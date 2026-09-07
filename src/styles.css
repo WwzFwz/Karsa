@@ -2128,3 +2128,11 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   .app { --chrome-left: 80px; }
   .sidebar { width: 68px; }
 }
+
+/* Dragging the empty ground moves the board. The cursor is the whole
+   affordance, so it has to be right: open hand over the ground, closed while
+   pulling it. */
+.canvas-viewport { cursor: grab; }
+.canvas-viewport.is-panning { cursor: grabbing; }
+.canvas-viewport.is-panning .node { cursor: grabbing; }
+.canvas-viewport .node { cursor: pointer; }

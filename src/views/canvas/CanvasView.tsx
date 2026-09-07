@@ -115,6 +115,22 @@ export function CanvasView() {
   */
   const dragRef = useRef<DragLink | null>(null)
 
+  /*
+    Panning the board by dragging its empty ground, the way FigJam does, plus
+    the middle button anywhere. Scrollbars alone made a large diagram feel
+    locked in place.
+
+    This is navigation and nothing else -- it moves the viewport, never a node,
+    so it cannot collide with rule 2 or with D6. The keyboard equivalent already
+    exists and is better: arrowing through the tree scrolls the focused node
+    into view on its own.
+
+    Space is deliberately not a modifier here. It is the talk switch, and the
+    person who most needs panning is often the one holding it.
+  */
+  const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null)
+  const [panning, setPanning] = useState(false)
+
   const toStage = useCallback((clientX: number, clientY: number): Point => {
     const rect = stageRef.current?.getBoundingClientRect()
     return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) }
@@ -254,7 +270,38 @@ export function CanvasView() {
     : null
 
   return (
-    <div className="canvas-viewport" ref={viewportRef}>
+    <div
+      className={`canvas-viewport ${panning ? 'is-panning' : ''}`}
+      ref={viewportRef}
+      onPointerDown={(event) => {
+        const middle = event.button === 1
+        const onObject = (event.target as HTMLElement).closest('.node, .node-anchor, .agent')
+        if (!middle && (onObject || event.button !== 0)) return
+        const vp = viewportRef.current
+        if (!vp) return
+        event.preventDefault()
+        panRef.current = { x: event.clientX, y: event.clientY, left: vp.scrollLeft, top: vp.scrollTop }
+        setPanning(true)
+        vp.setPointerCapture(event.pointerId)
+      }}
+      onPointerMove={(event) => {
+        const start = panRef.current
+        const vp = viewportRef.current
+        if (!start || !vp) return
+        vp.scrollLeft = start.left - (event.clientX - start.x)
+        vp.scrollTop = start.top - (event.clientY - start.y)
+      }}
+      onPointerUp={(event) => {
+        if (!panRef.current) return
+        panRef.current = null
+        setPanning(false)
+        viewportRef.current?.releasePointerCapture(event.pointerId)
+      }}
+      onPointerCancel={() => {
+        panRef.current = null
+        setPanning(false)
+      }}
+    >
       <div
         className={`canvas-stage ${dragLink ? 'is-linking' : ''}`}
         style={{ width: stageW, height: stageH }}
