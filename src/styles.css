@@ -2125,8 +2125,22 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 }
 
 @media (max-width: 900px) {
-  .app { --chrome-left: 80px; }
+  /* sidebar left margin + width + gap, so the toolbar never touches it */
+  .app { --chrome-left: 92px; }
   .sidebar { width: 68px; }
+}
+
+/*
+  One row that scrolls, rather than two rows that eat the canvas. A toolbar that
+  wraps doubles its height exactly when the window is smallest.
+*/
+@media (max-width: 1240px) {
+  .canvas-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .canvas-toolbar::-webkit-scrollbar { height: 0; }
 }
 
 /* Dragging the empty ground moves the board. The cursor is the whole

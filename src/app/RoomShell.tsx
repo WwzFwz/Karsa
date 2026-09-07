@@ -16,7 +16,7 @@
  * the draft panel.
  */
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useRoom } from './RoomContext'
 import { useDialogs } from './DialogContext'
@@ -46,6 +46,24 @@ export function RoomShell({ children }: { children: ReactNode }) {
   const { roomId } = useParams()
   const { pathname } = useLocation()
   const theme = useTheme()
+
+  /*
+    The chrome offset is measured, not guessed. A hard-coded 82px was right
+    until the top bar wrapped or the browser zoomed, and then the toolbar sat
+    on top of it. Measuring costs one observer and cannot drift.
+  */
+  const appRef = useRef<HTMLDivElement>(null)
+  const topbarRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const bar = topbarRef.current
+    const app = appRef.current
+    if (!bar || !app) return
+    const sync = () => app.style.setProperty('--chrome-top', `${Math.round(bar.offsetHeight) + 24}px`)
+    sync()
+    const observer = new ResizeObserver(sync)
+    observer.observe(bar)
+    return () => observer.disconnect()
+  }, [])
 
   const {
     doc,
@@ -218,6 +236,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
 
   return (
     <div
+      ref={appRef}
       className={`app ${focusMode ? 'is-focus-mode' : ''} ${
         panelHidden ? 'is-panel-hidden' : ''
       } ${sidebarHidden ? 'is-sidebar-hidden' : ''}`}
@@ -226,7 +245,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
         Lompat ke isi utama
       </a>
 
-      <header className="topbar">
+      <header className="topbar" ref={topbarRef}>
         <button
           type="button"
           className="icon-btn"

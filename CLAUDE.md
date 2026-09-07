@@ -73,9 +73,16 @@ Ini bukan preferensi gaya. Melanggar salah satunya membatalkan klaim inti produk
 1. **Satu induk.** Setiap simpul punya tepat satu induk. Tanpa pohon yang pasti,
    outline dan telusur audio tidak dapat dibentuk. Hubungan lain disimpan sebagai
    **relasi tambahan** yang tidak memindahkan simpul di dalam pohon.
-2. **Tidak ada makna pada koordinat.** Arti yang bergantung pada letak di layar
-   hilang bagi yang tidak melihat. Inilah yang membuat pergantian bentuk visual
-   menjadi aman.
+2. **Tidak ada makna yang disimpan atau dikirim lewat koordinat.** Arti yang
+   bergantung pada letak di layar hilang bagi yang tidak melihat. Inilah yang
+   membuat pergantian bentuk visual menjadi aman.
+
+   > Perjelas 7 September 2026. Aturan ini tentang **dokumen**, bukan tentang
+   > perhitungan. Menghitung koordinat di perangkat itu wajar dan memang
+   > dilakukan terus - tata letak, posisi kursor, uji-tumbuk, geser papan.
+   > Yang dilarang adalah menyimpannya di dokumen atau mengirimkannya lewat
+   > jaringan. `Node` tidak punya `x`, `y`, `width`, `height`, maupun `color`,
+   > dan tidak boleh punya.
 3. **Semua isi bermakna punya tipe.** Tidak ada menggambar bebas.
 4. **Judul simpul dibatasi** agar dapat disebut dalam satu tarikan napas.
 5. **Setiap operasi menghasilkan peristiwa yang dapat dinarasikan dalam satu
