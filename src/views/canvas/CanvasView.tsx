@@ -131,10 +131,48 @@ export function CanvasView() {
   const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null)
   const [panning, setPanning] = useState(false)
 
-  const toStage = useCallback((clientX: number, clientY: number): Point => {
-    const rect = stageRef.current?.getBoundingClientRect()
-    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) }
-  }, [])
+  /*
+    Zoom, because a diagram that outgrows the window should be shrinkable rather
+    than clipped. Local navigation only: it changes nothing in the document, and
+    two people may sit at different zoom levels without disagreeing about
+    anything, because pointing is by node id and never by position.
+  */
+  const [zoom, setZoom] = useState(1)
+  const MIN_ZOOM = 0.25
+  const MAX_ZOOM = 2
+
+  const toStage = useCallback(
+    (clientX: number, clientY: number): Point => {
+      const rect = stageRef.current?.getBoundingClientRect()
+      // The stage is scaled, so screen pixels are not stage pixels.
+      return { x: (clientX - (rect?.left ?? 0)) / zoom, y: (clientY - (rect?.top ?? 0)) / zoom }
+    },
+    [zoom],
+  )
+
+  /** Zoom about a screen point, so the thing under the cursor stays put. */
+  const zoomAt = useCallback(
+    (next: number, clientX?: number, clientY?: number) => {
+      const vp = viewportRef.current
+      const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next))
+      if (!vp) {
+        setZoom(clamped)
+        return
+      }
+      const box = vp.getBoundingClientRect()
+      const anchorX = (clientX ?? box.left + box.width / 2) - box.left
+      const anchorY = (clientY ?? box.top + box.height / 2) - box.top
+      const stageX = (vp.scrollLeft + anchorX) / zoom
+      const stageY = (vp.scrollTop + anchorY) / zoom
+      setZoom(clamped)
+      requestAnimationFrame(() => {
+        vp.scrollLeft = stageX * clamped - anchorX
+        vp.scrollTop = stageY * clamped - anchorY
+      })
+    },
+    [zoom],
+  )
+
   const visible = useMemo(() => new Set(visibleIds), [visibleIds])
 
   // A click sets the focused id through React state, so the DOM focus has to
@@ -177,28 +215,88 @@ export function CanvasView() {
       const p = layout.positions.get(id)
       if (!p) return
 
-      const margin = 40
-      const x = p.x + PAD
-      const y = p.y + PAD
+      /*
+        The canvas runs edge to edge, so the window is not the visible area:
+        the top bar, the toolbar, the sidebar, the inspector and the dock all
+        float on top of it. Scrolling against the raw viewport parked the
+        focused node underneath one of them, half of it showing.
+
+        The insets are measured from those elements rather than derived from the
+        layout variables. Deriving meant adding a guess for the toolbar's height,
+        and the guess was ten pixels short.
+      */
+      const box = vp.getBoundingClientRect()
+      const pad = { top: 0, right: 0, bottom: 0, left: 0 }
+
+      /*
+        Which side a panel occludes is worked out from its shape, not hardcoded:
+        the inspector is a right-hand column on a wide window and a full-width
+        bottom sheet on a narrow one, and an inset written for one is nonsense
+        for the other.
+      */
+      for (const selector of ['.topbar', '.canvas-toolbar', '.sidebar', '.inspector', '.dock']) {
+        const el = document.querySelector(selector)
+        if (!el) continue
+        const r = el.getBoundingClientRect()
+        if (r.width <= 0 || r.height <= 0) continue
+        if (r.width > box.width * 0.7) {
+          // A band across the window: costs height at whichever edge it hugs.
+          if (r.top - box.top < box.bottom - r.bottom) {
+            pad.top = Math.max(pad.top, r.bottom - box.top)
+          } else {
+            pad.bottom = Math.max(pad.bottom, box.bottom - r.top)
+          }
+        } else if (r.height > box.height * 0.5) {
+          // A column: costs width at whichever edge it hugs.
+          if (r.left - box.left < box.right - r.right) {
+            pad.left = Math.max(pad.left, r.right - box.left)
+          } else {
+            pad.right = Math.max(pad.right, box.right - r.left)
+          }
+        }
+      }
+
+      // If the chrome leaves less room than a node needs, showing it somewhere
+      // beats refusing to scroll at all.
+      if (box.width - pad.left - pad.right < NODE_W * zoom + 80) {
+        pad.left = 0
+        pad.right = 0
+      }
+      if (box.height - pad.top - pad.bottom < NODE_H * zoom + 80) {
+        pad.top = 0
+        pad.bottom = 0
+      }
+
+      const { top: padTop, right: padRight, bottom: padBottom, left: padLeft } = pad
+
+      const margin = 24
+      const x = (p.x + PAD) * zoom
+      const y = (p.y + PAD) * zoom
+      const nodeW = NODE_W * zoom
+      const nodeH = NODE_H * zoom
       const left = vp.scrollLeft
       const top = vp.scrollTop
+      const viewLeft = left + padLeft + margin
+      const viewRight = left + vp.clientWidth - padRight - margin
+      const viewTop = top + padTop + margin
+      const viewBottom = top + vp.clientHeight - padBottom - margin
       let nextLeft = left
       let nextTop = top
 
-      if (x - margin < left) nextLeft = Math.max(0, x - margin)
-      else if (x + NODE_W + margin > left + vp.clientWidth) {
-        nextLeft = x + NODE_W + margin - vp.clientWidth
+      if (x < viewLeft) nextLeft = Math.max(0, x - padLeft - margin)
+      else if (x + nodeW > viewRight) {
+        nextLeft = x + nodeW + padRight + margin - vp.clientWidth
       }
-      if (y - margin < top) nextTop = Math.max(0, y - margin)
-      else if (y + NODE_H + margin > top + vp.clientHeight) {
-        nextTop = y + NODE_H + margin - vp.clientHeight
+      if (y < viewTop) nextTop = Math.max(0, y - padTop - margin)
+      else if (y + nodeH > viewBottom) {
+        nextTop = y + nodeH + padBottom + margin - vp.clientHeight
       }
 
       if (Math.abs(nextLeft - left) < 1 && Math.abs(nextTop - top) < 1) return
       const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       vp.scrollTo({ left: nextLeft, top: nextTop, behavior: still || !smooth ? 'auto' : 'smooth' })
     },
-    [layout],
+    [layout, zoom],
   )
 
   useEffect(() => {
@@ -216,12 +314,37 @@ export function CanvasView() {
   }, [focusId, ensureVisible])
 
   useEffect(() => {
+    const onZoomKey = (event: Event) => {
+      const key = (event as CustomEvent<string>).detail
+      if (key === '0') zoomAt(1)
+      else if (key === '-') zoomAt(zoom - 0.15)
+      else zoomAt(zoom + 0.15)
+    }
+    window.addEventListener('kanvas:zoom', onZoomKey)
+    return () => window.removeEventListener('kanvas:zoom', onZoomKey)
+  }, [zoomAt, zoom])
+
+  useEffect(() => {
     const vp = viewportRef.current
     if (!vp) return
     const observer = new ResizeObserver(() => ensureVisible(focusId, false))
     observer.observe(vp)
     return () => observer.disconnect()
   }, [focusId, ensureVisible])
+
+  /** Shrink until the whole diagram fits the space the chrome leaves free. */
+  const zoomToFit = useCallback(() => {
+    const vp = viewportRef.current
+    if (!vp) return
+    const usableW = Math.max(200, vp.clientWidth - 120)
+    const usableH = Math.max(200, vp.clientHeight - 220)
+    const next = Math.min(1, usableW / (layout.width + PAD * 2), usableH / (layout.height + PAD * 2))
+    setZoom(Math.max(MIN_ZOOM, next))
+    requestAnimationFrame(() => {
+      vp.scrollLeft = 0
+      vp.scrollTop = 0
+    })
+  }, [layout])
 
   const centreOf = (id: NodeId) => {
     const p = layout.positions.get(id)
@@ -301,10 +424,16 @@ export function CanvasView() {
         panRef.current = null
         setPanning(false)
       }}
+      onWheel={(event) => {
+        if (!event.ctrlKey && !event.metaKey) return
+        event.preventDefault()
+        zoomAt(zoom * (event.deltaY > 0 ? 0.92 : 1.08), event.clientX, event.clientY)
+      }}
     >
+      <div className="canvas-sizer" style={{ width: stageW * zoom, height: stageH * zoom }}>
       <div
         className={`canvas-stage ${dragLink ? 'is-linking' : ''}`}
-        style={{ width: stageW, height: stageH }}
+        style={{ width: stageW, height: stageH, transform: `scale(${zoom})` }}
         ref={stageRef}
         onPointerMove={(event) => {
           const current = dragRef.current
@@ -589,6 +718,49 @@ export function CanvasView() {
             flipY={agentPoint.y > stageH - 330}
           />
         )}
+      </div>
+      </div>
+
+      <div className="zoom-bar" role="group" aria-label="Perbesaran kanvas">
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Perkecil"
+          title="Perkecil (Ctrl -)"
+          onClick={() => zoomAt(zoom - 0.15)}
+          disabled={zoom <= MIN_ZOOM + 0.001}
+        >
+          <Icon name="minus" size={17} />
+        </button>
+        <button
+          type="button"
+          className="zoom-value"
+          aria-label={`Perbesaran ${Math.round(zoom * 100)} persen. Kembalikan ke ukuran asli.`}
+          title="Kembali ke 100 persen (Ctrl 0)"
+          onClick={() => zoomAt(1)}
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Perbesar"
+          title="Perbesar (Ctrl +)"
+          onClick={() => zoomAt(zoom + 0.15)}
+          disabled={zoom >= MAX_ZOOM - 0.001}
+        >
+          <Icon name="plus" size={17} />
+        </button>
+        <span className="dock-sep" aria-hidden="true" />
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Paskan seluruh kanvas ke layar"
+          title="Paskan ke layar"
+          onClick={zoomToFit}
+        >
+          <Icon name="maximize" size={17} />
+        </button>
       </div>
     </div>
   )

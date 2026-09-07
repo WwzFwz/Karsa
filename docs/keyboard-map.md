@@ -25,6 +25,9 @@ pernah saat sedang mengetik di kolom teks.
 | `f` | Kanvas layar penuh |
 | `Escape` | Keluar dari layar penuh |
 | `Ctrl` `Z` | Batalkan perubahan terakhir |
+| `Ctrl` `+` | Perbesar kanvas |
+| `Ctrl` `-` | Perkecil kanvas |
+| `Ctrl` `0` | Kembalikan perbesaran ke 100 persen |
 | `Ctrl` `Enter` | Terapkan usulan agen |
 | `Escape` | Tolak usulan agen |
 

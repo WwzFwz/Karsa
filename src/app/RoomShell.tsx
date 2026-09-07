@@ -106,6 +106,12 @@ export function RoomShell({ children }: { children: ReactNode }) {
         startTalking()
         return
       }
+      // Ctrl +/-/0 belong to the canvas, not the browser, while a room is open.
+      if ((event.ctrlKey || event.metaKey) && ['+', '=', '-', '0'].includes(event.key)) {
+        event.preventDefault()
+        window.dispatchEvent(new CustomEvent('kanvas:zoom', { detail: event.key }))
+        return
+      }
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         if (draft.status === 'ready') {
           event.preventDefault()

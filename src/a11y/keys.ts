@@ -36,6 +36,9 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'panel', keys: ['\\'], label: 'Sembunyikan atau tampilkan panel kanan', scope: 'global', mutates: false },
   { id: 'focus-mode', keys: ['f'], label: 'Kanvas layar penuh, keluar dengan Escape', scope: 'global', mutates: false },
   { id: 'undo', keys: ['Ctrl', 'Z'], label: 'Batalkan perubahan terakhir', scope: 'global', mutates: true },
+  { id: 'zoom-in', keys: ['Ctrl', '+'], label: 'Perbesar kanvas', scope: 'global', mutates: false },
+  { id: 'zoom-out', keys: ['Ctrl', '-'], label: 'Perkecil kanvas', scope: 'global', mutates: false },
+  { id: 'zoom-reset', keys: ['Ctrl', '0'], label: 'Kembalikan perbesaran ke 100 persen', scope: 'global', mutates: false },
 
   { id: 'nav-down', keys: ['Panah bawah'], label: 'Ke baris berikutnya', scope: 'tree', mutates: false },
   { id: 'nav-up', keys: ['Panah atas'], label: 'Ke baris sebelumnya', scope: 'tree', mutates: false },

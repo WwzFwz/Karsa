@@ -23,7 +23,7 @@ export type IconName =
   | 'fileText' | 'checkSquare' | 'folder' | 'pointer' | 'eye' | 'presentation'
   | 'play' | 'stop' | 'alert' | 'clock' | 'activity' | 'search' | 'send'
   | 'wifiOff' | 'copy' | 'zap' | 'more' | 'panelRight' | 'logIn' | 'dot'
-  | 'sun' | 'moon' | 'maximize' | 'minimize' | 'panelRightOpen' | 'undo' | 'settings' | 'lock' | 'menu'
+  | 'sun' | 'moon' | 'maximize' | 'minimize' | 'panelRightOpen' | 'undo' | 'settings' | 'lock' | 'menu' | 'minus'
 
 const PATHS: Record<IconName, JSX.Element> = {
   mic: (
@@ -263,6 +263,7 @@ const PATHS: Record<IconName, JSX.Element> = {
   ),
   moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
   menu: <path d="M3 6h18M3 12h18M3 18h18" />,
+  minus: <path d="M5 12h14" />,
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
