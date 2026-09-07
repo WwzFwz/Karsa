@@ -1,0 +1,408 @@
+/**
+ * The room chrome.
+ *
+ * The shape follows Trido, which reads better than a flush application frame:
+ * everything is a rounded card floating on a tinted ground, the sidebar carries
+ * words next to its icons, and the processing mode sits in a badge in the middle
+ * of the top bar where it cannot be missed.
+ *
+ * One inversion is deliberate. Trido's badge says which cloud model is running.
+ * Ours says the opposite -- that nothing is leaving this machine. It is the same
+ * piece of furniture making the opposite promise, and it is the promise this
+ * product is built on.
+ *
+ * The primary controls live in a floating dock (see VoiceDock), Zoom-style,
+ * because voice must work from every view and not only from the page that owns
+ * the draft panel.
+ */
+
+import { useEffect, type ReactNode } from 'react'
+import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useRoom } from './RoomContext'
+import { useDialogs } from './DialogContext'
+import { isTypingTarget } from '../a11y/keys'
+import { audioBus } from '../audio/bus'
+import { Icon, type IconName } from '../ui/icons'
+import { SHAPE_LABEL } from '../ui/labels'
+import { useTheme } from '../ui/theme'
+import { VoiceDock } from '../features/voice/VoiceDock'
+
+/*
+  Three places, not six. The room is one workspace whose arrangement and side
+  panel are switched inside it; only the session summary and the settings are
+  genuinely different pages. Six tabs, two of which repeated the contents of the
+  others, made a person guess which copy was real.
+*/
+const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
+  { to: '', label: 'Ruang', icon: 'layout' },
+  { to: 'ringkasan', label: 'Ringkasan', icon: 'activity' },
+  { to: 'pengaturan', label: 'Pengaturan', icon: 'settings' },
+]
+
+export function RoomShell({ children }: { children: ReactNode }) {
+  const room = useRoom()
+  const dialogs = useDialogs()
+  const navigate = useNavigate()
+  const { roomId } = useParams()
+  const { pathname } = useLocation()
+  const theme = useTheme()
+
+  const {
+    doc,
+    startTalking,
+    stopTalking,
+    endTalkHold,
+    toggleTraversal,
+    mode,
+    setMode,
+    soundProfile,
+    setSoundProfile,
+    lastError,
+    clearError,
+    tree,
+    participants,
+    selfId,
+    draft,
+    undo,
+    applyDraft,
+    discardDraft,
+    panelHidden,
+    togglePanel,
+    sidebarHidden,
+    toggleSidebar,
+    focusMode,
+    toggleFocusMode,
+  } = room
+
+  useEffect(() => {
+    const base = `/ruang/${roomId ?? doc.room.id}`
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return
+
+      if (event.key === ' ' && !event.repeat) {
+        // startTalking guards against repeats itself, so no stale state read.
+        event.preventDefault()
+        startTalking()
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        if (draft.status === 'ready') {
+          event.preventDefault()
+          applyDraft()
+        }
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        undo()
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'm') {
+        event.preventDefault()
+        setMode(mode === 'meeting' ? 'review' : 'meeting')
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+        event.preventDefault()
+        setSoundProfile(soundProfile === 'silent' ? 'sparse' : 'silent')
+        return
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+
+      switch (event.key) {
+        case '?':
+          event.preventDefault()
+          dialogs.open({ kind: 'help' })
+          return
+        case '\\':
+        case ']':
+          event.preventDefault()
+          togglePanel()
+          return
+        case '[':
+          event.preventDefault()
+          toggleSidebar()
+          return
+        case 'f':
+          event.preventDefault()
+          toggleFocusMode()
+          return
+        case 'Escape':
+          // The draft is the more urgent thing to dismiss when both are open.
+          if (draft.status === 'ready') {
+            event.preventDefault()
+            discardDraft()
+          } else if (focusMode) {
+            event.preventDefault()
+            toggleFocusMode(false)
+          }
+          return
+        case '.':
+          event.preventDefault()
+          toggleTraversal()
+          return
+        case '1':
+          event.preventDefault()
+          navigate(base)
+          return
+        case '2':
+          event.preventDefault()
+          navigate(`${base}/outline`)
+          return
+        case '3':
+          event.preventDefault()
+          navigate(`${base}/perintah`)
+          return
+        default:
+          return
+      }
+    }
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === ' ') {
+        // Tap latches, hold ends. Same rule as the button, so nobody has to
+        // keep a key pressed for the length of a sentence.
+        event.preventDefault()
+        endTalkHold()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [
+    startTalking,
+    stopTalking,
+    endTalkHold,
+    toggleTraversal,
+    dialogs,
+    navigate,
+    roomId,
+    doc.room.id,
+    mode,
+    setMode,
+    soundProfile,
+    setSoundProfile,
+    togglePanel,
+    toggleSidebar,
+    toggleFocusMode,
+    focusMode,
+    undo,
+    applyDraft,
+    discardDraft,
+    draft.status,
+  ])
+
+  useEffect(() => {
+    audioBus.setMuted(soundProfile === 'silent')
+  }, [soundProfile])
+
+  const base = `/ruang/${roomId ?? doc.room.id}`
+  const online = participants.filter((p) => p.online)
+  const speaking = online.filter((p) => p.talking)
+  const pendingOps = draft.status === 'ready' ? draft.operations.filter((o) => o.accepted).length : 0
+  const openComments = Object.values(doc.comments).filter((c) => !c.resolvedAt).length
+
+  const badgeFor = (label: string): number => (label === 'Ruang' ? pendingOps + openComments : 0)
+
+  return (
+    <div
+      className={`app ${focusMode ? 'is-focus-mode' : ''} ${
+        panelHidden ? 'is-panel-hidden' : ''
+      } ${sidebarHidden ? 'is-sidebar-hidden' : ''}`}
+    >
+      <a className="skip-link" href="#isi-utama">
+        Lompat ke isi utama
+      </a>
+
+      <header className="topbar">
+        <button
+          type="button"
+          className="icon-btn"
+          aria-pressed={!sidebarHidden}
+          aria-label={sidebarHidden ? 'Tampilkan navigasi' : 'Sembunyikan navigasi'}
+          title="Navigasi kiri ([)"
+          onClick={toggleSidebar}
+        >
+          <Icon name="menu" size={19} />
+        </button>
+
+        <div className="topbar-brand">
+          <span className="brand-mark" aria-hidden="true">
+            <Icon name="target" size={18} />
+          </span>
+          <div className="brand-text">
+            <p className="brand-name">Kanvas Setara</p>
+            <p className="brand-sub">{doc.room.title}</p>
+          </div>
+        </div>
+
+        <div className="topbar-spacer" />
+
+        {/* Trido puts the model badge here. Ours says the opposite thing. */}
+        <div className="mode-badge">
+          <span className="mode-dot" aria-hidden="true" />
+          <span>
+            <span className="mode-text">Mode Lokal</span>
+            <span className="mode-detail">Tidak ada audio yang keluar dari perangkat</span>
+          </span>
+        </div>
+
+        <div className="topbar-spacer" />
+
+        <div className="topbar-right">
+          <ul className="avatar-stack" aria-label={`${online.length} peserta hadir`}>
+            {online.slice(0, 5).map((p) => (
+              <li
+                key={p.actorId}
+                className={`avatar ${p.talking ? 'is-talking' : ''}`}
+                style={{ ['--hue' as string]: String(p.hue) }}
+                title={`${p.displayName}${p.talking ? ' — sedang bicara' : ''}${
+                  p.actorId === selfId ? ' (Anda)' : ''
+                }`}
+              >
+                {p.displayName.charAt(0)}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={() => dialogs.open({ kind: 'shape' })}
+            title="Ganti bentuk kanvas"
+          >
+            <Icon name="layout" size={15} />
+            <span className="hide-narrow">{SHAPE_LABEL[doc.room.shape]}</span>
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={theme.active === 'dark' ? 'Beralih ke tema terang' : 'Beralih ke tema gelap'}
+            title={theme.active === 'dark' ? 'Tema gelap' : 'Tema terang'}
+            onClick={theme.toggle}
+          >
+            <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={18} />
+          </button>
+          <button
+            type="button"
+            className={`icon-btn ${panelHidden ? '' : 'is-on'}`}
+            aria-pressed={!panelHidden}
+            aria-label={panelHidden ? 'Tampilkan panel kanan' : 'Sembunyikan panel kanan'}
+            title="Panel kanan (\)"
+            onClick={togglePanel}
+          >
+            <Icon name={panelHidden ? 'panelRightOpen' : 'panelRight'} size={18} />
+          </button>
+          <button
+            type="button"
+            className={`icon-btn ${focusMode ? 'is-on' : ''}`}
+            aria-pressed={focusMode}
+            aria-label={focusMode ? 'Keluar dari layar penuh' : 'Kanvas layar penuh'}
+            title="Layar penuh (f), keluar dengan Escape"
+            onClick={() => toggleFocusMode()}
+          >
+            <Icon name={focusMode ? 'minimize' : 'maximize'} size={18} />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Pintasan papan ketik"
+            title="Pintasan papan ketik (?)"
+            onClick={() => dialogs.open({ kind: 'help' })}
+          >
+            <Icon name="keyboard" size={18} />
+          </button>
+        </div>
+      </header>
+
+      <div className="app-body">
+        <aside className="sidebar">
+          <nav aria-label="Tampilan ruang">
+            {TABS.map((tab) => {
+              const badge = badgeFor(tab.label)
+              return (
+                <NavLink
+                  key={tab.label}
+                  to={tab.to ? `${base}/${tab.to}` : base}
+                  className={({ isActive }) => {
+                    // "Ruang" covers every arrangement of the workspace, so it
+                    // stays lit unless one of the two real pages is open.
+                    const active =
+                      tab.to === ''
+                        ? !pathname.endsWith('/ringkasan') && !pathname.endsWith('/pengaturan')
+                        : isActive
+                    return `nav-item ${active ? 'is-active' : ''}`
+                  }}
+                >
+                  <Icon name={tab.icon} size={19} />
+                  <span className="nav-label">{tab.label}</span>
+                  {badge > 0 && <span className="nav-badge">{badge}</span>}
+                </NavLink>
+              )
+            })}
+          </nav>
+
+          <div className="sidebar-foot">
+            <div className="side-card">
+              <p className="side-card-label">Ruang</p>
+              <p className="side-card-value">{doc.room.id}</p>
+              <p className="side-card-sub">
+                {Object.keys(doc.nodes).length} simpul ·{' '}
+                {tree.repairs.length > 0 ? `${tree.repairs.length} pemulihan bentrok` : 'pohon utuh'}
+              </p>
+            </div>
+
+            <div className="side-card">
+              <p className="side-card-label">Status</p>
+              <p className="side-card-value is-ok">
+                <Icon name="shield" size={13} />
+                Diproses di perangkat
+              </p>
+              <p className="side-card-sub">
+                {speaking.length > 0
+                  ? `${speaking.map((p) => p.displayName).join(', ')} sedang bicara`
+                  : 'Tidak ada yang sedang bicara'}
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        <div className="content">
+          {lastError && (
+            <div className="error-bar" role="status">
+              <Icon name="alert" size={16} />
+              <span>{lastError}</span>
+              <button
+                type="button"
+                className="icon-btn is-danger"
+                aria-label="Tutup pesan"
+                onClick={clearError}
+              >
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+          )}
+          <main id="isi-utama">{children}</main>
+        </div>
+      </div>
+
+      {focusMode && (
+        <button
+          type="button"
+          className="icon-btn focus-exit"
+          aria-label="Keluar dari layar penuh"
+          title="Keluar dari layar penuh (Escape)"
+          onClick={() => toggleFocusMode(false)}
+        >
+          <Icon name="minimize" size={18} />
+        </button>
+      )}
+
+      <VoiceDock />
+    </div>
+  )
+}

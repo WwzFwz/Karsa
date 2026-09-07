@@ -1,0 +1,132 @@
+/**
+ * Comments attached to ideas, not to a chat channel.
+ *
+ * A conversation stream would be a fourth place where meaning lives, and a
+ * blind participant would have to hold canvas and chat in their head at the
+ * same time. Anchoring every remark to a node keeps one model, and lets the
+ * outline announce "two comments unresolved" as part of the row itself.
+ */
+
+import { useMemo, useState } from 'react'
+import { useRoom } from '../../app/RoomContext'
+import { Icon } from '../../ui/icons'
+
+function timeAgo(at: number): string {
+  const minutes = Math.max(0, Math.round((Date.now() - at) / 60000))
+  if (minutes < 1) return 'baru saja'
+  if (minutes < 60) return `${minutes} menit lalu`
+  return `${Math.round(minutes / 60)} jam lalu`
+}
+
+export function CommentsPanel() {
+  const { doc, focusId, setFocus, run, nameOf } = useRoom()
+  const [showResolved, setShowResolved] = useState(false)
+  const [reply, setReply] = useState('')
+
+  const threads = useMemo(() => {
+    const roots = Object.values(doc.comments)
+      .filter((c) => !c.replyToId)
+      .filter((c) => showResolved || !c.resolvedAt)
+      .sort((a, b) => b.createdAt - a.createdAt)
+    return roots.map((root) => ({
+      root,
+      replies: Object.values(doc.comments)
+        .filter((c) => c.replyToId === root.id)
+        .sort((a, b) => a.createdAt - b.createdAt),
+    }))
+  }, [doc.comments, showResolved])
+
+  const focusNode = focusId ? doc.nodes[focusId] : null
+
+  return (
+    <section className="panel" aria-labelledby="comments-heading">
+      <header className="panel-head">
+        <h2 id="comments-heading">
+          <Icon name="message" size={15} />
+          Percakapan pada elemen
+        </h2>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={showResolved}
+            onChange={(e) => setShowResolved(e.target.checked)}
+          />
+          Tampilkan yang selesai
+        </label>
+      </header>
+
+      <ul className="threads">
+        {threads.map(({ root, replies }) => {
+          const target = doc.nodes[root.targetId]
+          return (
+            <li key={root.id} className={`thread ${root.resolvedAt ? 'is-resolved' : ''}`}>
+              <p className="thread-anchor">
+                <Icon name="cornerDownRight" size={12} />
+                <button type="button" className="link" onClick={() => target && setFocus(target.id)}>
+                  {target?.title ?? 'Elemen yang sudah dihapus'}
+                </button>
+              </p>
+              <p className="thread-body">{root.body}</p>
+              <p className="thread-meta">
+                {nameOf(root.authorId)} · {timeAgo(root.createdAt)}
+              </p>
+              {replies.map((r) => (
+                <div key={r.id} className="thread-reply">
+                  <p className="thread-body">{r.body}</p>
+                  <p className="thread-meta">
+                    {nameOf(r.authorId)} · {timeAgo(r.createdAt)}
+                  </p>
+                </div>
+              ))}
+              {!root.resolvedAt && (
+                <div className="thread-actions">
+                  <button
+                    type="button"
+                    className="btn btn-small"
+                    onClick={() => run({ type: 'resolveComment', id: root.id })}
+                  >
+                    <Icon name="check" size={14} />
+                    Tandai selesai
+                  </button>
+                </div>
+              )}
+            </li>
+          )
+        })}
+        {threads.length === 0 && <li className="empty">Belum ada komentar.</li>}
+      </ul>
+
+      <div className="composer">
+        <label className="field-label" htmlFor="new-comment">
+          Komentar pada {focusNode ? `"${focusNode.title}"` : 'simpul yang sedang difokus'}
+        </label>
+        <textarea
+          id="new-comment"
+          className="text-input"
+          rows={3}
+          value={reply}
+          disabled={!focusNode}
+          onChange={(e) => setReply(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!focusNode || !reply.trim()}
+          onClick={() => {
+            if (!focusNode) return
+            const result = run({
+              type: 'addComment',
+              targetType: 'node',
+              targetId: focusNode.id,
+              body: reply,
+            })
+            if (result.ok) setReply('')
+          }}
+        >
+          <Icon name="send" size={15} />
+          Kirim komentar
+        </button>
+      </div>
+    </section>
+  )
+}
