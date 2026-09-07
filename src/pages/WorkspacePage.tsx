@@ -73,6 +73,8 @@ export function WorkspacePage() {
     focusMode,
     toggleFocusMode,
     draft,
+    nodeOverrides,
+    clearOverrides,
   } = room
 
   const view = viewFromPath(pathname)
@@ -157,6 +159,22 @@ export function WorkspacePage() {
           )}
 
           <span className="topbar-spacer" />
+
+          {/*
+            Only offered once something has been hand-placed. A permanent
+            "reset layout" button on a canvas nobody has touched is noise.
+          */}
+          {Object.keys(nodeOverrides).length > 0 && (
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={clearOverrides}
+              title="Buang penempatan manual, kembali ke tata letak otomatis"
+            >
+              <Icon name="undo" size={15} />
+              <span className="hide-narrow">Tata letak otomatis</span>
+            </button>
+          )}
 
           {/* The two controls that decide how much of the room you can see. */}
           <button

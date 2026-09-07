@@ -2196,3 +2196,17 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   padding: 4px 2px;
 }
 .zoom-value:hover { background: var(--surface-2); color: var(--ink); }
+
+/* A node placed by hand. The dashed tie says the position is this screen's
+   opinion, not something everyone else can see. */
+.node.is-placed { border-style: dashed; }
+.node.is-placed.node-step,
+.node.is-placed.node-fact,
+.node.is-placed.node-decision { border-style: dashed; }
+
+.node.is-dragging {
+  transition: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), var(--e3);
+  cursor: grabbing;
+  z-index: 6;
+}

@@ -26,7 +26,8 @@ import { audioBus } from '../audio/bus'
 import type { SoundProfile } from '../audio/earcons'
 import { narrate } from '../core/events/narrate'
 import type { Command, CommandResult } from '../core/commands/types'
-import type { InputPath, NodeId, RoomDoc } from '../core/model/types'
+import type { InputPath, NodeId, RoomDoc, RoomShape } from '../core/model/types'
+import type { Point } from '../core/shape/layout'
 import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/project'
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
 import { MemoryDocStore } from '../store/MemoryDocStore'
@@ -50,6 +51,18 @@ interface RoomApi {
   /** The node whose title is being typed over, in place. Navigation state. */
   editingId: NodeId | null
   setEditingId: (id: NodeId | null) => void
+  /**
+   * Hand-placed positions for the current shape.
+   *
+   * Device-local, never in the document and never on the wire, so rule 2 holds
+   * exactly as written: no meaning is *stored* in a coordinate. Kept per shape,
+   * because a mind map and a flow chart disagree about where things belong and
+   * neither should inherit the other's nudges. D5 already accepted that two
+   * devices may lay the same room out differently.
+   */
+  nodeOverrides: Readonly<Record<string, Point>>
+  setNodeOverride: (id: NodeId, at: Point) => void
+  clearOverrides: () => void
   /** Set while a relation is being drawn: the next node picked is the target. */
   linkingFrom: NodeId | null
   startLinking: (id: NodeId) => void
@@ -112,6 +125,8 @@ interface RoomApi {
   simulateConflict: () => void
 }
 
+const EMPTY_OVERRIDES: Readonly<Record<string, Point>> = Object.freeze({})
+
 const RoomContext = createContext<RoomApi | null>(null)
 
 export function RoomProvider({ selfName, children }: { selfName: string; children: ReactNode }) {
@@ -132,6 +147,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const [focusId, setFocusId] = useState<NodeId | null>('n_akar')
   const [editingId, setEditingId] = useState<NodeId | null>(null)
   const [linkingFrom, setLinkingFrom] = useState<NodeId | null>(null)
+  const [overridesByShape, setOverridesByShape] = useState<
+    Partial<Record<RoomShape, Record<string, Point>>>
+  >({})
   const [view, setView] = useState<ViewMode>('canvas')
   const [panelHidden, setPanelHidden] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
@@ -559,6 +577,18 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     focusId,
     editingId,
     setEditingId,
+    nodeOverrides: overridesByShape[doc.room.shape] ?? EMPTY_OVERRIDES,
+    setNodeOverride: (id, at) =>
+      setOverridesByShape((prev) => ({
+        ...prev,
+        [doc.room.shape]: { ...(prev[doc.room.shape] ?? {}), [id]: at },
+      })),
+    clearOverrides: () =>
+      setOverridesByShape((prev) => {
+        const next = { ...prev }
+        delete next[doc.room.shape]
+        return next
+      }),
     linkingFrom,
     startLinking,
     cancelLinking,

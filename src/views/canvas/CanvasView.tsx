@@ -50,6 +50,8 @@ export function CanvasView() {
     linkingFrom,
     startLinking,
     cancelLinking,
+    nodeOverrides,
+    setNodeOverride,
   } = room
   const dialogs = useDialogs()
   const { announce } = useAnnouncer()
@@ -190,10 +192,42 @@ export function CanvasView() {
     }
   }, [focusId])
 
-  const layout = useMemo(
+  const computed = useMemo(
     () => layoutFor(doc.room.shape, tree, visible),
     [doc.room.shape, tree, visible],
   )
+
+  /*
+    Auto layout first, hand placement on top. Overrides are a thin sheet over a
+    computed arrangement rather than a replacement for it, so a node that was
+    never touched keeps moving with its branch, and switching shape simply
+    stops consulting this shape's sheet.
+  */
+  const layout = useMemo(() => {
+    const keys = Object.keys(nodeOverrides)
+    if (keys.length === 0) return computed
+    const positions = new Map(computed.positions)
+    for (const id of keys) {
+      if (positions.has(id)) positions.set(id, nodeOverrides[id])
+    }
+    let width = 0
+    let height = 0
+    for (const p of positions.values()) {
+      width = Math.max(width, p.x + NODE_W)
+      height = Math.max(height, p.y + NODE_H)
+    }
+    return { positions, width: Math.max(width, computed.width), height: Math.max(height, computed.height) }
+  }, [computed, nodeOverrides])
+
+  /*
+    Dragging a node moves it on this screen only. Nothing is dispatched, no
+    event is written, nothing crosses the wire -- so it cannot carry meaning to
+    anyone else, which is exactly why it stays inside rule 2. The structural
+    move, the one that does mean something, is still `m`.
+  */
+  const nodeDragRef = useRef<{ id: NodeId; startX: number; startY: number; from: Point } | null>(null)
+  const suppressClickRef = useRef(false)
+  const [draggingNode, setDraggingNode] = useState<NodeId | null>(null)
 
   /*
     Keep the focused node in view.
@@ -408,6 +442,19 @@ export function CanvasView() {
         vp.setPointerCapture(event.pointerId)
       }}
       onPointerMove={(event) => {
+        const node = nodeDragRef.current
+        if (node) {
+          const dx = (event.clientX - node.startX) / zoom
+          const dy = (event.clientY - node.startY) / zoom
+          if (!suppressClickRef.current && Math.hypot(dx, dy) < 4) return
+          suppressClickRef.current = true
+          setDraggingNode(node.id)
+          setNodeOverride(node.id, {
+            x: Math.max(0, node.from.x + dx),
+            y: Math.max(0, node.from.y + dy),
+          })
+          return
+        }
         const start = panRef.current
         const vp = viewportRef.current
         if (!start || !vp) return
@@ -415,6 +462,15 @@ export function CanvasView() {
         vp.scrollTop = start.top - (event.clientY - start.y)
       }}
       onPointerUp={(event) => {
+        if (nodeDragRef.current) {
+          nodeDragRef.current = null
+          setDraggingNode(null)
+          // The click that follows a drag would re-focus; that is harmless, but
+          // it must not be read as a plain selection gesture.
+          window.setTimeout(() => {
+            suppressClickRef.current = false
+          }, 0)
+        }
         if (!panRef.current) return
         panRef.current = null
         setPanning(false)
@@ -562,7 +618,9 @@ export function CanvasView() {
                   pointing.length ? 'is-pointed' : ''
                 } ${draftTargets.has(id) ? 'is-proposed' : ''} ${
                   linkingFrom && linkingFrom !== id ? 'is-linktarget' : ''
-                } ${linkingFrom === id ? 'is-linksource' : ''}`}
+                } ${linkingFrom === id ? 'is-linksource' : ''} ${
+                  draggingNode === id ? 'is-dragging' : ''
+                } ${nodeOverrides[id] ? 'is-placed' : ''}`}
                 style={{
                   transform: `translate(${pos.x + PAD}px, ${pos.y + PAD}px)`,
                   width: NODE_W,
@@ -573,7 +631,18 @@ export function CanvasView() {
                   if (el) refs.current.set(id, el)
                   else refs.current.delete(id)
                 }}
+                onPointerDown={(event) => {
+                  if (linkingFrom || editingId === id || event.button !== 0) return
+                  if ((event.target as HTMLElement).closest('.node-anchor, .node-handle')) return
+                  nodeDragRef.current = {
+                    id,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    from: { x: pos.x, y: pos.y },
+                  }
+                }}
                 onClick={() => {
+                  if (suppressClickRef.current) return
                   if (linkingFrom) {
                     finishLink(id)
                     return
