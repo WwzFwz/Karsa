@@ -17,13 +17,26 @@ import { useRoom } from '../../app/RoomContext'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { KIND_HUE, KIND_LABEL, RELATION_LABEL, STATE_LABEL } from '../../ui/labels'
 import { Icon, KIND_ICON } from '../../ui/icons'
+import { InlineTitle } from '../../ui/InlineTitle'
 import type { NodeId } from '../../core/model/types'
 
 export function OutlineTree({ compact = false }: { compact?: boolean }) {
   const room = useRoom()
   const onKeyDown = useTreeKeyboard()
-  const { tree, focusId, setFocus, collapsed, toggleCollapse, doc, participants, selfId, draftTargets } =
-    room
+  const {
+    tree,
+    focusId,
+    setFocus,
+    collapsed,
+    toggleCollapse,
+    doc,
+    participants,
+    selfId,
+    draftTargets,
+    editingId,
+    setEditingId,
+    run,
+  } = room
   const refs = useRef(new Map<NodeId, HTMLLIElement>())
 
   const wantsFocus = useRef(false)
@@ -135,9 +148,28 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
               </span>
               <Icon name={KIND_ICON[node.kind]} size={15} className="icon outline-kindicon" />
               <span className="outline-kind">{KIND_LABEL[node.kind]}</span>
-              <span className="outline-title" id={labelId}>
-                {node.title}
-              </span>
+              {editingId === id ? (
+                <InlineTitle
+                  value={node.title}
+                  className="outline-title"
+                  onCommit={(title) => {
+                    run({ type: 'renameNode', id, title })
+                    setEditingId(null)
+                  }}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <span
+                  className="outline-title"
+                  id={labelId}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    setEditingId(id)
+                  }}
+                >
+                  {node.title}
+                </span>
+              )}
               {node.state && (
                 <span className={`state-tag state-${node.state}`}>{STATE_LABEL[node.state]}</span>
               )}

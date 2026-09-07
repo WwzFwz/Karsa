@@ -20,6 +20,7 @@ import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { layoutFor, NODE_H, NODE_W } from '../../core/shape/layout'
 import { KIND_HUE, KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../../ui/labels'
 import { Icon, KindGlyph } from '../../ui/icons'
+import { InlineTitle } from '../../ui/InlineTitle'
 import { AgentCursor } from '../../features/voice/AgentCursor'
 import type { NodeId } from '../../core/model/types'
 
@@ -40,6 +41,9 @@ export function CanvasView() {
     draftTargets,
     agentTargetId,
     setCanvasMounted,
+    editingId,
+    setEditingId,
+    run,
   } = room
 
   // The dock keeps the proposal when no canvas is on screen, so the outline
@@ -290,7 +294,27 @@ export function CanvasView() {
                   <KindGlyph kind={node.kind} />
                   {KIND_LABEL[node.kind]}
                 </span>
-                <span className="node-title">{node.title}</span>
+                {editingId === id ? (
+                  <InlineTitle
+                    value={node.title}
+                    className="node-title"
+                    onCommit={(title) => {
+                      run({ type: 'renameNode', id, title })
+                      setEditingId(null)
+                    }}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <span
+                    className="node-title"
+                    onDoubleClick={(event) => {
+                      event.stopPropagation()
+                      setEditingId(id)
+                    }}
+                  >
+                    {node.title}
+                  </span>
+                )}
                 {draftTargets.has(id) && (
                   <span className="node-proposed" aria-hidden="true">
                     <Icon name="sparkles" size={11} />

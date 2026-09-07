@@ -47,6 +47,9 @@ interface RoomApi {
   hueOf: (actorId: string) => number
 
   focusId: NodeId | null
+  /** The node whose title is being typed over, in place. Navigation state. */
+  editingId: NodeId | null
+  setEditingId: (id: NodeId | null) => void
   setFocus: (id: NodeId | null, options?: { announce?: boolean }) => void
   collapsed: ReadonlySet<NodeId>
   toggleCollapse: (id: NodeId, next?: boolean) => void
@@ -123,6 +126,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
 
   const [collapsed, setCollapsed] = useState<Set<NodeId>>(() => new Set())
   const [focusId, setFocusId] = useState<NodeId | null>('n_akar')
+  const [editingId, setEditingId] = useState<NodeId | null>(null)
   const [view, setView] = useState<ViewMode>('canvas')
   const [panelHidden, setPanelHidden] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
@@ -525,6 +529,8 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     nameOf,
     hueOf,
     focusId,
+    editingId,
+    setEditingId,
     setFocus,
     collapsed,
     toggleCollapse,

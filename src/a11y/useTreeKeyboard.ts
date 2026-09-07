@@ -16,7 +16,8 @@ import { isTypingTarget } from './keys'
 export function useTreeKeyboard() {
   const room = useRoom()
   const dialogs = useDialogs()
-  const { visibleIds, focusId, setFocus, tree, collapsed, toggleCollapse, run, pointAt } = room
+  const { visibleIds, focusId, setFocus, tree, collapsed, toggleCollapse, run, pointAt, setEditingId } =
+    room
 
   return useCallback(
     (event: React.KeyboardEvent) => {
@@ -64,8 +65,10 @@ export function useTreeKeyboard() {
           return
         case 'Enter':
           if (id) {
+            // Type over the title where it sits. A dialog for one word costs two
+            // extra keystrokes and hides the thing being renamed.
             event.preventDefault()
-            dialogs.open({ kind: 'rename', nodeId: id })
+            setEditingId(id)
           }
           return
         case 'Delete':
@@ -140,6 +143,6 @@ export function useTreeKeyboard() {
           return
       }
     },
-    [visibleIds, focusId, setFocus, tree, collapsed, toggleCollapse, run, dialogs, pointAt],
+    [visibleIds, focusId, setFocus, tree, collapsed, toggleCollapse, run, dialogs, pointAt, setEditingId],
   )
 }

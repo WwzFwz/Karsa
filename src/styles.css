@@ -1843,3 +1843,26 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   align-content: start;
   min-width: 0;
 }
+
+/* Editing a title in place: same metrics as the text it replaces, so nothing
+   shifts when it appears. */
+.inline-title {
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: var(--ink);
+  width: 100%;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  padding: 1px 5px;
+  margin: -2px -5px;
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.inline-title.is-over {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
+}
