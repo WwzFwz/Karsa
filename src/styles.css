@@ -486,14 +486,17 @@ kbd {
 
 /* The badge Trido uses to name its cloud model. Ours names the opposite. */
 .mode-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 16px;
+  gap: 6px;
+  padding: 5px 12px;
   border-radius: var(--r-full);
   background: var(--ok-soft);
   color: var(--ok);
+  font-size: 12px;
+  font-weight: 650;
   white-space: nowrap;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 20%, transparent);
 }
 .mode-dot {
   width: 7px;
@@ -1917,4 +1920,211 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .node.is-linktarget:hover {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent), var(--e2);
+}
+
+/* ============================ connection anchors ============================ */
+
+/*
+  The Figma and Miro gesture: anchors sit on the node's edges, appear when the
+  pointer is near, and pull a line out behind the cursor. Familiar enough that
+  nobody needs telling.
+
+  They are aria-hidden and carry no tab stop on purpose. The same command is
+  reachable by `r`, by the Hubung button, and by tapping an anchor without
+  pulling -- so the gesture is an addition, never the only route.
+*/
+.node-anchor {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 120ms ease, transform 120ms ease;
+  cursor: crosshair;
+  touch-action: none;
+  z-index: 4;
+}
+
+.node:hover .node-anchor,
+.node.is-focus .node-anchor,
+.canvas-stage.is-linking .node-anchor { opacity: 1; transform: scale(1); }
+
+.node-anchor:hover { transform: scale(1.45); }
+
+.anchor-top { top: -6px; left: 50%; margin-left: -5.5px; }
+.anchor-bottom { bottom: -6px; left: 50%; margin-left: -5.5px; }
+.anchor-left { left: -6px; top: 50%; margin-top: -5.5px; }
+.anchor-right { right: -6px; top: 50%; margin-top: -5.5px; }
+
+/* While pulling, every other node reads as a droppable target. */
+.canvas-stage.is-linking .node { cursor: crosshair; }
+.canvas-stage.is-linking .node:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent), var(--e2);
+}
+
+.edge-drawing {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  opacity: 0.9;
+}
+
+/* ============================ full-bleed canvas ============================ */
+
+/*
+  FigJam's arrangement, and the right one for a canvas-first product: the canvas
+  is the window, and every piece of chrome floats on top of it. Nesting the
+  canvas inside a card inside a column meant the thing people came for got
+  whatever space was left over.
+
+  Offsets are variables so that hiding the sidebar or the panel gives the space
+  straight back to the canvas, and full-screen gives back all of it.
+*/
+.app {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  display: block;
+  padding: 0;
+  gap: 0;
+
+  --gap: 12px;
+  --chrome-top: 82px;
+  --chrome-left: 240px;
+  --chrome-right: 372px;
+  --chrome-bottom: 92px;
+}
+
+.app.is-sidebar-hidden { --chrome-left: 12px; }
+.app.is-panel-hidden { --chrome-right: 12px; }
+.app.is-focus-mode {
+  --chrome-top: 12px;
+  --chrome-left: 12px;
+  --chrome-right: 12px;
+}
+
+.ground { position: absolute; inset: 0; }
+.ground > main { height: 100%; }
+
+.topbar {
+  position: absolute;
+  top: var(--gap);
+  left: var(--gap);
+  right: var(--gap);
+  z-index: 30;
+}
+
+.sidebar {
+  position: absolute;
+  left: var(--gap);
+  top: var(--chrome-top);
+  bottom: var(--chrome-bottom);
+  width: 216px;
+  z-index: 25;
+}
+
+.app.is-focus-mode .topbar,
+.app.is-focus-mode .sidebar { display: none; }
+
+.error-bar {
+  position: absolute;
+  top: var(--chrome-top);
+  left: var(--chrome-left);
+  right: var(--chrome-right);
+  z-index: 28;
+  margin: 0;
+  box-shadow: var(--e2);
+}
+
+/* ---- workspace: canvas is the ground itself ---- */
+
+.workspace { position: absolute; inset: 0; display: block; }
+.workspace-main { position: absolute; inset: 0; display: block; }
+.stage-grid { display: block; }
+
+.canvas-viewport {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+:root[data-theme='dark'] .canvas-viewport { border: 0; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .canvas-viewport { border: 0; }
+}
+
+.canvas-toolbar {
+  position: absolute;
+  top: var(--chrome-top);
+  left: var(--chrome-left);
+  right: var(--chrome-right);
+  z-index: 20;
+  box-shadow: var(--e3);
+}
+
+.inspector {
+  position: absolute;
+  top: var(--chrome-top);
+  right: var(--gap);
+  bottom: var(--chrome-bottom);
+  width: 348px;
+  overflow: auto;
+  z-index: 20;
+}
+
+/* The outline floats over the canvas the same way every other panel does. */
+.outline-pane {
+  position: absolute;
+  top: calc(var(--chrome-top) + 60px);
+  bottom: var(--chrome-bottom);
+  z-index: 15;
+}
+.stage-grid.view-split .outline-pane {
+  right: var(--chrome-right);
+  width: min(420px, 34vw);
+}
+.stage-grid.view-outline .outline-pane {
+  left: var(--chrome-left);
+  right: var(--chrome-right);
+}
+.outline-pane .outline-shell { height: 100%; max-height: none; box-shadow: var(--e3); }
+
+/* ---- the two document pages keep a scrolling layout ---- */
+
+.page-summary,
+.page-settings {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  align-content: start;
+  padding: var(--chrome-top) var(--gap) var(--chrome-bottom) var(--chrome-left);
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 14px;
+}
+
+@media (max-width: 1180px) {
+  .page-summary,
+  .page-settings { grid-template-columns: minmax(0, 1fr); }
+  .canvas-toolbar,
+  .error-bar { right: var(--gap); }
+  .inspector {
+    top: auto;
+    bottom: var(--chrome-bottom);
+    height: 46vh;
+  }
+  .stage-grid.view-split .outline-pane { right: var(--gap); }
+  .stage-grid.view-outline .outline-pane { right: var(--gap); }
+}
+
+@media (max-width: 900px) {
+  .app { --chrome-left: 80px; }
+  .sidebar { width: 68px; }
 }

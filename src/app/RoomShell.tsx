@@ -250,18 +250,16 @@ export function RoomShell({ children }: { children: ReactNode }) {
 
         <div className="topbar-spacer" />
 
-        {/* Trido puts the model badge here. Ours says the opposite thing. */}
-        <div className="mode-badge">
-          <span className="mode-dot" aria-hidden="true" />
-          <span>
-            <span className="mode-text">Mode Lokal</span>
-            <span className="mode-detail">Tidak ada audio yang keluar dari perangkat</span>
-          </span>
-        </div>
-
-        <div className="topbar-spacer" />
-
         <div className="topbar-right">
+          {/*
+            The promise, as a status chip rather than a banner. It sits with the
+            other status -- who is here -- because that is where people look for
+            state. The full sentence is the tooltip and the settings page.
+          */}
+          <span className="mode-badge" title="Tidak ada audio yang keluar dari perangkat ini">
+            <Icon name="shield" size={13} />
+            Lokal
+          </span>
           <ul className="avatar-stack" aria-label={`${online.length} peserta hadir`}>
             {online.slice(0, 5).map((p) => (
               <li
@@ -296,26 +294,6 @@ export function RoomShell({ children }: { children: ReactNode }) {
           </button>
           <button
             type="button"
-            className={`icon-btn ${panelHidden ? '' : 'is-on'}`}
-            aria-pressed={!panelHidden}
-            aria-label={panelHidden ? 'Tampilkan panel kanan' : 'Sembunyikan panel kanan'}
-            title="Panel kanan (\)"
-            onClick={togglePanel}
-          >
-            <Icon name={panelHidden ? 'panelRightOpen' : 'panelRight'} size={18} />
-          </button>
-          <button
-            type="button"
-            className={`icon-btn ${focusMode ? 'is-on' : ''}`}
-            aria-pressed={focusMode}
-            aria-label={focusMode ? 'Keluar dari layar penuh' : 'Kanvas layar penuh'}
-            title="Layar penuh (f), keluar dengan Escape"
-            onClick={() => toggleFocusMode()}
-          >
-            <Icon name={focusMode ? 'minimize' : 'maximize'} size={18} />
-          </button>
-          <button
-            type="button"
             className="icon-btn"
             aria-label="Pintasan papan ketik"
             title="Pintasan papan ketik (?)"
@@ -326,72 +304,70 @@ export function RoomShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className="app-body">
-        <aside className="sidebar">
-          <nav aria-label="Tampilan ruang">
-            {TABS.map((tab) => {
-              const badge = badgeFor(tab.label)
-              return (
-                <NavLink
-                  key={tab.label}
-                  to={tab.to ? `${base}/${tab.to}` : base}
-                  className={({ isActive }) => {
-                    // "Ruang" covers every arrangement of the workspace, so it
-                    // stays lit unless one of the two real pages is open.
-                    const active =
-                      tab.to === ''
-                        ? !pathname.endsWith('/ringkasan') && !pathname.endsWith('/pengaturan')
-                        : isActive
-                    return `nav-item ${active ? 'is-active' : ''}`
-                  }}
-                >
-                  <Icon name={tab.icon} size={19} />
-                  <span className="nav-label">{tab.label}</span>
-                  {badge > 0 && <span className="nav-badge">{badge}</span>}
-                </NavLink>
-              )
-            })}
-          </nav>
-
-          <div className="sidebar-foot">
-            {/*
-              One card, not two. "Diproses di perangkat" already sits in the top
-              bar badge, and naming a single speaker here breaks the moment two
-              people talk at once -- the ringed avatars up top say it better and
-              say it for everyone.
-            */}
-            <div className="side-card">
-              <p className="side-card-label">Kode ruang</p>
-              <p className="side-card-value">{doc.room.id}</p>
-              <p className="side-card-sub">{Object.keys(doc.nodes).length} simpul</p>
-              {tree.repairs.length > 0 && (
-                <p className="side-card-alert">
-                  <Icon name="alert" size={12} />
-                  {tree.repairs.length} pemulihan bentrok
-                </p>
-              )}
-            </div>
+      <div className="ground">
+        {lastError && (
+          <div className="error-bar" role="status">
+            <Icon name="alert" size={16} />
+            <span>{lastError}</span>
+            <button
+              type="button"
+              className="icon-btn is-danger"
+              aria-label="Tutup pesan"
+              onClick={clearError}
+            >
+              <Icon name="x" size={16} />
+            </button>
           </div>
-        </aside>
-
-        <div className="content">
-          {lastError && (
-            <div className="error-bar" role="status">
-              <Icon name="alert" size={16} />
-              <span>{lastError}</span>
-              <button
-                type="button"
-                className="icon-btn is-danger"
-                aria-label="Tutup pesan"
-                onClick={clearError}
-              >
-                <Icon name="x" size={16} />
-              </button>
-            </div>
-          )}
-          <main id="isi-utama">{children}</main>
-        </div>
+        )}
+        <main id="isi-utama">{children}</main>
       </div>
+
+      <aside className="sidebar">
+        <nav aria-label="Tampilan ruang">
+          {TABS.map((tab) => {
+            const badge = badgeFor(tab.label)
+            return (
+              <NavLink
+                key={tab.label}
+                to={tab.to ? `${base}/${tab.to}` : base}
+                className={({ isActive }) => {
+                  // "Ruang" covers every arrangement of the workspace, so it
+                  // stays lit unless one of the two real pages is open.
+                  const active =
+                    tab.to === ''
+                      ? !pathname.endsWith('/ringkasan') && !pathname.endsWith('/pengaturan')
+                      : isActive
+                  return `nav-item ${active ? 'is-active' : ''}`
+                }}
+              >
+                <Icon name={tab.icon} size={19} />
+                <span className="nav-label">{tab.label}</span>
+                {badge > 0 && <span className="nav-badge">{badge}</span>}
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        <div className="sidebar-foot">
+          {/*
+            One card, not two. "Diproses di perangkat" already sits in the top
+            bar badge, and naming a single speaker here breaks the moment two
+            people talk at once -- the ringed avatars up top say it better and
+            say it for everyone.
+          */}
+          <div className="side-card">
+            <p className="side-card-label">Kode ruang</p>
+            <p className="side-card-value">{doc.room.id}</p>
+            <p className="side-card-sub">{Object.keys(doc.nodes).length} simpul</p>
+            {tree.repairs.length > 0 && (
+              <p className="side-card-alert">
+                <Icon name="alert" size={12} />
+                {tree.repairs.length} pemulihan bentrok
+              </p>
+            )}
+          </div>
+        </div>
+      </aside>
 
       {focusMode && (
         <button

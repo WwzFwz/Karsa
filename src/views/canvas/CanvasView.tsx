@@ -14,8 +14,9 @@
  *    something would lock out anyone who cannot use a mouse.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDialogs } from '../../app/DialogContext'
+import { useAnnouncer } from '../../a11y/Announcer'
 import { useRoom } from '../../app/RoomContext'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { layoutFor, NODE_H, NODE_W } from '../../core/shape/layout'
@@ -24,6 +25,7 @@ import { Icon, KindGlyph } from '../../ui/icons'
 import { InlineTitle } from '../../ui/InlineTitle'
 import { AgentCursor } from '../../features/voice/AgentCursor'
 import type { NodeId } from '../../core/model/types'
+import type { Point } from '../../core/shape/layout'
 
 const PAD = 52
 
@@ -50,6 +52,7 @@ export function CanvasView() {
     cancelLinking,
   } = room
   const dialogs = useDialogs()
+  const { announce } = useAnnouncer()
 
   /*
     Add a child straight from the node: create it with a working title and drop
@@ -88,6 +91,34 @@ export function CanvasView() {
 
   const refs = useRef(new Map<NodeId, HTMLLIElement>())
   const viewportRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+
+  /*
+    Figma and Miro both teach the same gesture: approach a shape, anchors appear
+    on its edges, pull one out and a line follows the pointer until you drop it
+    on something. Borrowing it costs nothing and saves explaining.
+
+    What is ours is that the drag is never the only way. Releasing without
+    moving falls through to the two-pick flow, and `r` plus the target picker is
+    still there for the keyboard. The rule this refines is D6, which used to ban
+    dragging outright: the real requirement is that no operation may be
+    drag-only, because a drag needs sustained pressure and a precise path.
+    Drawing a relation stores two ids and no path, so the gesture itself is
+    safe once an alternative exists.
+  */
+  type DragLink = { fromId: NodeId; origin: Point; at: Point; moved: boolean }
+  const [dragLink, setDragLink] = useState<DragLink | null>(null)
+  /*
+    The ref carries the truth, the state only draws it. Without this the first
+    pointermove after pointerdown reads a closure from before the re-render and
+    the line never starts -- a real race, not just a test artefact.
+  */
+  const dragRef = useRef<DragLink | null>(null)
+
+  const toStage = useCallback((clientX: number, clientY: number): Point => {
+    const rect = stageRef.current?.getBoundingClientRect()
+    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) }
+  }, [])
   const visible = useMemo(() => new Set(visibleIds), [visibleIds])
 
   // A click sets the focused id through React state, so the DOM focus has to
@@ -224,7 +255,51 @@ export function CanvasView() {
 
   return (
     <div className="canvas-viewport" ref={viewportRef}>
-      <div className="canvas-stage" style={{ width: stageW, height: stageH }}>
+      <div
+        className={`canvas-stage ${dragLink ? 'is-linking' : ''}`}
+        style={{ width: stageW, height: stageH }}
+        ref={stageRef}
+        onPointerMove={(event) => {
+          const current = dragRef.current
+          if (!current) return
+          const at = toStage(event.clientX, event.clientY)
+          const moved =
+            current.moved || Math.hypot(at.x - current.origin.x, at.y - current.origin.y) > 6
+          const next = { ...current, at, moved }
+          dragRef.current = next
+          setDragLink(next)
+        }}
+        onPointerUp={(event) => {
+          const current = dragRef.current
+          if (!current) return
+          const { fromId, moved } = current
+          dragRef.current = null
+          setDragLink(null)
+          if (!moved) {
+            // A tap on the anchor, not a pull. Fall through to two picks.
+            startLinking(fromId)
+            return
+          }
+          /*
+            elementsFromPoint, not elementFromPoint: the topmost thing under the
+            cursor is often the anchor dot itself or a floating panel, and the
+            node underneath is the one that was aimed at.
+          */
+          const stack = document.elementsFromPoint(event.clientX, event.clientY)
+          const under = stack.map((el) => el.closest('[data-node-id]')).find(Boolean)
+          const targetId = under?.getAttribute('data-node-id') ?? null
+          if (targetId && targetId !== fromId) {
+            dialogs.open({ kind: 'relate', nodeId: fromId, presetTarget: targetId })
+          } else {
+            // Never fail silently. A line that vanishes with no word looks broken.
+            announce('Tidak ada simpul di titik itu. Penghubungan dibatalkan.')
+          }
+        }}
+        onPointerCancel={() => {
+          dragRef.current = null
+          setDragLink(null)
+        }}
+      >
         <svg className="canvas-edges" width={stageW} height={stageH} aria-hidden="true" focusable="false">
           <defs>
             <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
@@ -234,6 +309,13 @@ export function CanvasView() {
           {parentEdges.map((e) => (
             <path key={e.id} className="edge edge-parent" d={curve(e.from, e.to)} />
           ))}
+          {dragLink?.moved && (
+            <path
+              className="edge edge-drawing"
+              d={curve(dragLink.origin, dragLink.at)}
+              markerEnd="url(#arrow)"
+            />
+          )}
           {relationEdges.map((e) => (
             <g key={e.id}>
               <path className="edge edge-relation" d={curve(e.from, e.to)} markerEnd="url(#arrow)" />
@@ -298,6 +380,7 @@ export function CanvasView() {
                     ? `, ditunjuk ${pointing.map((p) => p.displayName).join(' dan ')}`
                     : ''
                 }${draftTargets.has(id) ? ', ada usulan menunggu persetujuan' : ''}`}
+                data-node-id={id}
                 tabIndex={focusId === id ? 0 : -1}
                 className={`node node-${node.kind} ${focusId === id ? 'is-focus' : ''} ${
                   pointing.length ? 'is-pointed' : ''
@@ -390,33 +473,46 @@ export function CanvasView() {
                   </span>
                 )}
 
-                {focusId === id && !editingId && !linkingFrom && (
-                  <span className="node-handles">
-                    <button
-                      type="button"
-                      className="node-handle"
-                      aria-label={`Tambah simpul anak di bawah ${node.title}`}
-                      title="Tambah anak (n)"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        addChild(id)
-                      }}
-                    >
-                      <Icon name="plus" size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      className="node-handle"
-                      aria-label={`Hubungkan ${node.title} ke simpul lain`}
-                      title="Hubungkan, lalu pilih tujuannya (r)"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        startLinking(id)
-                      }}
-                    >
-                      <Icon name="link" size={13} />
-                    </button>
-                  </span>
+                {!editingId && !linkingFrom && (
+                  <>
+                    {focusId === id && (
+                      <span className="node-handles">
+                        <button
+                          type="button"
+                          className="node-handle"
+                          aria-label={`Tambah simpul anak di bawah ${node.title}`}
+                          title="Tambah anak (n)"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            addChild(id)
+                          }}
+                        >
+                          <Icon name="plus" size={13} />
+                        </button>
+                      </span>
+                    )}
+
+                    {/*
+                      Pointer affordance only, so it adds no tab stops. The
+                      accessible route to the same command is `r` and the Hubung
+                      button, which were there first.
+                    */}
+                    {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+                      <span
+                        key={side}
+                        className={`node-anchor anchor-${side}`}
+                        aria-hidden="true"
+                        onPointerDown={(event) => {
+                          event.stopPropagation()
+                          event.preventDefault()
+                          const origin = toStage(event.clientX, event.clientY)
+                          const start = { fromId: id, origin, at: origin, moved: false }
+                          dragRef.current = start
+                          setDragLink(start)
+                        }}
+                      />
+                    ))}
+                  </>
                 )}
 
                 {(pointing.length > 0 || watching.length > 0) && (

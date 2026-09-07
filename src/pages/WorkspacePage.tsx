@@ -118,24 +118,6 @@ export function WorkspacePage() {
               <button
                 type="button"
                 className="btn btn-small"
-                onClick={() => dialogs.open({ kind: 'create', parentId: focused.node.id })}
-                title="Tambah simpul anak (n)"
-              >
-                <Icon name="plus" size={15} />
-                Anak
-              </button>
-              <button
-                type="button"
-                className="btn btn-small"
-                onClick={() => dialogs.open({ kind: 'rename', nodeId: focused.node.id })}
-                title="Ubah judul (Enter)"
-              >
-                <Icon name="pencil" size={15} />
-                Judul
-              </button>
-              <button
-                type="button"
-                className="btn btn-small"
                 onClick={() => dialogs.open({ kind: 'move', nodeId: focused.node.id })}
                 title="Pindahkan ke induk lain (m)"
               >
