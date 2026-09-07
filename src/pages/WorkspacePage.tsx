@@ -208,25 +208,6 @@ export function WorkspacePage() {
           )}
         </div>
 
-        <p className="canvas-hint">
-          {view === 'outline' ? (
-            <>
-              <Icon name="list" size={14} />
-              <span>
-                {tree.preorder.length} simpul, pola ARIA tree. Isi yang sama dengan kanvas, dibaca
-                dari proyeksi pohon yang sama.
-              </span>
-            </>
-          ) : (
-            <>
-              <Icon name="move" size={14} />
-              <span>
-                Tidak ada seret-lepas. Memindahkan simpul memakai <kbd>m</kbd>, karena letak di layar
-                tidak menyimpan makna apa pun.
-              </span>
-            </>
-          )}
-        </p>
       </section>
 
       {!panelHidden && (

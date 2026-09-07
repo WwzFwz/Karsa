@@ -626,8 +626,20 @@ kbd {
 .content {
   min-width: 0;
   overflow: auto;
-  /* room for the floating dock */
-  padding-bottom: 116px;
+  padding-bottom: 20px;
+}
+
+/*
+  The dock floats over the canvas rather than sitting on a reserved strip below
+  it. Reserving the strip cost the canvas about a hundred pixels of height for
+  a bar that is mostly empty space; letting it overlap gives that height back to
+  the thing people are actually looking at.
+
+  The reservation comes back only when the layout stacks, because then the
+  inspector ends up underneath the dock and would be unreachable.
+*/
+@media (max-width: 1180px) {
+  .content { padding-bottom: 112px; }
 }
 
 .error-bar {
@@ -669,7 +681,9 @@ kbd {
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  background: var(--surface);
+  /* Slightly translucent so what it covers still reads as being behind it. */
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px);
   border-radius: var(--r-xl);
   box-shadow: var(--e3);
   max-width: 100%;
@@ -777,7 +791,8 @@ kbd {
 
 .floater {
   width: min(580px, 100%);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(10px);
   border-radius: var(--r-xl);
   box-shadow: var(--e3);
   padding: 13px 15px;
@@ -1481,7 +1496,7 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .app.is-focus-mode .app-body { grid-template-columns: minmax(0, 1fr); gap: 0; }
 .app.is-focus-mode .content { padding: 12px 12px 120px; }
 .app.is-focus-mode .page { grid-template-columns: minmax(0, 1fr) !important; }
-.app.is-focus-mode .canvas-viewport { height: calc(100vh - 168px); }
+.app.is-focus-mode .canvas-viewport { height: calc(100vh - 92px); }
 
 .focus-exit {
   position: fixed;
@@ -1509,7 +1524,7 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
     overflowing scroll container.
   */
   display: block;
-  height: calc(100vh - 306px);
+  height: calc(100vh - 182px);
   min-height: 360px;
   max-height: none;
 }
@@ -1518,8 +1533,7 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 
 .mini-canvas .canvas-viewport { height: 320px; min-height: 0; }
 
-.outline-shell { max-height: calc(100vh - 268px); }
-.app.is-panel-hidden .outline-shell { max-height: calc(100vh - 268px); }
+.outline-shell { max-height: calc(100vh - 182px); }
 
 /* ============================ badge polish ============================ */
 
@@ -1770,8 +1784,8 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 }
 
 .outline-pane { min-width: 0; }
-.stage-grid.view-outline .outline-shell { max-height: calc(100vh - 306px); }
-.stage-grid.view-split .outline-shell { max-height: calc(100vh - 306px); }
+.stage-grid.view-outline .outline-shell,
+.stage-grid.view-split .outline-shell { max-height: calc(100vh - 182px); }
 
 /* segmented control */
 .seg {
