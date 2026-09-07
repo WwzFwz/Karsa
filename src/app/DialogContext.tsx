@@ -21,7 +21,7 @@ export type DialogRequest =
   | { kind: 'setState'; nodeId: NodeId }
   | { kind: 'note'; nodeId: NodeId }
   | { kind: 'move'; nodeId: NodeId }
-  | { kind: 'relate'; nodeId: NodeId }
+  | { kind: 'relate'; nodeId: NodeId; presetTarget?: NodeId }
   | { kind: 'comment'; nodeId: NodeId }
   | { kind: 'delete'; nodeId: NodeId }
   | { kind: 'shape' }
@@ -70,7 +70,9 @@ function DialogHost({ request, onClose }: { request: DialogRequest; onClose: () 
     case 'move':
       return <MoveDialog nodeId={request.nodeId} onClose={onClose} />
     case 'relate':
-      return <RelateDialog nodeId={request.nodeId} onClose={onClose} />
+      return (
+        <RelateDialog nodeId={request.nodeId} presetTarget={request.presetTarget} onClose={onClose} />
+      )
     case 'comment':
       return <CommentDialog nodeId={request.nodeId} onClose={onClose} />
     case 'delete':
@@ -336,9 +338,18 @@ function MoveDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void }
   )
 }
 
-function RelateDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void }) {
+function RelateDialog({
+  nodeId,
+  presetTarget,
+  onClose,
+}: {
+  nodeId: NodeId
+  /** Filled in when the target was picked on the canvas first. */
+  presetTarget?: NodeId
+  onClose: () => void
+}) {
   const { run, doc } = useRoom()
-  const [target, setTarget] = useState<NodeId | null>(null)
+  const [target, setTarget] = useState<NodeId | null>(presetTarget ?? null)
   const [kind, setKind] = useState<RelationKind>('depends_on')
   const kinds: RelationKind[] = ['depends_on', 'causes', 'contradicts', 'refers_to', 'duplicates', 'sequence']
   return (

@@ -50,6 +50,10 @@ interface RoomApi {
   /** The node whose title is being typed over, in place. Navigation state. */
   editingId: NodeId | null
   setEditingId: (id: NodeId | null) => void
+  /** Set while a relation is being drawn: the next node picked is the target. */
+  linkingFrom: NodeId | null
+  startLinking: (id: NodeId) => void
+  cancelLinking: () => void
   setFocus: (id: NodeId | null, options?: { announce?: boolean }) => void
   collapsed: ReadonlySet<NodeId>
   toggleCollapse: (id: NodeId, next?: boolean) => void
@@ -127,6 +131,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const [collapsed, setCollapsed] = useState<Set<NodeId>>(() => new Set())
   const [focusId, setFocusId] = useState<NodeId | null>('n_akar')
   const [editingId, setEditingId] = useState<NodeId | null>(null)
+  const [linkingFrom, setLinkingFrom] = useState<NodeId | null>(null)
   const [view, setView] = useState<ViewMode>('canvas')
   const [panelHidden, setPanelHidden] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
@@ -218,6 +223,29 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     },
     [store, tree],
   )
+
+  /*
+    Drawing a relation as two picks instead of a drag.
+
+    Pick the handle, pick the target. It needs no sustained pressure and no
+    precise path, so it works for someone who cannot drag -- and the same two
+    steps already exist on the keyboard as `r` plus the target picker, which is
+    why this is an addition rather than a second way of thinking about it.
+  */
+  const startLinking = useCallback(
+    (id: NodeId) => {
+      setLinkingFrom(id)
+      announcer.announce('Pilih simpul tujuan untuk dihubungkan. Escape untuk membatalkan.', 'assertive')
+    },
+    [announcer],
+  )
+
+  const cancelLinking = useCallback(() => {
+    setLinkingFrom((current) => {
+      if (current) announcer.announce('Penghubungan dibatalkan.')
+      return null
+    })
+  }, [announcer])
 
   const run = useCallback(
     (command: Command, inputPath: InputPath = 'keyboard'): CommandResult => {
@@ -531,6 +559,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     focusId,
     editingId,
     setEditingId,
+    linkingFrom,
+    startLinking,
+    cancelLinking,
     setFocus,
     collapsed,
     toggleCollapse,

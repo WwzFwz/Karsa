@@ -34,11 +34,6 @@ export function SettingsPage() {
   return (
     <div className="page page-settings">
       <section className="settings-main">
-        <header className="summary-head">
-          <h1>Pengaturan</h1>
-          <p>Berlaku untuk perangkat ini saja. Tidak ada yang dikirim ke peserta lain.</p>
-        </header>
-
         <section className="panel" aria-labelledby="provider-heading">
           <header className="panel-head">
             <h2 id="provider-heading">
@@ -52,7 +47,8 @@ export function SettingsPage() {
           </header>
           <p className="panel-note">
             Satu antarmuka, beberapa penyedia. Yang lain belum dibangun dan sengaja tetap
-            ditampilkan supaya jelas apa yang berubah kalau salah satunya dinyalakan.
+            ditampilkan supaya jelas apa yang berubah kalau salah satunya dinyalakan. Semua
+            pilihan di halaman ini berlaku untuk perangkat ini saja.
           </p>
 
           <ul className="provider-list">

@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useDialogs } from '../../app/DialogContext'
 import { useRoom } from '../../app/RoomContext'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { layoutFor, NODE_H, NODE_W } from '../../core/shape/layout'
@@ -44,7 +45,39 @@ export function CanvasView() {
     editingId,
     setEditingId,
     run,
+    linkingFrom,
+    startLinking,
+    cancelLinking,
   } = room
+  const dialogs = useDialogs()
+
+  /*
+    Add a child straight from the node: create it with a working title and drop
+    into the inline editor on it. One gesture instead of a dialog, and still one
+    narrated, undoable command.
+  */
+  const addChild = useCallback(
+    (parentId: NodeId) => {
+      const result = run({ type: 'createNode', parentId, kind: 'idea', title: 'Gagasan baru' })
+      if (!result.ok) return
+      const created = result.events.find((e) => e.type === 'createNode')?.payload.nodeId
+      if (created) setEditingId(created as NodeId)
+    },
+    [run, setEditingId],
+  )
+
+  /** Second half of a two-pick link: the kind is still chosen deliberately. */
+  const finishLink = useCallback(
+    (targetId: NodeId) => {
+      if (!linkingFrom || linkingFrom === targetId) {
+        cancelLinking()
+        return
+      }
+      dialogs.open({ kind: 'relate', nodeId: linkingFrom, presetTarget: targetId })
+      cancelLinking()
+    },
+    [linkingFrom, cancelLinking, dialogs],
+  )
 
   // The dock keeps the proposal when no canvas is on screen, so the outline
   // page is never left without a way to answer.
@@ -268,7 +301,9 @@ export function CanvasView() {
                 tabIndex={focusId === id ? 0 : -1}
                 className={`node node-${node.kind} ${focusId === id ? 'is-focus' : ''} ${
                   pointing.length ? 'is-pointed' : ''
-                } ${draftTargets.has(id) ? 'is-proposed' : ''}`}
+                } ${draftTargets.has(id) ? 'is-proposed' : ''} ${
+                  linkingFrom && linkingFrom !== id ? 'is-linktarget' : ''
+                } ${linkingFrom === id ? 'is-linksource' : ''}`}
                 style={{
                   transform: `translate(${pos.x + PAD}px, ${pos.y + PAD}px)`,
                   width: NODE_W,
@@ -280,6 +315,10 @@ export function CanvasView() {
                   else refs.current.delete(id)
                 }}
                 onClick={() => {
+                  if (linkingFrom) {
+                    finishLink(id)
+                    return
+                  }
                   wantsFocus.current = true
                   setFocus(id)
                 }}
@@ -348,6 +387,35 @@ export function CanvasView() {
                     title={`${pointing.map((p) => p.displayName).join(' dan ')} menunjuk simpul ini`}
                   >
                     <Icon name="pointer" size={12} />
+                  </span>
+                )}
+
+                {focusId === id && !editingId && !linkingFrom && (
+                  <span className="node-handles">
+                    <button
+                      type="button"
+                      className="node-handle"
+                      aria-label={`Tambah simpul anak di bawah ${node.title}`}
+                      title="Tambah anak (n)"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        addChild(id)
+                      }}
+                    >
+                      <Icon name="plus" size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="node-handle"
+                      aria-label={`Hubungkan ${node.title} ke simpul lain`}
+                      title="Hubungkan, lalu pilih tujuannya (r)"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        startLinking(id)
+                      }}
+                    >
+                      <Icon name="link" size={13} />
+                    </button>
                   </span>
                 )}
 

@@ -1866,3 +1866,55 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   border-color: var(--danger);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
 }
+
+.side-card-alert {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 640;
+  color: var(--danger);
+  margin-top: 5px;
+}
+
+/* ============================ node handles ============================ */
+
+/*
+  Direct manipulation added beside the keyboard path, never instead of it.
+  Both handles have an accessible name and both duplicate a shortcut that
+  already exists (n and r), so nothing here is reachable only by pointing.
+*/
+.node-handles {
+  position: absolute;
+  bottom: -13px;
+  inset-inline-end: 8px;
+  display: flex;
+  gap: 5px;
+}
+
+.node-handle {
+  width: 25px;
+  height: 25px;
+  border-radius: var(--r-full);
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--e2);
+  cursor: pointer;
+  transition: background 120ms ease, transform 100ms ease;
+}
+.node-handle:hover { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.node-handle:active { transform: translateY(1px); }
+
+/* Picking the other end of a relation. */
+.node.is-linksource {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 32%, transparent), var(--e2);
+}
+.node.is-linktarget { cursor: crosshair; }
+.node.is-linktarget:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent), var(--e2);
+}

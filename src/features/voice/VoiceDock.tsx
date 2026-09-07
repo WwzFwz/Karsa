@@ -53,6 +53,7 @@ export function VoiceDock() {
     canvasMounted,
     talkLatched,
     endTalkHold,
+    linkingFrom,
   } = useRoom()
 
   const accepted = draft.operations.filter((op) => op.accepted).length
@@ -60,7 +61,13 @@ export function VoiceDock() {
   const busy = draft.status === 'listening' || draft.status === 'thinking'
   const tempo = pace(thinkingSeconds)
 
-  const status = talking
+  const status = linkingFrom
+    ? {
+        text: 'Pilih simpul tujuan',
+        detail: 'Klik simpul lain, atau Escape untuk membatalkan',
+        tone: 'is-wait',
+      }
+    : talking
     ? {
         text: 'Mendengarkan',
         detail: talkLatched ? 'Terkunci. Ketuk sekali lagi untuk berhenti.' : 'Lepas tombol untuk berhenti',

@@ -29,14 +29,10 @@ export function SummaryPage() {
   return (
     <div className="page page-summary">
       <section className="summary-main">
-        <header className="summary-head">
-          <h1>Ringkasan sesi</h1>
-          <p>
-            {summary.total} perubahan dalam {minutes(summary.startedAt, summary.endedAt)} menit, oleh{' '}
-            {summary.rows.length} orang.
-          </p>
-        </header>
-
+        {/*
+          No page header. The navigation already says where you are, and the
+          sentence that used to sit here just repeated the tiles underneath it.
+        */}
         <div className="stat-row">
           <div className="stat">
             <p className="stat-label">
@@ -44,7 +40,10 @@ export function SummaryPage() {
               Total perubahan
             </p>
             <p className="stat-value">{summary.total}</p>
-            <p className="stat-sub">tercatat sebagai peristiwa</p>
+            <p className="stat-sub">
+              dalam {minutes(summary.startedAt, summary.endedAt)} menit, oleh {summary.rows.length}{' '}
+              orang
+            </p>
           </div>
           <div className="stat">
             <p className="stat-label">

@@ -72,6 +72,8 @@ export function RoomShell({ children }: { children: ReactNode }) {
     toggleSidebar,
     focusMode,
     toggleFocusMode,
+    linkingFrom,
+    cancelLinking,
   } = room
 
   useEffect(() => {
@@ -129,8 +131,12 @@ export function RoomShell({ children }: { children: ReactNode }) {
           toggleFocusMode()
           return
         case 'Escape':
-          // The draft is the more urgent thing to dismiss when both are open.
-          if (draft.status === 'ready') {
+          // Most-recent intent first: an unfinished link, then a draft, then
+          // full screen.
+          if (linkingFrom) {
+            event.preventDefault()
+            cancelLinking()
+          } else if (draft.status === 'ready') {
             event.preventDefault()
             discardDraft()
           } else if (focusMode) {
@@ -195,6 +201,8 @@ export function RoomShell({ children }: { children: ReactNode }) {
     applyDraft,
     discardDraft,
     draft.status,
+    linkingFrom,
+    cancelLinking,
   ])
 
   useEffect(() => {
@@ -203,7 +211,6 @@ export function RoomShell({ children }: { children: ReactNode }) {
 
   const base = `/ruang/${roomId ?? doc.room.id}`
   const online = participants.filter((p) => p.online)
-  const speaking = online.filter((p) => p.talking)
   const pendingOps = draft.status === 'ready' ? draft.operations.filter((o) => o.accepted).length : 0
   const openComments = Object.values(doc.comments).filter((c) => !c.resolvedAt).length
 
@@ -347,26 +354,22 @@ export function RoomShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="sidebar-foot">
+            {/*
+              One card, not two. "Diproses di perangkat" already sits in the top
+              bar badge, and naming a single speaker here breaks the moment two
+              people talk at once -- the ringed avatars up top say it better and
+              say it for everyone.
+            */}
             <div className="side-card">
-              <p className="side-card-label">Ruang</p>
+              <p className="side-card-label">Kode ruang</p>
               <p className="side-card-value">{doc.room.id}</p>
-              <p className="side-card-sub">
-                {Object.keys(doc.nodes).length} simpul ·{' '}
-                {tree.repairs.length > 0 ? `${tree.repairs.length} pemulihan bentrok` : 'pohon utuh'}
-              </p>
-            </div>
-
-            <div className="side-card">
-              <p className="side-card-label">Status</p>
-              <p className="side-card-value is-ok">
-                <Icon name="shield" size={13} />
-                Diproses di perangkat
-              </p>
-              <p className="side-card-sub">
-                {speaking.length > 0
-                  ? `${speaking.map((p) => p.displayName).join(', ')} sedang bicara`
-                  : 'Tidak ada yang sedang bicara'}
-              </p>
+              <p className="side-card-sub">{Object.keys(doc.nodes).length} simpul</p>
+              {tree.repairs.length > 0 && (
+                <p className="side-card-alert">
+                  <Icon name="alert" size={12} />
+                  {tree.repairs.length} pemulihan bentrok
+                </p>
+              )}
             </div>
           </div>
         </aside>
