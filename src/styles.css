@@ -2930,3 +2930,115 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .person-actions { flex: 0 0 auto; margin-inline-start: auto; }
 .waiting .person { align-items: flex-start; }
 .waiting .person + .person { margin-top: 4px; }
+
+/* ============================ command palette ============================ */
+
+/*
+  Ctrl+K. Combobox over a listbox: the input keeps focus while arrows move the
+  active option, which is the pattern screen readers already know and the one
+  that lets a person type and choose without ever changing focus.
+*/
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding: 12vh 16px 16px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  backdrop-filter: blur(2px);
+}
+.palette {
+  width: min(620px, 100%);
+  max-height: 68vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--e3);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.palette-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-3);
+}
+.palette-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+}
+.palette-input::placeholder { color: var(--ink-3); }
+
+.palette-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
+.palette-group {
+  margin: 10px 0 4px;
+  padding: 0 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.palette-row:first-child .palette-group { margin-top: 2px; }
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border-radius: var(--r-md);
+  color: var(--ink);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.palette-item.is-active { background: var(--accent-soft); }
+/* Still listed, still explained. A palette that hides what it cannot do
+   teaches a shape of the product that is not true. */
+.palette-item.is-off { color: var(--ink-3); cursor: not-allowed; }
+.palette-label { flex: 1 1 auto; min-width: 0; display: grid; }
+.palette-why { font-size: 11px; color: var(--ink-3); }
+.palette-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: var(--warn-soft, var(--surface-2));
+  color: var(--ink-2);
+  font-size: 10.5px;
+  font-weight: 660;
+}
+.palette-key, .palette-search kbd {
+  flex: none;
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-family: inherit;
+  font-weight: 640;
+}
+.palette-empty { padding: 18px 12px; font-size: 13px; color: var(--ink-3); text-align: center; }
+
+.palette-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 10px 15px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}

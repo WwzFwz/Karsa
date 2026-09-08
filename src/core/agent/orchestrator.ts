@@ -19,7 +19,7 @@
  */
 
 import { expandTemplate, templateSize } from '../templates/expand'
-import { TEMPLATES, templateById } from '../templates/registry'
+import { templateById } from '../templates/registry'
 import { planWithOllama } from './ollama'
 import type { NodeId } from '../model/types'
 import type { PlanInput, ProviderId } from './provider'
@@ -161,13 +161,4 @@ export function plan(input: PlanInput): Plan {
     reason: 'Tidak ada alat yang diminta; ini isi biasa.',
     steps: [],
   }
-}
-
-/** Everything the orchestrator knows how to be asked for, for the help panel. */
-export function askableTemplates(): { id: string; label: string; say: string }[] {
-  return TEMPLATES.map((template) => ({
-    id: template.id,
-    label: template.label,
-    say: `"bikin ${template.label.toLowerCase()}"`,
-  }))
 }

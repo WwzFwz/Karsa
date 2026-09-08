@@ -16,17 +16,19 @@
  * the draft panel.
  */
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useRoom } from './RoomContext'
 import { useDialogs } from './DialogContext'
 import { isTypingTarget } from '../a11y/keys'
 import { audioBus } from '../audio/bus'
 import { Icon, type IconName } from '../ui/icons'
-import { SHAPE_LABEL } from '../ui/labels'
+import { KIND_LABEL, SHAPE_LABEL } from '../ui/labels'
 import { ThemeSwitch } from '../ui/ThemeSwitch'
 import { VoiceDock } from '../features/voice/VoiceDock'
 import { rememberLastRoom } from '../features/rooms/rooms'
+import { CommandPalette } from '../features/commands/CommandPalette'
+import type { PaletteRoom } from '../features/commands/entries'
 
 /*
   Three places, not six. The room is one workspace whose arrangement and side
@@ -53,6 +55,8 @@ export function RoomShell({ children }: { children: ReactNode }) {
     until the top bar wrapped or the browser zoomed, and then the toolbar sat
     on top of it. Measuring costs one observer and cannot drift.
   */
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
   const appRef = useRef<HTMLDivElement>(null)
   const topbarRef = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -98,6 +102,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const base = `/ruang/${roomId ?? doc.room.id}`
 
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (isTypingTarget(event.target)) return
 
@@ -118,6 +123,12 @@ export function RoomShell({ children }: { children: ReactNode }) {
           event.preventDefault()
           applyDraft()
         }
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        // The shortcut sheet has promised this since the first commit.
+        event.preventDefault()
+        setPaletteOpen((open) => !open)
         return
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
@@ -248,6 +259,57 @@ export function RoomShell({ children }: { children: ReactNode }) {
   }, [roomId, doc.room.id])
 
   const base = `/ruang/${roomId ?? doc.room.id}`
+
+  /*
+    The palette speaks in verbs; the room speaks in state and commands. Keeping
+    the translation here means the entry list stays a plain list -- no context,
+    no hooks -- and can be read, tested and extended without React in the way.
+  */
+  const paletteRoom = useMemo<PaletteRoom>(
+    () => ({
+      focusId: room.focusId,
+      focusTitle: room.focusId ? room.doc.nodes[room.focusId]?.title ?? null : null,
+      canUndo: room.canUndo,
+      shape: room.doc.room.shape,
+      mode: room.mode,
+      soundProfile: room.soundProfile,
+      panelHidden: room.panelHidden,
+      sidebarHidden: room.sidebarHidden,
+      focusMode: room.focusMode,
+      hasOverrides: Object.keys(room.nodeOverrides).length > 0,
+      addNode: (kind) =>
+        room.run(
+          {
+            type: 'createNode',
+            parentId: room.focusId,
+            kind,
+            title: `${KIND_LABEL[kind]} baru`,
+          },
+          'keyboard',
+        ),
+      insertTemplate: (id) => room.insertTemplate(id, null),
+      openDialog: (kind) => {
+        if (kind === 'shape' || kind === 'share' || kind === 'help') {
+          dialogs.open({ kind })
+          return
+        }
+        if (!room.focusId) return
+        dialogs.open({ kind, nodeId: room.focusId })
+      },
+      vote: () => room.focusId && room.run({ type: 'voteNode', id: room.focusId }),
+      undo: room.undo,
+      clearOverrides: room.clearOverrides,
+      setShape: (shape) => room.run({ type: 'setRoomShape', shape }),
+      setMode: room.setMode,
+      setSoundProfile: room.setSoundProfile,
+      togglePanel: room.togglePanel,
+      toggleSidebar: room.toggleSidebar,
+      toggleFocusMode: () => room.toggleFocusMode(),
+      toggleTraversal: room.toggleTraversal,
+      startTalking: room.startTalking,
+    }),
+    [room, dialogs],
+  )
   const online = participants.filter((p) => p.online)
   const pendingOps = draft.status === 'ready' ? draft.operations.filter((o) => o.accepted).length : 0
   const openComments = Object.values(doc.comments).filter((c) => !c.resolvedAt).length
@@ -430,6 +492,15 @@ export function RoomShell({ children }: { children: ReactNode }) {
       )}
 
       <VoiceDock />
+
+      {paletteOpen && (
+        <CommandPalette
+          room={paletteRoom}
+          navigate={navigate}
+          base={base}
+          onClose={() => setPaletteOpen(false)}
+        />
+      )}
     </div>
   )
 }

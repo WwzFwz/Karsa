@@ -48,16 +48,3 @@ export function votersOf(doc: RoomDoc, nodeId: NodeId): ActorId[] {
 export function countVotes(doc: RoomDoc, nodeId: NodeId): number {
   return votersOf(doc, nodeId).length
 }
-
-/** Every option under a tool node, tallied, highest first. Ties keep tree order. */
-export function tallyOf(
-  doc: RoomDoc,
-  optionIds: readonly NodeId[],
-): { id: NodeId; votes: number; voters: ActorId[] }[] {
-  return optionIds
-    .map((id) => {
-      const voters = votersOf(doc, id)
-      return { id, votes: voters.length, voters }
-    })
-    .sort((a, b) => b.votes - a.votes)
-}

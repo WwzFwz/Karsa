@@ -12,7 +12,7 @@ pernah saat sedang mengetik di kolom teks.
 | Tombol | Fungsi |
 | ------ | ------ |
 | `?` | Buka daftar pintasan |
-| `Ctrl` `K` | Buka daftar perintah |
+| `Ctrl` `K` | Buka daftar perintah — semua perintah, alat, dan templat dalam satu daftar yang bisa dicari |
 | `1` | Pindah ke kanvas |
 | `2` | Pindah ke outline |
 | `3` | Pindah ke panel perintah |
