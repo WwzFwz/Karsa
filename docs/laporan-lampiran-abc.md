@@ -11,6 +11,146 @@ tanpa mata**.
 
 ---
 
+## Ringkasan produk dan fitur
+
+### Masalah yang dijawab
+
+Hasil kerja tim daring hampir selalu berwujud visual - peta gagasan, papan
+retro, matriks prioritas. Ikut berkontribusi di sana menuntut dua kemampuan
+sekaligus: **membuat** isi kanvas, dan **mengikuti** perubahannya pada saat
+perubahan itu terjadi. Keduanya tertutup bagi penyandang disabilitas, dan justru
+dari dua arah yang berlawanan. Yang berkebutuhan motorik masih bisa melihat
+tetapi tidak bisa membuat, karena menggambar dan menyeret bertumpu pada kendali
+kursor yang presisi. Yang tunanetra bisa berbicara tetapi tidak bisa mengikuti,
+karena kanvas dipahami dengan mata sementara percakapan rapat penuh rujukan
+tunjuk seperti "yang ini kita pindahkan ke sini".
+
+Akibatnya peran mereka bergeser dari penyusun menjadi pendengar: gagasannya baru
+sampai ke kanvas apabila ada rekan yang bersedia menuliskannya.
+
+Alat papan kerja sejenis sudah bisa dibaca pembaca layar. Yang belum digarap
+siapa pun adalah **kesadaran situasional selama kolaborasi berlangsung** - bisa
+mengikuti apa yang sedang berubah, oleh siapa, di bagian mana, tanpa melihat.
+Di situlah Karsa mengambil tempat.
+
+### Dari teks dan ucapan menjadi visual bersama
+
+Dua jalur masukan, satu hasil.
+
+**Jalur teks dan papan ketik.** Seluruh isi kanvas dapat dibangun tanpa tetikus
+sama sekali. Setiap operasi punya pintasan - menambah simpul, mengubah judul,
+memindahkan ke induk lain, menghubungkan, memberi status, berkomentar - dan yang
+pintasannya belum dihafal dijangkau lewat daftar perintah Ctrl+K yang memuat
+setiap perintah, alat, dan templat dalam satu daftar yang bisa dicari. Ini bukan
+mode aksesibel yang harus dinyalakan; ini cara kerja bawaannya.
+
+**Jalur ucapan.** Kalimat yang diucapkan diubah menjadi operasi kanvas oleh
+rantai yang seluruhnya berjalan di perangkat. Yang membedakannya dari asisten
+suara biasa: hasilnya berhenti di sebuah **draf** yang menampilkan apa yang
+didengar, apa yang dipahami, dan apa yang akan dilakukan - sebelum satu pun
+perubahan menyentuh kanvas bersama. Draf itu bisa dijawab dengan suara juga,
+sehingga lingkaran bicara, tinjau, terapkan tidak menuntut satu jari pun.
+
+Keduanya bermuara ke tempat yang sama karena tidak ada jalan lain menuju data:
+papan ketik, tetikus, dan suara semuanya berakhir pada satu jenis perintah yang
+divalidasi di satu tempat.
+
+### Satu model, tiga tampilan setara
+
+Isi ruang disimpan sekali dan digambar tiga cara: **kanvas visual**, **outline
+teks** yang terbaca pembaca layar dengan pola ARIA tree sungguhan, dan
+**penelusuran lewat bunyi**. Ketiganya bukan salinan satu sama lain melainkan
+tampilan atas data yang sama, jadi ketiganya berubah bersamaan dan mustahil
+menampilkan isi yang berbeda.
+
+Bentuk visualnya tidak dipatok pada satu jenis diagram. Peta gagasan, hierarki,
+diagram alur, garis waktu, dan bagan kolom semuanya **algoritma tata letak yang
+berbeda atas model yang sama** - bukan tipe data baru - sehingga berpindah
+bentuk tidak pernah mengubah isi dan tidak pernah merusak outline.
+
+### Alat rapat sebagai tata letak, bukan jendela
+
+Karsa menyediakan alat dan templat yang benar-benar dipakai tim: **voting**
+dengan hitungan suara, **papan retro** tiga kolom, **matriks dampak-usaha** 2x2,
+**rencana sprint**, **lima kenapa**, dan **tempat parkir** untuk pertanyaan yang
+ditunda.
+
+Yang membedakannya dari papan kerja lain bukan daftar itu melainkan cara alat
+dibangun. Sebuah alat **tidak pernah memiliki data**: isinya adalah anak-anak
+dari simpul itu sendiri. Pilihan voting adalah simpul, kolom retro adalah simpul,
+kuadran matriks adalah simpul. Akibatnya tiap alat langsung terbaca di outline,
+ikut penelusuran audio, ikut pembatalan, ikut hitungan kontribusi - tanpa satu
+baris pun ditulis untuk itu - dan mematikan sebuah alat tidak menghilangkan apa
+pun.
+
+Matriks dampak-usaha contoh yang paling jelas. Karena kuadran adalah simpul
+kelompok dan bukan wilayah di layar, letak sebuah item bisa **dibacakan dengan
+kata**: "Dampak besar, usaha kecil, Tambah praktikum aksesibilitas". Di papan
+kerja lain, memindahkan kartu ke kuadran lain tidak menghasilkan apa pun yang
+bisa didengar; di sini ia menghasilkan satu kalimat.
+
+### Lapisan agen di perangkat
+
+Ucapan dirutekan **orchestrator** yang memutuskan apakah kalimat itu meminta
+alat, mengisyaratkan alat tanpa menyebutnya, atau sekadar isi biasa - lalu
+menyerahkannya ke tahap yang tepat: penyusun struktur, pemilih alat, atau perapi
+judul. Tiap usulan membawa nama tahap yang menghasilkannya, sehingga pengguna
+bisa membantah bagian yang salah saja alih-alih menerima atau menolak seluruh
+jawaban.
+
+Semuanya berjalan di perangkat: pengenalan suara, deteksi bicara, dan model
+bahasa. **Audio tidak pernah keluar dari perangkat**, dan yang dikirim ke model
+adalah struktur - bukan tangkapan layar - yang isinya bisa dibaca pengguna
+sebelum menjawab.
+
+Uraian lengkapnya di Lampiran B, termasuk B.5 tentang arsitektur multi-agentnya.
+
+### Kolaborasi dan akses
+
+Beberapa orang menyunting bagian berbeda pada saat bersamaan tanpa saling
+menimpa. Semua orang tahu siapa hadir, siapa sedang berbicara, dan bagian mana
+yang sedang ditunjuk rekannya - supaya "yang ini" tetap punya rujukan yang jelas
+di ketiga tampilan.
+
+Bergabung tidak menuntut akun, kata sandi, maupun surel: yang dipakai **kode
+ruang**. Ruang punya dua keadaan akses - terbuka, atau terkunci dengan ruang
+tunggu yang dijawab di panel peserta pada detik yang sama, bukan di kotak masuk
+berjam-jam kemudian.
+
+### Mengikuti tanpa melihat
+
+Setiap perubahan menghasilkan **satu kalimat** dan **satu bunyi pendek**.
+Kalimatnya masuk ke antrean narasi milik Karsa sendiri, yang menahannya sampai
+ada jeda **bicara** - bukan sekadar jeda pembaca layar - sehingga narasi tidak
+menabrak percakapan rapat. Bunyinya dirancang, bukan dekoratif: arah nada
+menyatakan sesuatu muncul atau hilang, tinggi nada menyatakan kedalaman di pohon,
+dan timbre menyatakan siapa pelakunya.
+
+### Ringkasan kontribusi
+
+Akhir sesi menampilkan porsi tiap peserta, dihitung dari jejak peristiwa dan
+**dipecah menurut jalur masukan**: papan ketik, suara, tetikus. Angka ini yang
+membedakan Karsa dari papan kerja biasa - kontribusi lewat suara tercatat setara
+dengan kontribusi lewat papan ketik, dan bagi seseorang yang selama ini
+gagasannya baru sampai ke kanvas lewat tangan orang lain, itu bukan statistik
+melainkan bukti.
+
+### Enam hal yang membedakan
+
+1. **Tiga tampilan setara**, bukan satu kanvas yang ditambahi keterangan
+   aksesibilitas.
+2. **Tidak ada makna yang disimpan lewat koordinat** - itulah yang membuat letak
+   bisa dibacakan dengan kata dan pergantian bentuk visual selalu aman.
+3. **Setiap perubahan punya kalimat dan bisa dibatalkan**, termasuk perubahan
+   yang dilakukan asisten.
+4. **Asisten mengusulkan, manusia memutuskan** - tidak ada yang mendarat di
+   kanvas bersama tanpa persetujuan.
+5. **Seluruh pemrosesan di perangkat**, tanpa biaya per pemakaian dan tanpa isi
+   rapat keluar dari mesin.
+6. **Berjalan tanpa internet sama sekali** dalam mode kelas.
+
+---
+
 ## Lampiran A. Diagram Use Case
 
 ### A.1 Aktor
@@ -244,6 +384,99 @@ yang **tidak** boleh memicu alat — karena perute yang menyambar templat tiap
 melihat kata "prioritas" lebih buruk daripada yang tidak pernah menyambar sama
 sekali: menyela itu ongkos yang dibayar semua orang di ruangan. Set uji ini
 menemukan tiga positif palsu pada jalannya yang pertama.
+
+
+### B.5 Arsitektur Multi-Agent
+
+"Multi-agent" di Karsa bukan kawanan agen dan bukan pertunjukan. Ia **pipeline
+yang diberi nama**, dan penamaannya yang membuat perbedaan: jawaban yang tidak
+menyebut asalnya cuma bisa diterima atau diabaikan seluruhnya, sedangkan jawaban
+yang menyebut tahapnya bisa dibantah pada bagian yang salah saja.
+
+**Orchestrator** menerima transkrip beserta konteks ruang, lalu memutuskan rute
+dan menyerahkan pekerjaan ke tahap di bawahnya. Ia sendiri tidak menghasilkan
+perubahan apa pun.
+
+**Penyusun struktur** mengubah ucapan menjadi simpul bertipe dan menempatkannya
+di pohon: menambah, mengubah nama, memindahkan, menghubungkan, memberi status.
+
+**Pemilih alat** menentukan apakah yang diminta lebih tepat berbentuk alat atau
+templat, dan menyusun sub-pohonnya lengkap.
+
+**Perapi judul** memendekkan judul supaya muat satu tarikan napas, batas yang
+ada karena judul harus bisa disebut dalam satu kali ucap.
+
+Keempatnya menghasilkan **satu bentuk rencana yang sama**, apa pun tahap yang
+membuatnya, sehingga panel draf, kursor asisten, dan mekanisme penerapan tidak
+perlu tahu siapa yang mengerjakan apa.
+
+**Menawarkan alat yang tidak diminta.** Pengguna sering tidak menyebut alatnya:
+ia bilang "kita harus putuskan mana yang duluan", bukan "bikin voting". Sistem
+boleh menawarkan, dengan tiga syarat yang membedakan menawarkan dari menyela.
+Keyakinannya diturunkan dan ditandai perlu dilihat, kalimatnya berbeda ("ini
+usulan, bukan keputusan"), dan mengabaikannya cukup dengan mendiamkannya. Satu
+aturan lagi menjaga agar ini tidak berubah jadi gangguan: **sekali ditolak, alat
+itu tidak ditawarkan lagi di sesi yang sama.** Asisten yang bertanya dua kali
+sudah bukan bertanya.
+
+**Skema per alat, bukan satu skema untuk semua.** Tiap alat mendaftarkan skema
+keluarannya sendiri. Skema kecil yang tepat itulah yang membuat constrained
+decoding mendarat pada model 7B; satu skema besar yang memuat semua alat adalah
+skema yang tidak cocok untuk satu pun. Ekstraktor sudah menentukan alat mana yang
+diminta sebelum skema dipilih, jadi jumlah skema tidak pernah jadi beban saat
+berjalan; ia cuma daftar yang tumbuh.
+
+**Aturan jadi lantai, model jadi jangkauan.** Pemeriksaan yang menyangkut
+keselamatan diletakkan di kode, bukan di prompt. Dua alat disebut dalam satu
+kalimat diperiksa **sebelum** model ditanya, karena aturan yang bergantung pada
+model 7B mengingat satu baris prosa bukan aturan. Sebaliknya, bila model menjawab
+"isi biasa" padahal kalimatnya jelas menyebut nama sebuah alat, nama yang menang:
+kata yang ada di kalimat bukan soal penilaian.
+
+**Beberapa orang, beberapa masukan.** Empat orang bicara menghasilkan empat
+transkrip, bukan satu. Menggabungkannya menjadi satu aliran justru membuang
+informasi paling berharga di ruangan: siapa mengusulkan apa. Karena itu tiap
+transkrip membawa identitas pengucapnya sejak dari mikrofon, tiap orang punya
+antrean drafnya sendiri, dan draf orang lain tidak pernah terlihat sebelum
+diterapkan; yang terlihat cuma penanda kehadiran "sedang menyiapkan sesuatu".
+Menentukan giliran bicara **bukan** urusan agen: itu keputusan sosial, dan sistem
+menampilkan keduanya lalu diam.
+
+**Peletakan bukan urusan agen.** Menempatkan simpul baru adalah algoritma, bukan
+penilaian, dan ini ditetapkan sebagai batas rancangan supaya tidak dibangun
+sebagai agen di kemudian hari. Alasannya tiga: tata letak harus deterministik
+agar kanvas tidak melompat di depan orang yang paling terganggu olehnya; ia
+terjadi tiap kali sebuah simpul lahir sehingga dua detik per simpul mustahil; dan
+model yang memutuskan letak akan mulai menaruh makna di koordinat, yang justru
+hilang bagi pengguna tunanetra. Yang **memang** penilaian, dan sudah punya
+namanya sendiri, adalah memilih bentuk visual mana yang cocok dengan isi ruang,
+dan hasilnya diusulkan, bukan diterapkan.
+
+**Pengamat dinamika, opsional dan mati secara bawaan.** Dirancang untuk membaca
+jejak perubahan dan transkrip, mengenali pola kerja tim yang punya nama: dua
+keputusan yang saling bertentangan, satu simpul yang diubah bolak-balik, suara
+yang terbelah rata pada sebuah voting, pertanyaan yang lama tidak terjawab. Lalu
+ia **menawarkan alat** untuk menanganinya, misalnya tabel perbandingan atau
+daftar kriteria keputusan.
+
+Bedanya dengan agen lain: agen lain membaca **isi**, agen ini membaca **orang**.
+Sistem yang memberi tahu satu ruangan bahwa dua orang sedang tidak sepakat
+mengubah apa yang orang berani ucapkan di ruangan itu. Karena itu ia diikat lima
+aturan: mati sampai dinyalakan oleh manusia, berbicara tentang isi dan tidak
+pernah tentang orang, tidak pernah menilai siapa pun, terlihat sedang menyala
+lewat lencana di bilah atas, dan satu tawaran per pola per sesi. Satu pola
+sengaja tidak diberi usulan sama sekali, yaitu "seseorang menyumbang lebih
+sedikit", karena orang bisa diam justru akibat antarmuka yang menghalanginya, dan
+produk ini dibangun untuk orang itu; menyorotnya berarti menyalahkan yang
+dirugikan.
+
+**Kualitas perutean diukur, bukan diyakini.** Ada set uji berisi 22 kasus yang
+dijalankan terhadap kedua penyedia, pencocokan aturan dan model lokal, dan isinya
+sengaja didominasi kalimat rapat biasa yang **tidak** boleh memicu alat. Set uji
+ini menemukan tiga positif palsu pada jalannya yang pertama, semuanya kata pemicu
+yang juga kata sehari-hari, dan dari situ lahir dua aturan yang kini berlaku:
+kata pemicu tidak boleh kata sehari-hari, dan nama alat baru dianggap permintaan
+bila didahului kata permintaan.
 
 ---
 
