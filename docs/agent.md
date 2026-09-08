@@ -117,6 +117,63 @@ Langkah templat mendarat lewat `dispatchBatch`: satu baris, satu kotak centang,
 satu langkah undo. Mencentang separuh papan retro bukan sesuatu yang dimaksud
 siapa pun.
 
+## Set uji
+
+```bash
+npm run eval              # pencocokan aturan
+npm run eval -- --ollama  # model lokal
+```
+
+22 kasus di `core/agent/cases.ts`, dan yang dikumpulkan bukan kasus yang mudah
+lulus melainkan yang mudah salah:
+
+- **Negatif.** Sebagian besar isi rapat itu isi biasa. Perute yang menyambar
+  templat tiap melihat kata "prioritas" lebih buruk daripada yang tidak pernah
+  menyambar sama sekali, karena dia menyela.
+- **Ambigu.** Dua templat dalam satu kalimat wajib jadi pertanyaan.
+- **Kalimat tunjuk.** "Yang ini pindahkan ke sini" — begitu orang benar-benar
+  bicara, dan itu isi biasa, bukan permintaan alat.
+
+Set uji ini langsung membayar dirinya sendiri: tiga positif palsu ketahuan pada
+jalannya yang pertama, dan tidak satu pun akan ketahuan dengan mencoba-coba.
+Kata "suara" memicu voting pada "suara mahasiswa di survei kemarin cukup jelas";
+"prioritas" memicu matriks pada "prioritas kita semester ini adalah
+aksesibilitas"; dan "retro" memicu papan retro pada kalimat yang cuma
+menyebutnya sebagai peristiwa kemarin.
+
+Perbaikannya dua, dan keduanya jadi aturan:
+
+1. **Kata pemicu tidak boleh kata sehari-hari.** "suara" dan "prioritas"
+   dicabut sebagai pemicu tunggal.
+2. **Nama saja itu sebutan; nama sesudah kata permintaan itu permintaan.**
+   "Catat bahwa retro kemarin sudah kita bahas" menyebut retro dan tidak minta
+   apa-apa.
+
+### Angka terakhir
+
+| | aturan | Ollama qwen2.5:7b |
+| - | ------ | ----------------- |
+| alat disebut langsung | 6/6 | 4/6 |
+| alat diusulkan | 3/3 | 0/3 |
+| ambigu | 2/2 | 2/2 |
+| isi biasa | 11/11 | 11/11 |
+| **total** | **22/22** | **17/22** |
+
+Angka ini sengaja ditulis apa adanya. Model lokal **sempurna pada negatif** —
+tidak pernah menyela ketika tidak diminta — dan **lemah pada positif**: dia
+kurang berani, terutama pada permintaan yang tersirat. Untuk sebuah kanvas
+bersama, arah salahnya yang benar; kalau harus memilih satu arah gagal, diam
+lebih baik daripada menyela.
+
+Dua pelajaran jadi kode, bukan prompt:
+
+- **Rem itu kode.** Dua nama dalam satu kalimat diperiksa **sebelum** model
+  ditanya. Aturan keselamatan yang bergantung pada model 7B mengingat satu baris
+  prosa bukan aturan keselamatan. Skornya naik dari 0/2 ke 2/2.
+- **Aturan jadi lantai, model jadi jangkauan.** Kalau model menjawab "susun"
+  padahal kalimatnya jelas menyebut nama templat, nama yang menang. Kata yang
+  ada di kalimat bukan soal penilaian.
+
 ## Menggantinya dengan model sungguhan
 
 Ganti badan `plan()` dengan constrained decoding berskema JSON terhadap skema

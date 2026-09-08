@@ -21,6 +21,7 @@
 import { expandTemplate, templateSize } from '../templates/expand'
 import { templateById, TEMPLATES } from '../templates/registry'
 import { buildContext, renderContext } from './context'
+import { namedIn, plan } from './orchestrator'
 import type { Plan, PlanStep } from './types'
 import type { PlanInput } from './provider'
 
@@ -102,6 +103,37 @@ function stepFrom(answer: ModelAnswer, input: PlanInput): PlanStep | null {
 }
 
 export async function planWithOllama(input: PlanInput): Promise<Plan> {
+  /*
+    The brake is code, not prompt.
+
+    Rule: two templates named in one sentence must produce a question
+    (section 8, D46). The eval showed the model ignoring that instruction, and
+    that is the correct thing to learn from it -- a safety rule that depends on
+    a 7B model remembering a line of prose is not a safety rule. So the check
+    runs before the model is asked at all, and the model never gets the chance
+    to choose for somebody.
+  */
+  const named = namedIn(input.transcript)
+  if (named.length > 1) {
+    const choices = named
+      .map((id) => templateById(id))
+      .filter((spec): spec is NonNullable<typeof spec> => Boolean(spec))
+      .map((spec) => ({
+        id: spec.id,
+        label: spec.label,
+        commands: expandTemplate(spec.build(), input.focusId),
+      }))
+    return {
+      intent: 'ambigu',
+      reason: 'Dua alat disebut dalam satu kalimat, jadi ini tidak ditebak.',
+      steps: [],
+      question: {
+        question: `Yang mana dulu: ${choices.map((c) => c.label).join(' atau ')}?`,
+        choices,
+      },
+    }
+  }
+
   const context = buildContext(input.doc, input.tree, input.focusId)
   const body = {
     model: MODEL,
@@ -159,9 +191,25 @@ export async function planWithOllama(input: PlanInput): Promise<Plan> {
     }
   }
 
-  // 'susun' and anything the model got wrong both land here, and the caller
-  // hands the sentence to the structure stage. Refusing to answer is a valid
-  // answer; inventing one on a shared canvas is not (section 8).
+  /*
+    The model said no tool. Before believing it, check whether the sentence
+    actually named one: the eval showed qwen answering "susun" to sentences
+    with a template's name in them, and a keyword that is present is not a
+    judgement call. Rules provide the floor, the model provides the reach.
+  */
+  if (named.length === 1) {
+    const fromRules = plan(input)
+    if (fromRules.steps.length > 0) {
+      return {
+        ...fromRules,
+        reason: `${fromRules.reason} (Model menjawab "${answer.rute}"; namanya tetap disebut, jadi aturan yang dipakai.)`,
+      }
+    }
+  }
+
+  // 'susun' and anything else lands here, and the caller hands the sentence to
+  // the structure stage. Refusing to answer is a valid answer; inventing one on
+  // a shared canvas is not (section 8).
   return {
     intent: answer.rute === 'tak-dikenali' ? 'tak-dikenali' : 'susun',
     reason: answer.alasan || 'Tidak ada templat yang diminta.',

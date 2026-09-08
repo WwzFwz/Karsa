@@ -25,15 +25,35 @@ import type { NodeId } from '../model/types'
 import type { PlanInput, ProviderId } from './provider'
 import type { Plan, PlanStep } from './types'
 
-/** Words that name a template outright. */
+/**
+ * Words that name a template.
+ *
+ * Bare "suara" used to be here and had to go: "suara mahasiswa di survei
+ * kemarin cukup jelas" is a sentence about students, not a request for a
+ * ballot. A trigger word that is also an ordinary word will fire on ordinary
+ * speech, and a router that interrupts a meeting is worse than one that stays
+ * quiet. The eval set caught it; nobody would have caught it by trying things.
+ */
 const NAMED: Record<string, string[]> = {
-  voting: ['voting', 'vote', 'pemungutan suara', 'suara'],
+  voting: ['voting', 'vote', 'pemungutan suara', 'ambil suara'],
   retro: ['retro', 'retrospektif', 'mulai hentikan lanjutkan'],
   matriks: ['matriks', 'kuadran', 'dampak usaha', 'impact effort'],
   sprint: ['rencana sprint', 'sprint planning', 'perencanaan sprint'],
   lima_kenapa: ['lima kenapa', '5 kenapa', 'five whys', 'akar masalah'],
   parkir: ['tempat parkir', 'parking lot', 'parkir dulu'],
 }
+
+/**
+ * A name alone is a mention; a name after a request is a request.
+ *
+ * "Catat bahwa retro kemarin sudah kita bahas" names retro and asks for
+ * nothing. Requiring one of these words *before* the name is the cheapest
+ * distinction that holds, and it matches how people actually ask for things.
+ */
+const ASKS = [
+  'bikin', 'buat', 'buka', 'pakai', 'gunakan', 'siapkan', 'tolong',
+  'mulai', 'pasang', 'coba', 'kasih', 'tambahkan alat', 'jalankan',
+]
 
 /**
  * Sentences that ask for a tool without naming one. Kept small and honest: a
@@ -46,8 +66,11 @@ const IMPLIED: { templateId: string; phrases: string[]; because: string }[] = [
     because: 'kalimatnya meminta keputusan bersama',
   },
   {
+    // "prioritas" alone was here and fired on "prioritas kita semester ini
+    // adalah aksesibilitas", which is a statement, not a request to sort
+    // anything. What a matrix is actually for is the comparison.
     templateId: 'matriks',
-    phrases: ['prioritas', 'mana yang penting', 'dampaknya besar', 'usaha kecil'],
+    phrases: ['mana yang penting', 'dampaknya besar', 'usaha kecil', 'urutkan prioritas', 'dampak dan usaha'],
     because: 'kalimatnya membandingkan dampak dan usaha',
   },
   {
@@ -61,6 +84,22 @@ const IMPLIED: { templateId: string; phrases: string[]; because: string }[] = [
     because: 'kalimatnya mengevaluasi cara kerja',
   },
 ]
+
+/** Which templates a sentence names, in the order they appear. */
+export function namedIn(transcript: string): string[] {
+  const text = normalise(transcript)
+  return Object.entries(NAMED)
+    .map(([id, words]) => {
+      const at = words
+        .map((word) => text.indexOf(normalise(word)))
+        .filter((index) => index >= 0)
+        .sort((a, b) => a - b)[0]
+      return at === undefined ? null : ([id, at] as const)
+    })
+    .filter((hit): hit is readonly [string, number] => hit !== null)
+    .sort((a, b) => a[1] - b[1])
+    .map(([id]) => id)
+}
 
 function normalise(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -106,22 +145,21 @@ export function plan(input: PlanInput): Plan {
   const parentId = input.focusId
 
   // 1. Named outright.
-  const named = Object.entries(NAMED).filter(([, words]) =>
-    words.some((word) => text.includes(normalise(word))),
-  )
+  const named = Object.entries(NAMED)
+    .map(([id, words]) => {
+      const at = words
+        .map((word) => text.indexOf(normalise(word)))
+        .filter((index) => index >= 0)
+        .sort((a, b) => a - b)[0]
+      return at === undefined ? null : ([id, at] as const)
+    })
+    .filter((hit): hit is readonly [string, number] => hit !== null)
 
-  if (named.length === 1) {
-    const step = stepFor(named[0][0], parentId, 0.94)
-    if (step) {
-      return {
-        intent: 'alat-diminta',
-        reason: `Kamu menyebut ${step.source?.label} langsung, jadi tidak ada yang perlu ditebak.`,
-        steps: [step],
-      }
-    }
-  }
-
-  // Two names in one sentence is exactly the case that must not be guessed.
+  /*
+    Two names in one sentence is ambiguity whatever the verbs are, so this is
+    checked before the request-word rule. Asking is the safe failure here;
+    choosing for somebody is not (section 8).
+  */
   if (named.length > 1) {
     return {
       intent: 'ambigu',
@@ -138,6 +176,23 @@ export function plan(input: PlanInput): Plan {
         }),
       },
     }
+  }
+
+  if (named.length === 1) {
+    const [id, at] = named[0]
+    const asked = ASKS.some((word) => {
+      const index = text.indexOf(normalise(word))
+      return index >= 0 && index < at
+    })
+    const step = asked ? stepFor(id, parentId, 0.94) : null
+    if (step) {
+      return {
+        intent: 'alat-diminta',
+        reason: `Kamu menyebut ${step.source?.label} langsung, jadi tidak ada yang perlu ditebak.`,
+        steps: [step],
+      }
+    }
+    // Named without asking: a mention. Falls through to the structure stage.
   }
 
   // 2. Implied by the shape of the sentence. Lower confidence on purpose.
