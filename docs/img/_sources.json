@@ -1,0 +1,26 @@
+[
+  {
+    "name": "01-lapisan",
+    "code": "flowchart TB\n  subgraph masukan[\"Masukan\"]\n    kb[\"Papan ketik\"]\n    ms[\"Tetikus / sentuh\"]\n    sr[\"Suara\"]\n  end\n\n  subgraph agen[\"Lapisan agen — mengusulkan, tidak memutuskan\"]\n    orc[\"Orchestrator\"]\n    ext[\"Penyusun struktur\"]\n    tol[\"Pemilih alat\"]\n  end\n\n  gate[\"GERBANG MANUSIA<br/>terapkan / batalkan\"]\n\n  subgraph inti[\"Inti — satu-satunya yang boleh mengubah data\"]\n    cmd[\"Command\"]\n    val[\"Validator aturan 1–9\"]\n    doc[\"Dokumen\"]\n    evt[\"Log peristiwa<br/>tambah-saja\"]\n  end\n\n  subgraph tampilan[\"Tiga tampilan setara\"]\n    direction TB\n    kan[\"Kanvas\"]\n    out[\"Outline ARIA\"]\n    aud[\"Telusur audio\"]\n  end\n\n  kb --> cmd\n  ms --> cmd\n  sr --> orc\n  orc --> ext\n  orc --> tol\n  ext --> gate\n  tol --> gate\n  gate --> cmd\n  cmd --> val --> doc --> evt\n  doc --> kan\n  doc --> out\n  doc --> aud"
+  },
+  {
+    "name": "02-satu-pintu",
+    "code": "flowchart LR\n  ui[\"Antarmuka apa pun\"] --> c[\"Command\"]\n  c --> v{\"Validator\"}\n  v -->|melanggar| x[\"Ditolak<br/>+ kalimat + bunyi\"]\n  v -->|sah| d[\"Dokumen berubah\"]\n  d --> e[\"DocEvent<br/>actorId, inputPath\"]\n  e --> n[\"narrate()<br/>satu kalimat\"]\n  e --> s[\"Earcon\"]\n  e --> r[\"Ringkasan kontribusi\"]\n  e --> t[\"Mode telaah\"]"
+  },
+  {
+    "name": "03-model",
+    "code": "classDiagram\n  class RoomDoc {\n    room\n    nodes\n    relations\n    comments\n    events\n    actors\n  }\n  class Node {\n    id\n    parentId : LWW\n    order : indeks pecahan\n    kind\n    title\n    note\n    state\n    tool\n    createdBy, updatedBy\n    inputPath\n  }\n  class Relation {\n    fromId\n    toId\n    kind\n  }\n  class DocEvent {\n    seq\n    actorId\n    inputPath\n    type\n    payload\n    origin\n  }\n  RoomDoc *-- Node\n  RoomDoc *-- Relation\n  RoomDoc *-- DocEvent\n  Node --> Node : parentId\n  Relation --> Node : fromId / toId"
+  },
+  {
+    "name": "04-bentuk",
+    "code": "flowchart TB\n  m[\"Satu model\"] --> s1[\"Peta gagasan\"]\n  m --> s2[\"Hierarki\"]\n  m --> s3[\"Diagram alur\"]\n  m --> s4[\"Garis waktu\"]\n  m --> s5[\"Bagan kolom\"]\n  n[\"Satu simpul + anaknya\"] --> t1[\"Voting<br/>daftar + hitungan\"]\n  n --> t2[\"Retro<br/>tiga kolom\"]\n  n --> t3[\"Matriks<br/>kisi 2×2\"]"
+  },
+  {
+    "name": "05-suara",
+    "code": "sequenceDiagram\n  participant P as Orang\n  participant M as Mikrofon (sakelar)\n  participant A as ASR lokal\n  participant O as Orchestrator\n  participant K as Kursor agen\n  participant C as Command\n\n  P->>M: ketuk untuk mengunci, atau tahan\n  M->>A: audio, hanya selama sakelar aktif\n  A-->>P: transkrip mengalir\n  A->>O: transkrip + actorId\n  O->>O: konteks = outline + fokus + skema alat\n  O-->>P: rencana + alasan + tahap mana\n  K-->>P: berdiri di tempat perubahan akan mendarat\n  P->>K: \"terapkan\" (suara) atau Ctrl+Enter\n  K->>C: satu per satu, tiap langkah punya kalimat"
+  },
+  {
+    "name": "06-penyebaran",
+    "code": "flowchart TB\n  subgraph klien[\"Klien\"]\n    app[\"React + TypeScript\"]\n    idb[\"IndexedDB<br/>salinan lokal\"]\n    ol[\"Ollama di perangkat\"]\n  end\n\n  subgraph server[\"Satu kontainer\"]\n    hp[\"Hocuspocus<br/>sinkronisasi Yjs\"]\n    rs[\"Room service<br/>ruang + token, tanpa akun\"]\n    pg[(\"PostgreSQL<br/>snapshot + metadata\")]\n  end\n\n  app <-->|\"perubahan dokumen<br/>+ penanda kehadiran\"| hp\n  app --> rs\n  app <--> idb\n  app <--> ol\n  hp --> pg\n  rs --> pg"
+  }
+]

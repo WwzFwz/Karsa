@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Render diagram arsitektur</title>
+<!--
+  Merender blok Mermaid di docs/architecture.md jadi PNG.
+
+  Dibuka lewat server dev (`npm run dev`, lalu /docs/img/render.html tidak
+  jalan karena docs/ di luar root vite) -- jadi dibuka lewat file:// atau
+  disalin sementara ke public/. Sumber diagramnya satu: _sources.json, yang
+  diambil dari architecture.md. Tidak ada diagram yang diketik dua kali.
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 0; padding: 20px; background: #fff; }
+  .stage { padding: 24px; background: #ffffff; display: inline-block; }
+  h2 { font-size: 13px; color: #555; margin: 18px 0 6px; }
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script>
+  window.RENDERED = {}
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    themeVariables: {
+      background: '#ffffff',
+      primaryColor: '#eef2ff',
+      primaryBorderColor: '#2f6feb',
+      primaryTextColor: '#111827',
+      lineColor: '#94a3b8',
+      fontFamily: 'system-ui, -apple-system, Segoe UI, sans-serif',
+      fontSize: '14px',
+    },
+    // Natural size, not squeezed to the container: these are exported, and an
+    // export that fits a 300px box is a picture nobody can read in a report.
+    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
+    sequence: { useMaxWidth: false },
+    class: { useMaxWidth: false },
+  })
+
+  async function go() {
+    const sources = await fetch('./_sources.json').then((r) => r.json())
+    const out = document.getElementById('out')
+    for (const item of sources) {
+      const h = document.createElement('h2')
+      h.textContent = item.name
+      out.append(h)
+      const box = document.createElement('div')
+      box.className = 'stage'
+      box.id = 'box-' + item.name
+      out.append(box)
+      const { svg } = await mermaid.render('m-' + item.name.replace(/[^a-z0-9]/gi, ''), item.code)
+      box.innerHTML = svg
+      window.RENDERED[item.name] = true
+    }
+    window.ALL_DONE = true
+  }
+  go()
+</script>
+</body>
+</html>

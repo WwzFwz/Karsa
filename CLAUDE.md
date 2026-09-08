@@ -307,6 +307,9 @@ riasan:
   jendela mengambang, dan cara menambah alat baru.
 - `docs/agent.md` - orchestrator: tiga jalur perutean, tahap-tahap yang diberi
   nama, set uji, dan cara menukar pencocok kata kunci dengan model sungguhan.
+- `docs/architecture.md` - bentuk sistem: lapisan, satu pintu menuju data, model
+  data, jalur suara, penyimpanan, struktur folder, dan daftar yang belum
+  dibangun. Diagramnya juga tersedia sebagai PNG di `docs/img/`.
 - `docs/agent-design.md` - rancangan multi-agent yang belum dibangun: jalur suara
   sampai keputusan, banyak orang dengan masukan berbeda, kenapa peletakan bukan
   agen, dan pengamat dinamika yang mati secara bawaan.
