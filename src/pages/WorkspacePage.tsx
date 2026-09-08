@@ -25,6 +25,7 @@ import { useRoom } from '../app/RoomContext'
 import { useDialogs } from '../app/DialogContext'
 import { SHAPE_LABEL } from '../ui/labels'
 import { Icon, type IconName } from '../ui/icons'
+import { useWaiting } from '../features/rooms/WaitingRoom'
 
 type ViewId = 'canvas' | 'outline'
 type InspectorId = 'jejak' | 'perintah' | 'peserta' | 'komentar'
@@ -87,8 +88,9 @@ export function WorkspacePage() {
 
   const pendingOps = draft.status === 'ready' ? draft.operations.filter((o) => o.accepted).length : 0
   const openComments = Object.values(doc.comments).filter((c) => !c.resolvedAt).length
+  const waiting = useWaiting(doc.room.id).length
   const badgeFor = (id: InspectorId) =>
-    id === 'perintah' ? pendingOps : id === 'komentar' ? openComments : 0
+    id === 'perintah' ? pendingOps : id === 'komentar' ? openComments : id === 'peserta' ? waiting : 0
 
   return (
     <div className={`workspace ${panelHidden ? 'is-solo' : ''}`}>

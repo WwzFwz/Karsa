@@ -240,6 +240,66 @@ export function buildSeedDoc(now = Date.now()): RoomDoc {
   }
 }
 
+/**
+ * A room that was made a minute ago, not the demo one.
+ *
+ * It carries exactly one node -- a root named after the room -- because a canvas
+ * with nothing on it has nothing to focus, nothing to read out, and nothing to
+ * hang the first spoken sentence on. One root is the smallest honest starting
+ * point, and it is a real event in the log so the room's history begins where
+ * the room did.
+ */
+export function buildEmptyDoc(id: string, title: string, now = Date.now()): RoomDoc {
+  const root: Node = {
+    id: 'n_akar',
+    parentId: null,
+    order: 'a',
+    kind: 'root',
+    title,
+    createdBy: SELF_ID,
+    createdAt: now,
+    updatedBy: SELF_ID,
+    updatedAt: now,
+    inputPath: 'keyboard',
+  }
+  return {
+    room: { id, title, shape: 'mindmap', createdAt: now },
+    nodes: { [root.id]: root },
+    relations: {},
+    comments: {},
+    events: [
+      {
+        id: 'e_root',
+        seq: 1,
+        type: 'createNode',
+        at: now,
+        actorId: SELF_ID,
+        inputPath: 'keyboard',
+        origin: 'user',
+        payload: { nodeId: root.id, title },
+      },
+    ],
+    actors: { [SELF_ID]: ACTORS[SELF_ID] },
+  }
+}
+
+/** A new room has one person in it, and it is you. */
+export function buildSoloParticipants(selfName: string, now = Date.now()): Participant[] {
+  return [
+    {
+      actorId: SELF_ID,
+      displayName: selfName,
+      hue: ACTORS[SELF_ID].hue,
+      talking: false,
+      focusNodeId: 'n_akar',
+      pointingNodeId: null,
+      mode: 'meeting',
+      online: true,
+      lastSeen: now,
+    },
+  ]
+}
+
 export function buildSeedParticipants(selfName: string, now = Date.now()): Participant[] {
   return [
     {

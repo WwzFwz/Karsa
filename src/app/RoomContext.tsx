@@ -31,7 +31,15 @@ import type { Point } from '../core/shape/layout'
 import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/project'
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
 import { MemoryDocStore } from '../store/MemoryDocStore'
-import { buildSeedDoc, buildSeedParticipants, SELF_ID } from '../store/seed/room'
+import { useParams } from 'react-router-dom'
+import {
+  buildEmptyDoc,
+  buildSeedDoc,
+  buildSeedParticipants,
+  buildSoloParticipants,
+  SELF_ID,
+} from '../store/seed/room'
+import { findRoom } from '../features/rooms/rooms'
 import { buildDraft, CONFIRM_UTTERANCE, emptyDraft, UTTERANCES } from '../features/voice/mockPipeline'
 import type { Draft, DraftOperation } from '../features/voice/types'
 
@@ -130,13 +138,30 @@ const EMPTY_OVERRIDES: Readonly<Record<string, Point>> = Object.freeze({})
 
 const RoomContext = createContext<RoomApi | null>(null)
 
+/** The one room that carries the demo content. Everything else starts empty. */
+const DEMO_ROOM = 'KUR-482'
+
 export function RoomProvider({ selfName, children }: { selfName: string; children: ReactNode }) {
   const announcer = useAnnouncer()
+  const { roomId } = useParams()
 
-  const store = useMemo(
-    () => new MemoryDocStore(buildSeedDoc(), SELF_ID, buildSeedParticipants(selfName)),
-    [selfName],
-  )
+  /*
+    A room you just made must not open somebody else's meeting. Only the demo
+    code carries the seeded twenty nodes; any other room starts with its own
+    name on a single root and nobody in it but you.
+  */
+  const store = useMemo(() => {
+    const id = roomId ?? DEMO_ROOM
+    if (id === DEMO_ROOM) {
+      return new MemoryDocStore(buildSeedDoc(), SELF_ID, buildSeedParticipants(selfName))
+    }
+    const summary = findRoom(id)
+    return new MemoryDocStore(
+      buildEmptyDoc(id, summary?.title ?? 'Ruang tanpa nama'),
+      SELF_ID,
+      buildSoloParticipants(selfName),
+    )
+  }, [selfName, roomId])
 
   const doc = useSyncExternalStore(store.subscribeDoc, store.getDoc, store.getDoc)
   const presence = useSyncExternalStore(store.subscribePresence, store.getPresence, store.getPresence)

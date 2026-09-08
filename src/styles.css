@@ -2539,3 +2539,100 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 }
 /* So the dragged card does not shield whatever is beneath it from the hit test. */
 .node.is-dragging { pointer-events: none; }
+
+/* Adding people to a new room: one row to type in, chips for what was added. */
+.guest-row { display: flex; gap: 8px; align-items: center; }
+.guest-row .text-input { flex: 1 1 auto; min-width: 0; }
+.guest-row .btn { flex: none; }
+
+.guest-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px 4px 5px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.guest-remove {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.guest-remove:hover { background: var(--danger-soft); color: var(--danger); }
+
+/* Adding people to a new room: one row to type in, chips for what was added. */
+.guest-row { display: flex; gap: 8px; align-items: center; }
+.guest-row .text-input { flex: 1 1 auto; min-width: 0; }
+.guest-row .btn { flex: none; }
+
+.guest-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px 4px 5px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.guest-remove {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.guest-remove:hover { background: var(--danger-soft); color: var(--danger); }
+.guest-send { margin-top: 10px; }
+
+/* ---- the waiting room ---- */
+
+.waiting {
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.waiting .panel-head { margin: 0 0 6px; }
+.waiting .panel-sub { margin: 0; }
+.waiting .people { margin: 0; }
+.waiting .panel-note { margin: 6px 0 0; }
+.waiting .panel-actions { margin-top: 8px; }
+
+/* The buttons sit on the row itself: deciding about a person should not mean
+   selecting them first and then finding a control somewhere else. */
+.person-actions { display: flex; gap: 6px; flex: none; align-items: center; }
+
+.pill-lock { color: var(--ink-2); }
+.tag-off { opacity: 0.72; }

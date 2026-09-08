@@ -13,6 +13,7 @@ import { NODE_KINDS, TITLE_MAX } from '../core/rules/invariants'
 import { descendantsOf } from '../core/tree/project'
 import type { NodeId, NodeKind, NodeState, RelationKind, RoomShape } from '../core/model/types'
 import { useRoom } from './RoomContext'
+import { findRoom } from '../features/rooms/rooms'
 import { SCOPE_LABEL, SHORTCUTS_BY_SCOPE, type ShortcutScope } from '../a11y/keys'
 
 export type DialogRequest =
@@ -505,6 +506,7 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
   const { doc } = useRoom()
   const [copied, setCopied] = useState<'kode' | 'tautan' | null>(null)
   const link = `${window.location.origin}/ruang/${doc.room.id}`
+  const locked = (findRoom(doc.room.id)?.access ?? 'terkunci') === 'terkunci'
 
   const copy = async (what: 'kode' | 'tautan') => {
     const text = what === 'kode' ? doc.room.id : link
@@ -520,7 +522,11 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog
       title="Bagikan ruang"
-      description="Siapa pun yang punya kodenya bisa bergabung. Tanpa akun, tanpa undangan."
+      description={
+        locked
+          ? 'Kode ini membawa orang ke depan pintu. Permintaan masuknya muncul di panel Peserta, dan kamu yang menerima.'
+          : 'Siapa pun yang punya kodenya langsung bergabung. Tanpa akun, tanpa undangan.'
+      }
       onClose={onClose}
       footer={
         <button type="button" className="btn btn-primary" onClick={onClose}>
@@ -549,7 +555,10 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
       </div>
 
       <p className="panel-note" style={{ marginTop: 16, marginBottom: 0 }}>
-        Kode lebih berguna daripada tautan saat rapat sedang berjalan: ia bisa diucapkan.
+        <Icon name={locked ? 'lock' : 'link'} size={14} />
+        {locked
+          ? 'Ruang terkunci. Kode lebih berguna daripada tautan saat rapat berjalan: ia bisa diucapkan, dan yang menunggu tetap kelihatan di panel Peserta.'
+          : 'Ruang terbuka. Kode lebih berguna daripada tautan saat rapat sedang berjalan: ia bisa diucapkan.'}
       </p>
     </Dialog>
   )

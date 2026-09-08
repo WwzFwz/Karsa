@@ -31,7 +31,17 @@ export interface EarconSpec {
 
 const BASE_HZ = 880
 
-export const EARCONS: Record<EventType | 'focus' | 'traverse' | 'draftReady' | 'blocked', EarconSpec> = {
+export const EARCONS: Record<
+  | EventType
+  | 'focus'
+  | 'traverse'
+  | 'draftReady'
+  | 'blocked'
+  | 'joinRequest'
+  | 'joinAccepted'
+  | 'joinDeclined',
+  EarconSpec
+> = {
   createNode: { steps: [0, 4], step: 55, gain: 0.16, important: true },
   deleteNode: { steps: [4, -3], step: 60, gain: 0.16, important: true },
   renameNode: { steps: [2, 2], step: 40, gain: 0.1, important: false },
@@ -56,6 +66,12 @@ export const EARCONS: Record<EventType | 'focus' | 'traverse' | 'draftReady' | '
   traverse: { steps: [0], step: 32, gain: 0.09, important: true },
   draftReady: { steps: [0, 12], step: 60, gain: 0.14, important: true },
   blocked: { steps: [0, -1], step: 90, gain: 0.16, chord: true, important: true },
+  // Someone at the door. A repeated note, because that is what knocking is.
+  joinRequest: { steps: [7, 7], step: 80, gain: 0.14, important: true },
+  // Opening: a plain major triad going up, the most arrival-shaped thing there is.
+  joinAccepted: { steps: [0, 4, 7], step: 45, gain: 0.14, important: true },
+  // Turning away: down, and it does not settle on the note it started from.
+  joinDeclined: { steps: [2, -5], step: 62, gain: 0.12, important: false },
 }
 
 export type EarconName = keyof typeof EARCONS

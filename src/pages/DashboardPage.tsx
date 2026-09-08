@@ -16,8 +16,10 @@ import { useNavigate } from 'react-router-dom'
 import { Icon, type IconName } from '../ui/icons'
 import { SHAPE_LABEL } from '../ui/labels'
 import { ThemeSwitch } from '../ui/ThemeSwitch'
-import { agoLabel, createRoom, lastRoom, listRooms, type RoomSummary } from '../features/rooms/rooms'
+import { agoLabel, lastRoom, listRooms, type RoomSummary } from '../features/rooms/rooms'
 import { RoomThumbnail } from '../features/rooms/RoomThumbnail'
+import { NewRoomDialog } from '../features/rooms/NewRoomDialog'
+import { useAnnouncer } from '../a11y/Announcer'
 
 type Scope = 'semua' | 'milik' | 'dibagikan'
 
@@ -33,6 +35,8 @@ export function DashboardPage({ name }: { name: string }) {
   const [query, setQuery] = useState('')
   const [rooms, setRooms] = useState<RoomSummary[]>(() => listRooms())
   const [copied, setCopied] = useState<string | null>(null)
+  const [making, setMaking] = useState(false)
+  const { announce } = useAnnouncer()
   const back = useMemo(() => {
     const id = lastRoom()
     return id ? rooms.find((room) => room.id === id) ?? null : null
@@ -139,15 +143,7 @@ export function DashboardPage({ name }: { name: string }) {
                 aria-label="Cari ruang"
               />
             </label>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                const room = createRoom('Ruang baru')
-                setRooms(listRooms())
-                openRoom(room.id)
-              }}
-            >
+            <button type="button" className="btn btn-primary" onClick={() => setMaking(true)}>
               <Icon name="plus" size={17} />
               Ruang baru
             </button>
@@ -167,15 +163,7 @@ export function DashboardPage({ name }: { name: string }) {
         ) : (
           <ul className="dash-grid">
             <li>
-              <button
-                type="button"
-                className="room-new"
-                onClick={() => {
-                  const room = createRoom('Ruang baru')
-                  setRooms(listRooms())
-                  openRoom(room.id)
-                }}
-              >
+              <button type="button" className="room-new" onClick={() => setMaking(true)}>
                 <span className="room-new-icon" aria-hidden="true">
                   <Icon name="plus" size={20} />
                 </span>
@@ -189,7 +177,9 @@ export function DashboardPage({ name }: { name: string }) {
                   type="button"
                   className="room-open"
                   onClick={() => openRoom(room.id)}
-                  aria-label={`Buka ruang ${room.title}, kode ${room.id}, ${room.nodeCount} simpul`}
+                  aria-label={`Buka ruang ${room.title}, kode ${room.id}, ${
+                    room.access === 'terkunci' ? 'terkunci' : 'terbuka'
+                  }, ${room.nodeCount} simpul`}
                 >
                   <span className="room-thumb">
                     <RoomThumbnail id={room.id} shape={room.shape} nodeCount={room.nodeCount} />
@@ -198,6 +188,13 @@ export function DashboardPage({ name }: { name: string }) {
                     <span className="room-title">{room.title}</span>
                     <span className="room-meta">
                       <span className="pill">{room.id}</span>
+                      {/* Which door this room has. A locked room behaves
+                          differently for the person you send the code to, so it
+                          belongs on the card and not only in a settings page. */}
+                      <span className={`pill ${room.access === 'terkunci' ? 'pill-lock' : ''}`}>
+                        <Icon name={room.access === 'terkunci' ? 'lock' : 'link'} size={11} />
+                        {room.access === 'terkunci' ? 'terkunci' : 'terbuka'}
+                      </span>
                       <span>{room.nodeCount} simpul</span>
                       <span aria-hidden="true">·</span>
                       <span>{SHAPE_LABEL[room.shape]}</span>
@@ -245,6 +242,18 @@ export function DashboardPage({ name }: { name: string }) {
           </ul>
         )}
       </main>
+
+      {making && (
+        <NewRoomDialog
+          onClose={() => setMaking(false)}
+          onCreated={(room) => {
+            setMaking(false)
+            setRooms(listRooms())
+            announce(`Ruang ${room.title} dibuat, kode ${room.id}.`)
+            openRoom(room.id)
+          }}
+        />
+      )}
     </div>
   )
 }

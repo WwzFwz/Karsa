@@ -10,11 +10,16 @@
 import { useRoom } from '../../app/RoomContext'
 import { MODE_LABEL } from '../../ui/labels'
 import { Icon } from '../../ui/icons'
+import { WaitingRoom } from '../rooms/WaitingRoom'
+import { findRoom } from '../rooms/rooms'
 
 export function PresencePanel() {
   const { participants, selfId, doc, setFocus, pointAt, focusId, simulateConflict } = useRoom()
   const online = participants.filter((p) => p.online)
   const offline = participants.filter((p) => !p.online)
+  // People at the door come before people in the room: they are the only ones
+  // here who are waiting on a decision.
+  const access = findRoom(doc.room.id)?.access ?? 'terkunci'
 
   return (
     <section className="panel" aria-labelledby="presence-heading">
@@ -26,6 +31,9 @@ export function PresencePanel() {
         <span className="pill pill-ok">{online.length} hadir</span>
       </header>
 
+      <WaitingRoom roomId={doc.room.id} access={access} />
+
+      <h3 className="panel-sub">Di dalam ruang</h3>
       <ul className="people">
         {online.map((p) => {
           const pointed = p.pointingNodeId ? doc.nodes[p.pointingNodeId] : null

@@ -9,6 +9,17 @@
 
 import type { RoomShape } from '../../core/model/types'
 
+/**
+ * Who gets in.
+ *
+ * The two states Drive and Zoom both landed on, named for what they do rather
+ * than for a permission model this product does not have. "terbuka" is Zoom
+ * with the waiting room off; "terkunci" is Drive's Restricted and Zoom's
+ * waiting room at once -- the code still gets you to the door, but somebody
+ * inside has to open it.
+ */
+export type RoomAccess = 'terkunci' | 'terbuka'
+
 export interface RoomSummary {
   id: string
   title: string
@@ -16,6 +27,7 @@ export interface RoomSummary {
   nodeCount: number
   /** Milliseconds since epoch. */
   updatedAt: number
+  access: RoomAccess
   people: { name: string; hue: number }[]
   /** Someone else opened this room and shared the code. */
   shared?: boolean
@@ -33,6 +45,7 @@ function seeded(now: number): RoomSummary[] {
       id: 'KUR-482',
       title: 'Rapat Kurikulum Semester Genap',
       shape: 'mindmap',
+      access: 'terkunci',
       nodeCount: 20,
       updatedAt: now - 12 * MINUTE,
       people: [
@@ -46,6 +59,7 @@ function seeded(now: number): RoomSummary[] {
       id: 'AKR-119',
       title: 'Akreditasi: bukti dan penanggung jawab',
       shape: 'columns',
+      access: 'terkunci',
       nodeCount: 34,
       updatedAt: now - 5 * HOUR,
       people: [
@@ -57,6 +71,7 @@ function seeded(now: number): RoomSummary[] {
       id: 'ONB-207',
       title: 'Alur pendaftaran mahasiswa baru',
       shape: 'flow',
+      access: 'terbuka',
       nodeCount: 27,
       updatedAt: now - 2 * DAY,
       people: [{ name: 'Sari Wulandari', hue: 152 }],
@@ -66,6 +81,7 @@ function seeded(now: number): RoomSummary[] {
       id: 'RIS-058',
       title: 'Riset kebutuhan aksesibilitas kelas',
       shape: 'hierarchy',
+      access: 'terbuka',
       nodeCount: 16,
       updatedAt: now - 6 * DAY,
       people: [
@@ -82,7 +98,10 @@ function read(): RoomSummary[] {
     const raw = localStorage.getItem(STORE_KEY)
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? (parsed as RoomSummary[]) : []
+    if (!Array.isArray(parsed)) return []
+    // Rooms stored before access existed read as locked, never as open. A
+    // missing field must not quietly widen who can get in.
+    return (parsed as RoomSummary[]).map((room) => ({ ...room, access: room.access ?? 'terkunci' }))
   } catch {
     // Blocked storage or a stale shape. An empty extra list is harmless.
     return []
@@ -101,18 +120,55 @@ export function listRooms(now = Date.now()): RoomSummary[] {
   return [...read(), ...seeded(now)].sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
-export function createRoom(title: string): RoomSummary {
-  const code = `RUANG-${Math.floor(100 + Math.random() * 900)}`
+/**
+ * A code is minted before the room exists, so the dialog that makes a room can
+ * show the code while you are still filling the name in -- that code is the
+ * only thing that actually lets anyone else in.
+ */
+export function newRoomCode(): string {
+  return `RUANG-${Math.floor(100 + Math.random() * 900)}`
+}
+
+/** A stable colour per name, so the same person is the same colour everywhere. */
+export function hueFor(name: string): number {
+  let hash = 0
+  for (const char of name.trim().toLowerCase()) hash = (hash * 31 + char.charCodeAt(0)) % 360
+  return hash
+}
+
+export function createRoom(
+  title: string,
+  options: { id?: string; invited?: string[]; access?: RoomAccess } = {},
+): RoomSummary {
   const room: RoomSummary = {
-    id: code,
+    id: options.id ?? newRoomCode(),
     title: title.trim() || 'Ruang tanpa nama',
     shape: 'mindmap',
-    nodeCount: 0,
+    access: options.access ?? 'terkunci',
+    // The room opens with one root node carrying its name; see buildEmptyDoc.
+    nodeCount: 1,
     updatedAt: Date.now(),
-    people: [],
+    people: (options.invited ?? []).map((name) => ({ name, hue: hueFor(name) })),
   }
   write([room, ...read()])
   return room
+}
+
+export function findRoom(id: string): RoomSummary | null {
+  return listRooms().find((room) => room.id === id) ?? null
+}
+
+export function setRoomAccess(id: string, access: RoomAccess): void {
+  const own = read()
+  const index = own.findIndex((room) => room.id === id)
+  if (index >= 0) {
+    own[index] = { ...own[index], access }
+    write(own)
+    return
+  }
+  // A seeded room is not in the writable list yet. Copy it in, changed.
+  const seed = listRooms().find((room) => room.id === id)
+  if (seed) write([{ ...seed, access }, ...own])
 }
 
 export function forgetRoom(id: string): void {
