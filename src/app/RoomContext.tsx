@@ -61,7 +61,8 @@ interface RoomApi {
    * devices may lay the same room out differently.
    */
   nodeOverrides: Readonly<Record<string, Point>>
-  setNodeOverride: (id: NodeId, at: Point) => void
+  /** `null` forgets the placement, returning the node to auto layout. */
+  setNodeOverride: (id: NodeId, at: Point | null) => void
   clearOverrides: () => void
   /** Set while a relation is being drawn: the next node picked is the target. */
   linkingFrom: NodeId | null
@@ -283,11 +284,29 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
           hue: hueOf(event.actorId),
         })
       }
+      /*
+        A hand placement is an opinion about where a node sits under the layout
+        it was placed in. Giving the node a new parent invalidates that opinion
+        the same way changing the room's shape does (D31), so the override is
+        dropped and auto layout puts the node beside its new siblings.
+      */
+      for (const event of result.events) {
+        if (event.type !== 'moveNode' || !event.payload.nodeId) continue
+        const moved = event.payload.nodeId as NodeId
+        setOverridesByShape((prev) => {
+          const sheet = prev[doc.room.shape]
+          if (!sheet || !(moved in sheet)) return prev
+          const next = { ...sheet }
+          delete next[moved]
+          return { ...prev, [doc.room.shape]: next }
+        })
+      }
+
       const created = result.events.find((e) => e.type === 'createNode')
       if (created?.payload.nodeId) setFocusId(created.payload.nodeId as NodeId)
       return result
     },
-    [store, announcer, nameOf, hueOf, tree],
+    [store, announcer, nameOf, hueOf, tree, doc.room.shape],
   )
 
   /*
@@ -579,10 +598,12 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     setEditingId,
     nodeOverrides: overridesByShape[doc.room.shape] ?? EMPTY_OVERRIDES,
     setNodeOverride: (id, at) =>
-      setOverridesByShape((prev) => ({
-        ...prev,
-        [doc.room.shape]: { ...(prev[doc.room.shape] ?? {}), [id]: at },
-      })),
+      setOverridesByShape((prev) => {
+        const sheet = { ...(prev[doc.room.shape] ?? {}) }
+        if (at) sheet[id] = at
+        else delete sheet[id]
+        return { ...prev, [doc.room.shape]: sheet }
+      }),
     clearOverrides: () =>
       setOverridesByShape((prev) => {
         const next = { ...prev }

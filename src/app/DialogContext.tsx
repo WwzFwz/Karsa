@@ -21,7 +21,7 @@ export type DialogRequest =
   | { kind: 'setKind'; nodeId: NodeId }
   | { kind: 'setState'; nodeId: NodeId }
   | { kind: 'note'; nodeId: NodeId }
-  | { kind: 'move'; nodeId: NodeId }
+  | { kind: 'move'; nodeId: NodeId; presetParent?: NodeId }
   | { kind: 'relate'; nodeId: NodeId; presetTarget?: NodeId }
   | { kind: 'comment'; nodeId: NodeId }
   | { kind: 'delete'; nodeId: NodeId }
@@ -70,7 +70,9 @@ function DialogHost({ request, onClose }: { request: DialogRequest; onClose: () 
     case 'note':
       return <NoteDialog nodeId={request.nodeId} onClose={onClose} />
     case 'move':
-      return <MoveDialog nodeId={request.nodeId} onClose={onClose} />
+      return (
+        <MoveDialog nodeId={request.nodeId} presetParent={request.presetParent} onClose={onClose} />
+      )
     case 'relate':
       return (
         <RelateDialog nodeId={request.nodeId} presetTarget={request.presetTarget} onClose={onClose} />
@@ -309,9 +311,19 @@ function NoteDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void }
   )
 }
 
-function MoveDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void }) {
+function MoveDialog({
+  nodeId,
+  presetParent,
+  onClose,
+}: {
+  nodeId: NodeId
+  presetParent?: NodeId
+  onClose: () => void
+}) {
   const { run, doc, tree } = useRoom()
-  const [target, setTarget] = useState<NodeId | null>(doc.nodes[nodeId]?.parentId ?? null)
+  const [target, setTarget] = useState<NodeId | null>(
+    presetParent ?? doc.nodes[nodeId]?.parentId ?? null,
+  )
   // Rule 1: a node can never land inside its own subtree.
   const forbidden = useMemo(
     () => new Set<NodeId>([nodeId, ...descendantsOf(tree, nodeId)]),
@@ -320,7 +332,11 @@ function MoveDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void }
   return (
     <Dialog
       title="Pindahkan simpul"
-      description={`${doc.nodes[nodeId]?.title} akan menjadi anak dari induk yang dipilih. Tidak ada seret-lepas di produk ini.`}
+      description={
+        presetParent
+          ? `${doc.nodes[nodeId]?.title} akan menjadi anak dari ${doc.nodes[presetParent]?.title}. Pindah mengubah pohon, jadi ia dikonfirmasi lebih dulu.`
+          : `${doc.nodes[nodeId]?.title} akan menjadi anak dari induk yang dipilih.`
+      }
       onClose={onClose}
       footer={
         <>

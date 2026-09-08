@@ -9,9 +9,12 @@
  * 2. Kind is carried four ways at once -- icon, word, hue and card silhouette.
  *    Colour alone would fail anyone who cannot separate these hues, and the
  *    silhouette borrows the flowchart vocabulary people already read.
- * 3. There is no drag and drop. Position carries no meaning (rule 2), so
- *    dragging would be a gesture that changes nothing -- and making it change
- *    something would lock out anyone who cannot use a mouse.
+ * 3. Dragging is offered but never required (D6b). Dragging a node onto empty
+ *    ground places it -- a device-local opinion that never enters the document
+ *    (D31) -- and dragging it onto another node proposes making it a child
+ *    there. Both have a keyboard route: hand placement is optional decoration,
+ *    and the reparent is `m` or the command list. What a drag may never be is
+ *    the only way to reach an operation.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -24,6 +27,7 @@ import { KIND_HUE, KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '
 import { Icon, KindGlyph } from '../../ui/icons'
 import { InlineTitle } from '../../ui/InlineTitle'
 import { AgentCursor } from '../../features/voice/AgentCursor'
+import { descendantsOf } from '../../core/tree/project'
 import type { NodeId } from '../../core/model/types'
 import type { Point } from '../../core/shape/layout'
 
@@ -361,9 +365,44 @@ export function CanvasView() {
     anyone else, which is exactly why it stays inside rule 2. The structural
     move, the one that does mean something, is still `m`.
   */
-  const nodeDragRef = useRef<{ id: NodeId; startX: number; startY: number; from: Point } | null>(null)
+  const nodeDragRef = useRef<{
+    id: NodeId
+    startX: number
+    startY: number
+    from: Point
+    /** What the node's placement was before the drag, so a cancel can restore it. */
+    hadPlacement: Point | null
+  } | null>(null)
   const suppressClickRef = useRef(false)
   const [draggingNode, setDraggingNode] = useState<NodeId | null>(null)
+  /*
+    Dropping a node on another node reparents it -- the assembly gesture from
+    FigJam and draw.io, where you move a thing by putting it where it belongs
+    rather than by naming its new parent in a list. It is an addition, not a
+    replacement: `m` and the command list still open the picker, so rule D6
+    holds -- no operation is drag-only.
+
+    The drop still goes through the confirmation gate, because a reparent is
+    structural and rule 8 puts moves behind one.
+  */
+  const [dropParent, setDropParent] = useState<NodeId | null>(null)
+  const dropRef = useRef<NodeId | null>(null)
+
+  /** The node under the pointer that this one is allowed to land inside. */
+  const parentUnder = useCallback(
+    (clientX: number, clientY: number, dragged: NodeId): NodeId | null => {
+      const forbidden = new Set<NodeId>([dragged, ...descendantsOf(tree, dragged)])
+      const stack = document.elementsFromPoint(clientX, clientY)
+      for (const el of stack) {
+        const id = el.closest('[data-node-id]')?.getAttribute('data-node-id')
+        if (!id) continue
+        if (forbidden.has(id)) return null
+        return doc.nodes[dragged]?.parentId === id ? null : id
+      }
+      return null
+    },
+    [tree, doc],
+  )
 
   /*
     Keep the focused node in view.
@@ -631,6 +670,11 @@ export function CanvasView() {
             x: limit(node.from.x + dx, layout.width),
             y: limit(node.from.y + dy, layout.height),
           })
+          const over = parentUnder(event.clientX, event.clientY, node.id)
+          if (over !== dropRef.current) {
+            dropRef.current = over
+            setDropParent(over)
+          }
           return
         }
         const start = panRef.current
@@ -640,9 +684,20 @@ export function CanvasView() {
         vp.scrollTop = start.top - (event.clientY - start.y)
       }}
       onPointerUp={(event) => {
-        if (nodeDragRef.current) {
+        const dragged = nodeDragRef.current
+        if (dragged) {
+          const parent = dropRef.current
+          dropRef.current = null
+          setDropParent(null)
           nodeDragRef.current = null
           setDraggingNode(null)
+          if (parent) {
+            // Put it back exactly as it was picked up -- including having no
+            // placement at all. If the move is confirmed the layout puts the
+            // node under its new parent; if it is not, nothing has changed.
+            setNodeOverride(dragged.id, dragged.hadPlacement)
+            dialogs.open({ kind: 'move', nodeId: dragged.id, presetParent: parent })
+          }
           // The click that follows a drag would re-focus; that is harmless, but
           // it must not be read as a plain selection gesture.
           window.setTimeout(() => {
@@ -805,7 +860,7 @@ export function CanvasView() {
                   linkingFrom && linkingFrom !== id ? 'is-linktarget' : ''
                 } ${linkingFrom === id ? 'is-linksource' : ''} ${
                   draggingNode === id ? 'is-dragging' : ''
-                } ${nodeOverrides[id] ? 'is-placed' : ''}`}
+                } ${dropParent === id ? 'is-droptarget' : ''} ${nodeOverrides[id] ? 'is-placed' : ''}`}
                 style={{
                   transform: `translate(${pos.x + ORIGIN}px, ${pos.y + ORIGIN}px)`,
                   width: NODE_W,
@@ -824,6 +879,7 @@ export function CanvasView() {
                     startX: event.clientX,
                     startY: event.clientY,
                     from: { x: pos.x, y: pos.y },
+                    hadPlacement: nodeOverrides[id] ?? null,
                   }
                 }}
                 onClick={() => {

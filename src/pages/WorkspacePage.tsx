@@ -115,8 +115,9 @@ export function WorkspacePage() {
             No selection label, and no Pindah or Hubung buttons. The node is
             already highlighted, so naming it again in a bar was a caption for
             something you are looking at, and both operations have their own
-            afordans on the node: the edge anchors draw a relation, and `m` and
-            the command list still open the move picker.
+            afordans on the node: the edge anchors draw a relation, dropping one
+            node on another proposes a move, and `m` and the command list still
+            open the move picker.
           */}
           {focused && (
             <button
