@@ -90,6 +90,11 @@ export function narrate(event: DocEvent, actorName: string): string {
  */
 function narrateUndo(who: string, p: DocEvent['payload']): string {
   const what = quoted(p.title)
+  // One press, several changes: naming the last of them would describe a
+  // fraction of what just disappeared from everyone else's canvas.
+  if ((p.undoneCount ?? 1) > 1) {
+    return `${who} membatalkan ${p.undoneCount} perubahan terakhir sekaligus.`
+  }
   switch (p.undoneType) {
     case 'createNode':
       return `${who} membatalkan penambahan ${what}.`

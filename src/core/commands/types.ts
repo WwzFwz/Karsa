@@ -23,7 +23,12 @@ import type { DocEvent } from '../events/types'
 import type { RuleViolation } from '../rules/invariants'
 
 export type Command =
-  | { type: 'createNode'; parentId: NodeId | null; kind: NodeKind; title: string; afterId?: NodeId | null; note?: string }
+  /**
+   * `id` is only for callers that must reference the node later in the same
+   * batch -- a template building a sub-tree, mainly. Left out everywhere else,
+   * because inventing ids by hand is how two clients end up with one id.
+   */
+  | { type: 'createNode'; parentId: NodeId | null; kind: NodeKind; title: string; afterId?: NodeId | null; note?: string; id?: NodeId; tool?: ToolKind }
   | { type: 'renameNode'; id: NodeId; title: string }
   | { type: 'setNodeKind'; id: NodeId; kind: NodeKind }
   | { type: 'setNodeState'; id: NodeId; state: NodeState }

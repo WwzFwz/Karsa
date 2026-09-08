@@ -49,6 +49,36 @@ export class MemoryDocStore implements DocStore {
     return result
   }
 
+  /**
+   * Several commands, one undo step.
+   *
+   * A template drops six nodes at once. Six commands would mean six presses of
+   * Ctrl+Z to take back one gesture, which is not "dapat dibatalkan" in any
+   * sense a person would recognise -- so the snapshot is taken once, before the
+   * first command, and the whole batch rewinds together. The events stay
+   * separate, because rule 5 is about sentences and six things happened.
+   *
+   * All or nothing: if any command is refused, the document is left untouched.
+   */
+  dispatchBatch = (commands: Command[], ctx: CommandContext): CommandResult => {
+    const before = this.doc
+    let working = this.doc
+    const events: DocEvent[] = []
+
+    for (const command of commands) {
+      const { doc, result } = applyCommand(working, command, ctx)
+      if (!result.ok) return result
+      working = doc
+      events.push(...result.events)
+    }
+
+    this.history.push(before)
+    if (this.history.length > MemoryDocStore.HISTORY_LIMIT) this.history.shift()
+    this.doc = working
+    this.docListeners.forEach((l) => l())
+    return { ok: true, events }
+  }
+
   canUndo = (): boolean => this.history.length > 0
 
   undo = (actorId: ActorId): DocEvent | null => {
@@ -56,6 +86,9 @@ export class MemoryDocStore implements DocStore {
     if (!previous) return null
 
     const undone = this.doc.events[this.doc.events.length - 1]
+    // A batch pushed one snapshot but several events; the gap between the two
+    // event lists is exactly how much this press is taking back.
+    const undoneCount = Math.max(1, this.doc.events.length - previous.events.length)
     const event: DocEvent = {
       id: newEventId(),
       seq: this.doc.events.length + 1,
@@ -69,6 +102,7 @@ export class MemoryDocStore implements DocStore {
         targetTitle: undone?.payload.targetTitle,
         undoneEventId: undone?.id,
         undoneType: undone?.type,
+        undoneCount,
       },
     }
 

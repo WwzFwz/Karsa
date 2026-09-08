@@ -81,7 +81,10 @@ export function applyCommand(doc: RoomDoc, command: Command, ctx: CommandContext
       if (command.parentId !== null && !doc.nodes[command.parentId]) {
         return { doc, result: fail({ rule: 0, code: 'missing_parent', message: 'Induk tujuan tidak ditemukan.' }) }
       }
-      const id = newNodeId()
+      if (command.id && doc.nodes[command.id]) {
+        return { doc, result: fail({ rule: 0, code: 'duplicate_id', message: 'Simpul dengan id itu sudah ada.' }) }
+      }
+      const id = command.id ?? newNodeId()
       next.nodes[id] = {
         id,
         parentId: command.parentId,
@@ -89,6 +92,7 @@ export function applyCommand(doc: RoomDoc, command: Command, ctx: CommandContext
         kind: command.kind,
         title: command.title.trim(),
         note: command.note?.slice(0, NOTE_MAX),
+        tool: command.tool,
         createdBy: ctx.actorId,
         createdAt: now,
         ...stamp,

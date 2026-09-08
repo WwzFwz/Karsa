@@ -22,6 +22,7 @@ pernah saat sedang mengetik di kolom teks.
 | `Ctrl` `B` | Nyalakan atau matikan bunyi |
 | `[` | Sembunyikan atau tampilkan navigasi kiri |
 | `]` atau `\` | Sembunyikan atau tampilkan panel kanan |
+| `a` | Buka alat dan templat |
 | `f` | Kanvas layar penuh |
 | `Escape` | Keluar dari layar penuh |
 | `Ctrl` `Z` | Batalkan perubahan terakhir |

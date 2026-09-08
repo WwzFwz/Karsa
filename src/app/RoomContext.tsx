@@ -29,6 +29,8 @@ import type { Command, CommandResult } from '../core/commands/types'
 import type { InputPath, NodeId, RoomDoc, RoomShape } from '../core/model/types'
 import type { Point } from '../core/shape/layout'
 import { countVotes, hasVoted } from '../core/tools/tally'
+import { templateById } from '../core/templates/registry'
+import { expandTemplate, templateSize } from '../core/templates/expand'
 import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/project'
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
 import { MemoryDocStore } from '../store/MemoryDocStore'
@@ -90,6 +92,8 @@ interface RoomApi {
   /** True while the actor's standing vote on this node is a yes. */
   votedByMe: (id: NodeId) => boolean
   votesOn: (id: NodeId) => number
+  /** Drops a whole template under a parent, as one undo step and one sentence. */
+  insertTemplate: (templateId: string, parentId: NodeId | null) => void
 
   view: ViewMode
   setView: (view: ViewMode) => void
@@ -202,6 +206,15 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const [canvasMounted, setCanvasMounted] = useState(false)
 
   const visibleIds = useMemo(() => visibleOrder(tree, collapsed), [tree, collapsed])
+
+  /*
+    Undo can take away the node the focus was sitting on, and a focus pointing
+    at something gone is worse than no focus: `n` would try to create under a
+    ghost parent, and the rail would offer to add "di bawah" nothing.
+  */
+  useEffect(() => {
+    if (focusId && !doc.nodes[focusId]) setFocusId(tree.rootIds[0] ?? null)
+  }, [doc.nodes, focusId, tree.rootIds])
 
   const canvasIds = useMemo(() => {
     const folded = new Set(collapsed)
@@ -348,6 +361,35 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       return result
     },
     [store, announcer, nameOf, hueOf, tree, doc.room.shape],
+  )
+
+  /*
+    A template is many commands but one gesture, so it takes one snapshot and
+    says one sentence. The individual events still go into the log -- rule 5 is
+    about the record, and six things did happen -- but announcing six of them
+    into a meeting is exactly the burst D7 exists to damp.
+  */
+  const insertTemplate = useCallback(
+    (templateId: string, parentId: NodeId | null) => {
+      const spec = templateById(templateId)
+      if (!spec) return
+      const built = spec.build()
+      const commands = expandTemplate(built, parentId)
+      const result = store.dispatchBatch(commands, { actorId: SELF_ID, inputPath: 'pointer' })
+      if (!result.ok) {
+        setLastError(result.violation.message)
+        announcer.announce(result.violation.message, 'assertive')
+        audioBus.emit({ earcon: 'blocked', force: true })
+        return
+      }
+      announcer.announce(
+        `Anda menambahkan templat ${spec.label}, ${templateSize(built)} simpul.`,
+      )
+      audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(SELF_ID) })
+      const first = result.events.find((event) => event.payload.nodeId)
+      if (first?.payload.nodeId) setFocusId(first.payload.nodeId as NodeId)
+    },
+    [store, announcer, hueOf],
   )
 
   /*
@@ -661,6 +703,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     canvasIds,
     votedByMe: (id: NodeId) => hasVoted(doc, id, SELF_ID),
     votesOn: (id: NodeId) => countVotes(doc, id),
+    insertTemplate,
     view,
     setView,
     panelHidden,

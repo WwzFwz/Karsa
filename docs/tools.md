@@ -62,6 +62,24 @@ kontribusi satu per satu. Data contoh sengaja memuat kasus pembuktinya: Budi
 memilih "Rombak silabus dulu", menariknya, lalu memilih "Gabungkan dua mata
 kuliah". Penghitung yang disimpan akan salah di situ; turunan dari log tidak.
 
+## Templat
+
+Templat bukan jenis benda ketiga. Ia **sekumpulan perintah `createNode`** dengan
+tipe yang sudah dipilihkan — persis yang akan diketik orang, tanpa mengetik.
+Daftarnya di `core/templates/registry.ts`, dan isinya dipilih dari yang
+benar-benar dijalankan tim: voting, retro, matriks dampak–usaha, rencana sprint,
+lima kenapa, tempat parkir.
+
+Karena templat cuma simpul bertipe, dia lolos kedua pertanyaan bagian 5 dengan
+sendirinya, dan langsung terbaca di outline begitu mendarat.
+
+**Satu templat = satu langkah undo.** `MemoryDocStore.dispatchBatch` mengambil
+satu snapshot untuk seluruh batch. Enam perintah berarti enam kali `Ctrl+Z`
+untuk membatalkan satu gerakan, dan itu bukan "dapat dibatalkan" dalam arti yang
+dikenali orang. Peristiwanya tetap terpisah — aturan 5 soal catatan, dan memang
+enam hal terjadi — tapi yang **diumumkan** cuma satu kalimat, karena meredam
+ledakan perubahan itu justru tugas D7.
+
 ## Menambah alat baru
 
 1. Tambah nilai ke `ToolKind` di `core/model/types.ts`.

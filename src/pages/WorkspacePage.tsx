@@ -16,6 +16,7 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CanvasView } from '../views/canvas/CanvasView'
+import { ToolRail } from '../features/tools/ToolRail'
 import { OutlineTree } from '../views/outline/OutlineTree'
 import { EventLog } from '../features/summary/EventLog'
 import { DraftPanel } from '../features/voice/DraftPanel'
@@ -167,7 +168,12 @@ export function WorkspacePage() {
 
         <div className={`stage-grid view-${view}`}>
           {view === 'canvas' ? (
-            <CanvasView />
+            <>
+              <CanvasView />
+              {/* Floats over the canvas like everything else (D25), so hiding
+                  the panels hands the space straight back to the board. */}
+              <ToolRail />
+            </>
           ) : (
             <div className="outline-pane">
               <OutlineTree />

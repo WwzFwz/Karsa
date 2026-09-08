@@ -73,6 +73,12 @@ export interface EventPayload {
   /** undo only: which event was reversed, so contribution counting can skip it. */
   undoneEventId?: EventId
   undoneType?: EventType
+  /**
+   * undo only: how many events one press took back. A batch -- a template, say
+   * -- is one gesture and rewinds as one, so the sentence has to say four
+   * rather than naming whichever of the four happened to be last.
+   */
+  undoneCount?: number
 }
 
 export interface DocEvent {

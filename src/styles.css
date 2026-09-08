@@ -2727,3 +2727,129 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   cursor: pointer;
 }
 .vote-tag.is-mine { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* ============================ tool rail ============================ */
+
+/*
+  Horizontal, floating under the canvas toolbar, in the same left gutter. Trido
+  puts its rail on the left edge vertically; horizontal suits us better because
+  our left edge already carries the sidebar, and because the sheet that drops
+  out of it needs width more than the rail does.
+*/
+.tool-rail {
+  position: absolute;
+  top: calc(var(--chrome-top) + 58px);
+  left: var(--chrome-left);
+  z-index: 19;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  max-width: max(240px, calc(100% - var(--chrome-left) - var(--chrome-right)));
+}
+
+.rail-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  border-radius: var(--r-xl);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--e3);
+}
+.rail-sep { width: 1px; height: 20px; background: var(--line); margin: 0 3px; }
+
+.rail-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.rail-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.rail-btn.is-on { background: var(--accent); color: var(--accent-ink); }
+.rail-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+.rail-sheet {
+  width: min(440px, 78vw);
+  padding: 12px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--e3);
+  border: 1px solid var(--line);
+}
+.rail-sheet-narrow { width: min(240px, 70vw); }
+.rail-sheet-head {
+  margin: 0 0 9px;
+  font-size: 11px;
+  font-weight: 680;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rail-kinds { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+.rail-item:hover { background: var(--surface-2); }
+
+.rail-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.rail-card {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.rail-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+.rail-card-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.rail-card:hover .rail-card-icon { background: var(--surface); color: var(--accent); }
+.rail-card-label { font-size: 12.5px; font-weight: 640; color: var(--ink); }
+.rail-card-hint { font-size: 11px; color: var(--ink-3); line-height: 1.35; }
+
+.rail-note { margin: 10px 0 0; font-size: 11px; color: var(--ink-3); line-height: 1.4; }
+
+@media (max-width: 900px) {
+  .tool-rail { left: var(--gap); }
+}

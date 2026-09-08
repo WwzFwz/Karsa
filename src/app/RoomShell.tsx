@@ -169,6 +169,15 @@ export function RoomShell({ children }: { children: ReactNode }) {
             toggleFocusMode(false)
           }
           return
+        case 'a':
+          // `a` for alat. `p` was the obvious letter and is already pointing at
+          // a node for everyone -- one key, one meaning.
+          //
+          // The rail's own button owns the sheet state, so the shortcut asks
+          // for it the same way a click does rather than keeping a second copy.
+          event.preventDefault()
+          document.querySelector<HTMLButtonElement>('.tool-rail .rail-btn:last-of-type')?.click()
+          return
         case '.':
           event.preventDefault()
           toggleTraversal()
