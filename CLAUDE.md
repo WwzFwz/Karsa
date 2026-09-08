@@ -299,23 +299,34 @@ riasan:
 
 ## 15. Dokumen pendamping
 
-- `docs/data-model.md` - model data: elemen, atribut wajib, jenis relasi, dan
-  pemisahan operasi yang mengubah data versus yang hanya navigasi.
-- `docs/keyboard-map.md` - peta pintasan papan ketik, satu sumber kebenaran.
+Empat yang menjelaskan **rancangan**:
+
+- `docs/architecture.md` - bentuk sistem: lapisan, satu pintu menuju data, model
+  data, jalur suara, penyimpanan, dan skalabilitas empat tahap beserta
+  pemicunya. Diagramnya juga tersedia sebagai PNG di `docs/img/`.
+- `docs/rencana-implementasi.md` - rencana menyeluruh dari nol sampai produk
+  yang bisa dipasang institusi: P0-P5, lalu S1-S3 untuk server dan skala.
+- `docs/agent-design.md` - rancangan lapisan agen: jalur suara sampai keputusan,
+  banyak orang dengan masukan berbeda, kenapa peletakan bukan agen, dan pengamat
+  dinamika yang mati secara bawaan.
+- `docs/data-model.md` - elemen, atribut wajib, jenis relasi, dan pemisahan
+  operasi yang mengubah data versus yang hanya navigasi.
+
+Satu yang menjelaskan **keadaan**:
+
+- `docs/status.md` - sudah sampai mana per hari ini, dan apa ongkos dari yang
+  belum ada. Sengaja dipisah dari rencana: rencana yang ikut berubah tiap kali
+  sesuatu selesai berhenti jadi rencana.
+
+Empat yang menjadi **satu sumber kebenaran** untuk bagian yang mudah melenceng:
+
+- `docs/keyboard-map.md` - peta pintasan papan ketik.
 - `docs/sound-vocabulary.md` - kosakata bunyi peristiwa.
 - `docs/tools.md` - alat: kenapa alat itu tata letak di atas sub-pohon dan bukan
   jendela mengambang, dan cara menambah alat baru.
-- `docs/agent.md` - orchestrator: tiga jalur perutean, tahap-tahap yang diberi
-  nama, set uji, dan cara menukar pencocok kata kunci dengan model sungguhan.
-- `docs/roadmap.md` - keadaan proyek apa adanya: yang sudah berjalan, yang belum
-  ada beserta ongkos tidak adanya, dan urutan pengerjaan menurut risiko yang
-  dihilangkan per jam kerja.
-- `docs/architecture.md` - bentuk sistem: lapisan, satu pintu menuju data, model
-  data, jalur suara, penyimpanan, struktur folder, dan daftar yang belum
-  dibangun. Diagramnya juga tersedia sebagai PNG di `docs/img/`.
-- `docs/agent-design.md` - rancangan multi-agent yang belum dibangun: jalur suara
-  sampai keputusan, banyak orang dengan masukan berbeda, kenapa peletakan bukan
-  agen, dan pengamat dinamika yang mati secara bawaan.
+- `docs/agent.md` - orchestrator yang sudah ada: tiga jalur perutean, tahap yang
+  diberi nama, set uji, dan cara menukar pencocok kata kunci dengan model
+  sungguhan.
 
 ## 16. Catatan keputusan
 

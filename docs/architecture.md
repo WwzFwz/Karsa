@@ -278,7 +278,99 @@ dari satu instans**. Sebelum itu tujuh komponen untuk melayani dua hal.
 
 ---
 
-## 7. Struktur folder
+## 7. Skalabilitas: empat tahap dan pemicunya
+
+![Tahap penyebaran](img/07-skala.png)
+
+```mermaid
+flowchart LR
+  t0["TAHAP 0 — sekarang<br/>Klien saja<br/>data di memori"] --> t1
+  t1["TAHAP 1<br/>Satu kontainer<br/>Hocuspocus + room service + Postgres"] --> t2
+  t2["TAHAP 2<br/>Beberapa instans<br/>+ Redis + ingress"] --> t3
+  t3["TAHAP 3<br/>Kubernetes<br/>HPA, banyak zona"]
+```
+
+Ini bagian yang paling gampang ditulis secara keliru di sebuah proposal, jadi
+ditulis apa adanya: **yang dibangun sekarang Tahap 0.** Tiga tahap berikutnya
+adalah rancangan beserta pemicunya, bukan klaim.
+
+| Tahap | Isinya | Pindah ke tahap berikutnya ketika |
+| ----- | ------ | --------------------------------- |
+| **0** | Klien saja. `MemoryDocStore`, data contoh, Ollama di perangkat. | Butuh dua orang di satu ruang. |
+| **1** | Satu kontainer: Hocuspocus + room service + PostgreSQL, di satu proses. Mode kelas memakai SQLite. | Satu instans tidak lagi cukup — lihat tabel kapasitas. |
+| **2** | Beberapa instans Hocuspocus, Redis sebagai penghubung antar instans, ingress di depan. | Perlu penskalaan otomatis, pemulihan sendiri, atau beberapa zona. |
+| **3** | Kubernetes: HPA, PodDisruptionBudget, sesi lengket per ruang, beberapa zona. | — |
+
+### Kenapa Kubernetes tidak diasumsikan sejak Tahap 0
+
+Bukan karena tidak akan dipakai, melainkan karena **memakainya lebih awal
+menghilangkan dua hal sekaligus**: waktu yang seharusnya dipakai membuktikan
+klaim produk, dan kemampuan dipasang oleh sekolah yang tidak punya orang
+infrastruktur.
+
+Tiga alasan yang bisa diperiksa:
+
+1. **Bebannya bukan CPU, melainkan sambungan yang hidup lama.** Yang melintas
+   cuma perubahan dokumen dan penanda kehadiran — beberapa kilobita per menit
+   per orang. Ini bukan beban yang butuh sepuluh pod; ini beban yang butuh satu
+   proses yang tidak jatuh.
+2. **Ruang itu stateful.** Semua peserta satu ruang harus mendarat di instans
+   yang sama, atau Redis yang menyambungkan mereka. Menambah instans **tanpa**
+   Redis tidak menambah kapasitas, cuma menambah bug. Jadi Tahap 2 dan Tahap 3
+   memang datang bersama, dan sebelum keduanya dibutuhkan, keduanya cuma
+   komponen yang harus dirawat.
+3. **Mode kelas adalah janji produk, bukan kompromi.** Satu kontainer di laptop
+   pengajar, tanpa internet. Arsitektur yang menganggap klaster sebagai dasar
+   membuat janji itu jadi jalur khusus yang cepat rusak; arsitektur yang
+   menganggap satu kontainer sebagai dasar membuat klaster jadi konfigurasi.
+
+Yang **sudah** disiapkan supaya Tahap 2 dan 3 bukan tulis ulang:
+
+- Hocuspocus **tanpa state**; yang persisten cuma di PostgreSQL.
+- Kehadiran di kanal terpisah (Awareness), jadi bisa pindah ke Redis tanpa
+  menyentuh dokumen.
+- Room service kecil dan tanpa akun; token, bukan sesi.
+- Klien punya salinan lokal, jadi instans yang dimulai ulang bukan kehilangan
+  data melainkan sambungan yang tersambung lagi.
+
+### Perkiraan kapasitas
+
+Angka di bawah **perkiraan yang harus diukur**, bukan hasil pengukuran. Ditulis
+supaya ada yang bisa dibantah, dan supaya pemicu pindah tahap punya bentuk.
+
+| Besaran | Perkiraan | Dasarnya |
+| ------- | --------- | -------- |
+| Ukuran dokumen satu ruang | 50–200 KB | 200 simpul + log peristiwa satu sesi |
+| Memori per ruang aktif di server | ~1–3 MB | Dokumen + Awareness + buffer |
+| Lalu lintas per orang | ~2–10 KB/menit | Perubahan dokumen + penanda 10/detik |
+| Ruang serentak per instans | **100–300** | Batasnya memori dan jumlah socket, bukan CPU |
+| Orang serentak per instans | **500–1500** | Rata-rata 5 orang per ruang |
+
+Yang membuat angka ini besar untuk satu kontainer: **tidak ada audio, tidak ada
+gambar, dan tidak ada koordinat yang melintas.** Beban jaringan produk ini satu
+sampai dua orde lebih kecil daripada papan kerja yang mengirim posisi kursor
+piksel demi piksel.
+
+Artinya pemicu Tahap 2 bukan angka yang mengesankan: **satu institusi berukuran
+kampus muat di satu kontainer.** Klaster baru masuk akal untuk pemasangan
+lintas institusi.
+
+### Apa yang berubah di Tahap 3
+
+| Hal | Bentuknya di Kubernetes |
+| --- | ----------------------- |
+| Sesi lengket per ruang | Ingress dengan hash konsisten pada id ruang |
+| Penskalaan | HPA pada jumlah sambungan, bukan CPU — CPU-nya memang rendah |
+| Mulai ulang | PodDisruptionBudget; klien menyambung lagi dari salinan lokalnya |
+| Basis data | PostgreSQL terkelola, bukan pod |
+| Pengamatan | OpenTelemetry ke Grafana |
+
+Tidak ada satu pun baris di tabel itu yang menuntut perubahan pada `core/`, dan
+itu ukuran yang dipakai untuk menilai apakah rancangan ini benar.
+
+---
+
+## 8. Struktur folder
 
 ```
 src/
@@ -307,20 +399,20 @@ node tanpa DOM, dan yang membuat `core/` bisa diuji tanpa merender apa pun.
 
 ---
 
-## 8. Yang belum dibangun
+## 9. Yang belum dibangun
 
-Ditulis supaya tidak ada yang mengira gambar di atas seluruhnya sudah jadi.
+Daftar lengkapnya beserta ongkos tidak adanya ada di **`docs/status.md`**, dan
+sengaja tidak disalin ke sini: dokumen arsitektur yang ikut berubah tiap kali
+sesuatu selesai berhenti bisa dipakai sebagai rujukan.
 
-| Bagian | Status |
-| ------ | ------ |
-| ASR lokal, VAD | Diganti kalimat kalengan |
-| Hocuspocus, room service, PostgreSQL | Belum ada; klien memakai `MemoryDocStore` |
-| IndexedDB | Belum |
-| Kehadiran sungguhan | Data contoh |
-| Perapi judul | Terdaftar, belum berjalan |
-| Pengamat dinamika | Rancangan, mati secara bawaan — `docs/agent-design.md` |
+Ringkasnya: **yang berjalan sungguhan adalah klien** — model data dan
+validatornya, lima bentuk tata letak, tiga alat, orchestrator dengan dua
+penyedia termasuk Ollama sungguhan, undo, narasi, earcon, dan enam halaman.
+**Yang belum ada adalah seluruh sisi server** (Tahap 1 ke atas di bagian 7) dan
+**pengenalan suara sungguhan**, keduanya diganti data contoh atas keputusan
+bagian 14 CLAUDE.md.
 
-Yang **sudah** berjalan sungguhan: model data dan validatornya, lima bentuk tata
-letak, tiga alat, orchestrator dengan dua penyedia (pencocokan aturan dan Ollama
-`qwen2.5:7b` dengan constrained decoding), set uji, undo snapshot, narasi,
-earcon, telusur audio, dan enam halaman antarmuka.
+Satu gambar di dokumen ini menggambarkan kotak yang belum ada — Hocuspocus, room
+service, PostgreSQL, IndexedDB di bagian 6. Diagram arsitektur yang menggambar
+kotak rencana sama persis dengan kotak jadi adalah kebohongan paling mahal di
+sebuah laporan, jadi kalimat ini yang membedakannya.

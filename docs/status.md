@@ -1,7 +1,12 @@
-# Dari sini sampai selesai
+# Status
 
-Diperiksa langsung ke kodenya, 8 September 2026. 68 berkas, ~12.900 baris,
-33 commit.
+**Sudah sampai mana, per 8 September 2026.** Diperiksa langsung ke kodenya:
+68 berkas, ~12.900 baris, 34 commit.
+
+Yang menjawab "apa saja yang harus dibangun" adalah dokumen lain:
+**`docs/rencana-implementasi.md`**. Pemisahan ini disengaja — rencana yang ikut
+berubah tiap kali sesuatu selesai berhenti jadi rencana, dan status yang
+bercampur rencana berhenti bisa dipercaya.
 
 Dokumen ini sengaja tidak menyenangkan. Yang berguna dari daftar seperti ini
 bukan bagian "sudah", melainkan bagian "belum" yang ditulis cukup jujur sampai
@@ -150,46 +155,30 @@ semuanya bisa berperilaku lain di 200.
 
 ---
 
-## 3. Urutan yang saya sarankan
+## 3. Lima langkah berikutnya
 
 Diurutkan menurut **risiko yang dihilangkan per jam kerja**, bukan menurut yang
-paling menarik.
+paling menarik. Rencana lengkapnya di `docs/rencana-implementasi.md`.
 
-### Sebelum presentasi
-
-1. **Uji `core/`** — pemulihan siklus, indeks pecahan, penolakan, narasi.
-   Menghilangkan risiko terbesar yang tersisa, dan tanpa dependensi baru.
+1. **Uji `core/`** — pemulihan siklus, indeks pecahan, penolakan, kelengkapan
+   narasi. Menghilangkan risiko terbesar yang tersisa, tanpa dependensi baru.
 2. **IndexedDB** — muat ulang halaman berhenti menghapus rapat.
 3. **Error boundary** — layar putih di depan penilai lebih mahal daripada fitur
    apa pun yang bisa ditambahkan di waktu yang sama.
 4. **Satu putaran NVDA** — bahkan satu putaran akan menemukan sesuatu.
-5. **Cabut atau jalankan "Perapi judul"**, dan redam tawaran alat.
+5. **Cabut dua kebohongan kecil** — "Perapi judul" yang tidak pernah jalan, dan
+   tawaran alat yang belum diredam.
 
-### Sesudahnya, kalau proyek diteruskan
+## 4. Supaya daftar "belum" tidak salah dibaca
 
-6. **Hocuspocus + room service + PostgreSQL** dalam satu kontainer.
-7. **Kehadiran sungguhan**, lalu ukur 10 penanda per detik.
-8. **ASR + VAD lokal** sebagai penyedia di balik sambungan yang sudah ada.
-9. **Uji dengan pengguna pembaca layar sungguhan.** Ini yang mengubah produk,
-   bukan daftar ini.
-10. **Alat tabel perbandingan**, lalu pengamat dinamika kalau lima aturannya
-    terpenuhi (`docs/agent-design.md`).
+Sebagian besar yang belum ada memang **belum waktunya**, bukan tertinggal.
+Bagian 14 CLAUDE.md menyatakan tenggat terdekat adalah antarmuka yang bisa
+dilihat dan diklik, bukan sistem yang berfungsi penuh — server, sinkronisasi,
+dan pengenalan suara memang diganti tombol dan data contoh atas keputusan.
 
----
+Yang **bukan** keputusan dan memang tertinggal cuma tiga: tidak ada uji untuk
+`core/`, muat ulang halaman menghapus isi ruang, dan aksesibilitasnya belum
+pernah diuji dengan pembaca layar sungguhan.
 
-## 4. Yang sengaja tidak akan dibangun
-
-Supaya daftar "belum" tidak dibaca sebagai "kurang":
-
-Kanal percakapan, pesan pribadi, manajemen tugas, pencarian lintas ruang,
-aplikasi telepon genggam, menggambar bebas, izin berlapis. Panggilan video
-paling akhir, mati secara bawaan, dan ruang wajib tetap berfungsi penuh
-tanpanya.
-
-Ditambah dua yang diputuskan sepanjang jalan:
-
-- **Penata letak bukan agen** (`docs/agent-design.md` bagian 5). Peletakan itu
-  algoritma; yang jadi penilaian cuma pemilihan bentuk visual.
-- **Layanan awan tidak pernah jadi cadangan otomatis.** Kalau model lokal tidak
-  ada, jawabannya "model lokal tidak ada", bukan diam-diam mengirim ke server
-  orang lain.
+Daftar yang sengaja tidak akan pernah dibangun ada di
+`docs/rencana-implementasi.md`.

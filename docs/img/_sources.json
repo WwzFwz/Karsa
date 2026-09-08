@@ -22,5 +22,9 @@
   {
     "name": "06-penyebaran",
     "code": "flowchart TB\n  subgraph klien[\"Klien\"]\n    app[\"React + TypeScript\"]\n    idb[\"IndexedDB<br/>salinan lokal\"]\n    ol[\"Ollama di perangkat\"]\n  end\n\n  subgraph server[\"Satu kontainer\"]\n    hp[\"Hocuspocus<br/>sinkronisasi Yjs\"]\n    rs[\"Room service<br/>ruang + token, tanpa akun\"]\n    pg[(\"PostgreSQL<br/>snapshot + metadata\")]\n  end\n\n  app <-->|\"perubahan dokumen<br/>+ penanda kehadiran\"| hp\n  app --> rs\n  app <--> idb\n  app <--> ol\n  hp --> pg\n  rs --> pg"
+  },
+  {
+    "name": "07-skala",
+    "code": "flowchart LR\n  t0[\"TAHAP 0 — sekarang<br/>Klien saja<br/>data di memori\"] --> t1\n  t1[\"TAHAP 1<br/>Satu kontainer<br/>Hocuspocus + room service + Postgres\"] --> t2\n  t2[\"TAHAP 2<br/>Beberapa instans<br/>+ Redis + ingress\"] --> t3\n  t3[\"TAHAP 3<br/>Kubernetes<br/>HPA, banyak zona\"]"
   }
 ]
