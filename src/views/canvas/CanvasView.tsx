@@ -14,7 +14,7 @@
  *    something would lock out anyone who cannot use a mouse.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useDialogs } from '../../app/DialogContext'
 import { useAnnouncer } from '../../a11y/Announcer'
 import { useRoom } from '../../app/RoomContext'
@@ -27,7 +27,40 @@ import { AgentCursor } from '../../features/voice/AgentCursor'
 import type { NodeId } from '../../core/model/types'
 import type { Point } from '../../core/shape/layout'
 
-const PAD = 52
+const BREATH = 28
+
+/**
+ * How much of the viewport each floating panel covers.
+ *
+ * Every panel is anchored to an edge, so the edge it is nearest to is the one
+ * it occludes. Guessing from width and height instead needed thresholds, and
+ * the thresholds missed the inspector on a narrow window -- too narrow to count
+ * as a band, too short to count as a column, so it was ignored entirely and
+ * nodes kept sliding underneath it.
+ */
+function measureChrome(box: DOMRect): { top: number; right: number; bottom: number; left: number } {
+  const pad = { top: 0, right: 0, bottom: 0, left: 0 }
+  for (const selector of ['.topbar', '.canvas-toolbar', '.sidebar', '.inspector', '.dock', '.zoom-bar']) {
+    const el = document.querySelector(selector)
+    if (!el) continue
+    const r = el.getBoundingClientRect()
+    if (r.width <= 0 || r.height <= 0) continue
+    const distance = {
+      top: r.top - box.top,
+      right: box.right - r.right,
+      bottom: box.bottom - r.bottom,
+      left: r.left - box.left,
+    }
+    const side = (Object.keys(distance) as (keyof typeof distance)[]).reduce((best, key) =>
+      distance[key] < distance[best] ? key : best,
+    )
+    if (side === 'top') pad.top = Math.max(pad.top, r.bottom - box.top)
+    else if (side === 'bottom') pad.bottom = Math.max(pad.bottom, box.bottom - r.top)
+    else if (side === 'left') pad.left = Math.max(pad.left, r.right - box.left)
+    else pad.right = Math.max(pad.right, box.right - r.left)
+  }
+  return pad
+}
 
 export function CanvasView() {
   const room = useRoom()
@@ -52,6 +85,8 @@ export function CanvasView() {
     cancelLinking,
     nodeOverrides,
     setNodeOverride,
+    panelHidden,
+    focusMode,
   } = room
   const dialogs = useDialogs()
   const { announce } = useAnnouncer()
@@ -139,9 +174,71 @@ export function CanvasView() {
     two people may sit at different zoom levels without disagreeing about
     anything, because pointing is by node id and never by position.
   */
+  /*
+    The real fix for content sliding under the chrome.
+
+    Insetting the *content* is what keeps a node from being sliced in half by a
+    floating bar. Nudging the scroll position only ever rescued the focused
+    node; every other node still passed underneath. Now the scrollable area
+    carries the chrome as padding, so at either end of a scroll every node sits
+    in clear space, and there is always a scroll position that shows any node
+    whole.
+  */
+  const [inset, setInset] = useState({ top: 96, right: 32, bottom: 96, left: 32 })
+  const [viewBox, setViewBox] = useState({ w: 1000, h: 700 })
+
   const [zoom, setZoom] = useState(1)
   const MIN_ZOOM = 0.25
   const MAX_ZOOM = 2
+
+  const measure = useCallback(() => {
+    const vp = viewportRef.current
+    if (!vp) return
+    const box = vp.getBoundingClientRect()
+    setViewBox((prev) =>
+      Math.abs(prev.w - box.width) < 2 && Math.abs(prev.h - box.height) < 2
+        ? prev
+        : { w: box.width, h: box.height },
+    )
+    const chrome = measureChrome(box)
+    setInset((prev) => {
+      const next = {
+        top: chrome.top + BREATH,
+        right: chrome.right + BREATH,
+        bottom: chrome.bottom + BREATH,
+        left: chrome.left + BREATH,
+      }
+      const same =
+        Math.abs(prev.top - next.top) < 2 &&
+        Math.abs(prev.right - next.right) < 2 &&
+        Math.abs(prev.bottom - next.bottom) < 2 &&
+        Math.abs(prev.left - next.left) < 2
+      return same ? prev : next
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    measure()
+    const vp = viewportRef.current
+    if (!vp) return
+    const observer = new ResizeObserver(measure)
+    observer.observe(vp)
+    for (const selector of ['.topbar', '.canvas-toolbar', '.sidebar', '.inspector', '.dock']) {
+      const el = document.querySelector(selector)
+      if (el) observer.observe(el)
+    }
+    return () => observer.disconnect()
+  }, [measure, panelHidden, focusMode])
+
+  /*
+    A board wider than the window, with the diagram centred in it.
+
+    The earlier version reserved a gutter the size of the chrome and then a
+    margin the size of the viewport. Both were wrong in the same way: they were
+    dead zones the diagram could not enter, and at low zoom they pushed
+    everything into a corner. A board that is simply larger than the window,
+    with the content in the middle, does the job without any of that.
+  */
 
   const toStage = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -219,6 +316,15 @@ export function CanvasView() {
     return { positions, width: Math.max(width, computed.width), height: Math.max(height, computed.height) }
   }, [computed, nodeOverrides])
 
+  const BOARD_SLACK = 320
+
+  const stageW = layout.width
+  const stageH = layout.height
+  const sizerW = Math.max(viewBox.w, stageW * zoom + BOARD_SLACK * 2)
+  const sizerH = Math.max(viewBox.h, stageH * zoom + BOARD_SLACK * 2)
+  const offsetX = (sizerW - stageW * zoom) / 2
+  const offsetY = (sizerH - stageH * zoom) / 2
+
   /*
     Dragging a node moves it on this screen only. Nothing is dispatched, no
     event is written, nothing crosses the wire -- so it cannot carry meaning to
@@ -260,38 +366,10 @@ export function CanvasView() {
         and the guess was ten pixels short.
       */
       const box = vp.getBoundingClientRect()
-      const pad = { top: 0, right: 0, bottom: 0, left: 0 }
+      const pad = measureChrome(box)
 
-      /*
-        Which side a panel occludes is worked out from its shape, not hardcoded:
-        the inspector is a right-hand column on a wide window and a full-width
-        bottom sheet on a narrow one, and an inset written for one is nonsense
-        for the other.
-      */
-      for (const selector of ['.topbar', '.canvas-toolbar', '.sidebar', '.inspector', '.dock']) {
-        const el = document.querySelector(selector)
-        if (!el) continue
-        const r = el.getBoundingClientRect()
-        if (r.width <= 0 || r.height <= 0) continue
-        if (r.width > box.width * 0.7) {
-          // A band across the window: costs height at whichever edge it hugs.
-          if (r.top - box.top < box.bottom - r.bottom) {
-            pad.top = Math.max(pad.top, r.bottom - box.top)
-          } else {
-            pad.bottom = Math.max(pad.bottom, box.bottom - r.top)
-          }
-        } else if (r.height > box.height * 0.5) {
-          // A column: costs width at whichever edge it hugs.
-          if (r.left - box.left < box.right - r.right) {
-            pad.left = Math.max(pad.left, r.right - box.left)
-          } else {
-            pad.right = Math.max(pad.right, box.right - r.left)
-          }
-        }
-      }
-
-      // If the chrome leaves less room than a node needs, showing it somewhere
-      // beats refusing to scroll at all.
+      // If the chrome would leave less room than a node needs, showing it
+      // somewhere beats refusing to scroll at all.
       if (box.width - pad.left - pad.right < NODE_W * zoom + 80) {
         pad.left = 0
         pad.right = 0
@@ -304,8 +382,8 @@ export function CanvasView() {
       const { top: padTop, right: padRight, bottom: padBottom, left: padLeft } = pad
 
       const margin = 24
-      const x = (p.x + PAD) * zoom
-      const y = (p.y + PAD) * zoom
+      const x = offsetX + p.x * zoom
+      const y = offsetY + p.y * zoom
       const nodeW = NODE_W * zoom
       const nodeH = NODE_H * zoom
       const left = vp.scrollLeft
@@ -330,7 +408,7 @@ export function CanvasView() {
       const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       vp.scrollTo({ left: nextLeft, top: nextTop, behavior: still || !smooth ? 'auto' : 'smooth' })
     },
-    [layout, zoom],
+    [layout, zoom, inset, offsetX, offsetY],
   )
 
   useEffect(() => {
@@ -366,24 +444,42 @@ export function CanvasView() {
     return () => observer.disconnect()
   }, [focusId, ensureVisible])
 
+  /** Put the diagram in the middle of the free space, not the middle of the window. */
+  const centreOnContent = useCallback(
+    (atZoom: number) => {
+      const vp = viewportRef.current
+      if (!vp) return
+      const freeCentreX = inset.left + (vp.clientWidth - inset.left - inset.right) / 2
+      const freeCentreY = inset.top + (vp.clientHeight - inset.top - inset.bottom) / 2
+      const w = Math.max(vp.clientWidth, layout.width * atZoom + BOARD_SLACK * 2)
+      const h = Math.max(vp.clientHeight, layout.height * atZoom + BOARD_SLACK * 2)
+      vp.scrollLeft = w / 2 - freeCentreX
+      vp.scrollTop = h / 2 - freeCentreY
+    },
+    [inset, layout],
+  )
+
   /** Shrink until the whole diagram fits the space the chrome leaves free. */
   const zoomToFit = useCallback(() => {
     const vp = viewportRef.current
     if (!vp) return
-    const usableW = Math.max(200, vp.clientWidth - 120)
-    const usableH = Math.max(200, vp.clientHeight - 220)
-    const next = Math.min(1, usableW / (layout.width + PAD * 2), usableH / (layout.height + PAD * 2))
-    setZoom(Math.max(MIN_ZOOM, next))
-    requestAnimationFrame(() => {
-      vp.scrollLeft = 0
-      vp.scrollTop = 0
-    })
-  }, [layout])
+    // Fit against the window, not against what the chrome leaves: subtracting
+    // the panels shrank the diagram to a third of the screen for no good reason.
+    const usableW = Math.max(240, vp.clientWidth - 160)
+    const usableH = Math.max(240, vp.clientHeight - 200)
+    const next = Math.max(MIN_ZOOM, Math.min(1, usableW / layout.width, usableH / layout.height))
+    // Fit is for seeing the whole shape, and the button is always there for
+    // that. Opening at it is different: below about two thirds the titles stop
+    // being readable, and an unreadable overview is worse than a readable
+    // fragment you can pan.
+    setZoom(next)
+    requestAnimationFrame(() => centreOnContent(next))
+  }, [layout, inset, centreOnContent])
 
   const centreOf = (id: NodeId) => {
     const p = layout.positions.get(id)
     if (!p) return null
-    return { x: p.x + NODE_W / 2 + PAD, y: p.y + NODE_H / 2 + PAD }
+    return { x: p.x + NODE_W / 2, y: p.y + NODE_H / 2 }
   }
 
   const parentEdges = visibleIds
@@ -417,14 +513,60 @@ export function CanvasView() {
   const focusedBy = (id: NodeId) =>
     participants.filter((p) => p.online && p.focusNodeId === id && p.actorId !== selfId)
 
-  const stageW = layout.width + PAD * 2
-  const stageH = layout.height + PAD * 2
+  /*
+    The chrome padding lives on the sizer, outside the scaled stage.
+
+    Putting it inside meant it shrank with the zoom: fitting a diagram to 47%
+    also shrank the clearance to 47%, and the nodes went straight back under the
+    bars. Screen-space gutters have to stay screen-space.
+  */
+  /*
+    A board much larger than the diagram, with the diagram sitting in the middle
+    of it.
+
+    This is what makes the floating chrome harmless: the bars cover empty board,
+    not content. Trying to solve it by insetting the content only worked at the
+    edges of a scroll -- anything in the middle of a large diagram still passed
+    underneath. Margins are screen-space and do not scale, so zooming out does
+    not shrink the clearance with it.
+  */
 
   // Where the agent stands: just off the corner of the node it is talking about.
   const agentAnchor = agentTargetId ? layout.positions.get(agentTargetId) : undefined
   const agentPoint = agentAnchor
-    ? { x: agentAnchor.x + PAD + NODE_W - 18, y: agentAnchor.y + PAD + NODE_H - 10 }
+    ? { x: agentAnchor.x + NODE_W - 18, y: agentAnchor.y + NODE_H - 10 }
     : null
+
+  /*
+    Fit on arrival when the diagram is bigger than the space it has.
+
+    Padding alone only clears the nodes at the edges of the scroll; anything in
+    the middle of a large diagram still passes under a floating bar. Opening at
+    a zoom where the whole thing fits means nothing has to pass under anything.
+  */
+  const didFit = useRef(false)
+  useEffect(() => {
+    if (didFit.current) return
+    const vp = viewportRef.current
+    if (!vp || vp.clientWidth === 0) return
+    didFit.current = true
+    const overflows =
+      stageW > vp.clientWidth - inset.left - inset.right ||
+      stageH > vp.clientHeight - inset.top - inset.bottom
+    window.setTimeout(() => {
+      if (!overflows) {
+        centreOnContent(zoom)
+        return
+      }
+      const usableW = Math.max(240, vp.clientWidth - 160)
+      const usableH = Math.max(240, vp.clientHeight - 200)
+      const fitted = Math.min(1, usableW / layout.width, usableH / layout.height)
+      const opening = Math.max(0.65, fitted)
+      setZoom(opening)
+      requestAnimationFrame(() => centreOnContent(opening))
+    }, 140)
+  }, [stageW, stageH, inset, layout, centreOnContent, zoom])
+
 
   return (
     <div
@@ -486,10 +628,17 @@ export function CanvasView() {
         zoomAt(zoom * (event.deltaY > 0 ? 0.92 : 1.08), event.clientX, event.clientY)
       }}
     >
-      <div className="canvas-sizer" style={{ width: stageW * zoom, height: stageH * zoom }}>
+      <div
+        className="canvas-sizer"
+        style={{ width: sizerW, height: sizerH }}
+      >
       <div
         className={`canvas-stage ${dragLink ? 'is-linking' : ''}`}
-        style={{ width: stageW, height: stageH, transform: `scale(${zoom})` }}
+        style={{
+          width: stageW,
+          height: stageH,
+          transform: `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`,
+        }}
         ref={stageRef}
         onPointerMove={(event) => {
           const current = dragRef.current
@@ -622,7 +771,7 @@ export function CanvasView() {
                   draggingNode === id ? 'is-dragging' : ''
                 } ${nodeOverrides[id] ? 'is-placed' : ''}`}
                 style={{
-                  transform: `translate(${pos.x + PAD}px, ${pos.y + PAD}px)`,
+                  transform: `translate(${pos.x}px, ${pos.y}px)`,
                   width: NODE_W,
                   minHeight: NODE_H,
                   ['--kh' as string]: String(hue),

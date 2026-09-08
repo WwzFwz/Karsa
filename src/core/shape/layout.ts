@@ -28,7 +28,12 @@ export interface LayoutResult {
 export const NODE_W = 188
 export const NODE_H = 62
 const GAP_X = 72
-const GAP_Y = 26
+/*
+  Tight enough that a twenty-node tree does not become a column taller than any
+  screen. A tidy tree is naturally tall; every pixel of sibling gap is paid for
+  again at the bottom of the diagram.
+*/
+const GAP_Y = 16
 
 /**
  * A tidy tree: every subtree gets exactly the space it needs, so siblings never

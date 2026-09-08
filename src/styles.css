@@ -2016,7 +2016,13 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   left: var(--gap);
   right: var(--gap);
   z-index: 30;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
 }
+
+/* Anything sliding beneath the chrome should read as behind it, not cut off. */
+.sidebar,
+.inspector { background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); }
 
 .sidebar {
   position: absolute;
@@ -2061,13 +2067,21 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   :root:not([data-theme='light']) .canvas-viewport { border: 0; }
 }
 
+/*
+  Hugs its contents instead of spanning the canvas. A full-width band covered a
+  stripe of the board across its whole width, so anything near the top was
+  sliced no matter how far you scrolled sideways.
+*/
 .canvas-toolbar {
   position: absolute;
   top: var(--chrome-top);
   left: var(--chrome-left);
-  right: var(--chrome-right);
+  width: max-content;
+  max-width: calc(100% - var(--chrome-left) - var(--chrome-right));
   z-index: 20;
   box-shadow: var(--e3);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
 }
 
 .inspector {
@@ -2134,14 +2148,16 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   One row that scrolls, rather than two rows that eat the canvas. A toolbar that
   wraps doubles its height exactly when the window is smallest.
 */
-@media (max-width: 1240px) {
-  .canvas-toolbar {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: thin;
-  }
-  .canvas-toolbar::-webkit-scrollbar { height: 0; }
+/*
+  Always one row. Wrapping doubled the toolbar's height, and the height it took
+  was taken from the canvas.
+*/
+.canvas-toolbar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.canvas-toolbar::-webkit-scrollbar { height: 0; }
 
 /* Dragging the empty ground moves the board. The cursor is the whole
    affordance, so it has to be right: open hand over the ground, closed while
@@ -2153,8 +2169,8 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 
 /* ============================ zoom ============================ */
 
-.canvas-sizer { margin-inline: auto; position: relative; }
-.canvas-stage { transform-origin: 0 0; }
+.canvas-sizer { position: relative; box-sizing: border-box; }
+.canvas-stage { transform-origin: 0 0; position: absolute; top: 0; left: 0; }
 
 /*
   Bottom-left, because the dock owns the centre and the inspector owns the
