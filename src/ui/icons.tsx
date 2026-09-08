@@ -23,7 +23,7 @@ export type IconName =
   | 'fileText' | 'checkSquare' | 'folder' | 'pointer' | 'eye' | 'presentation'
   | 'play' | 'stop' | 'alert' | 'clock' | 'activity' | 'search' | 'send'
   | 'wifiOff' | 'copy' | 'zap' | 'more' | 'panelRight' | 'logIn' | 'dot'
-  | 'sun' | 'moon' | 'maximize' | 'minimize' | 'panelRightOpen' | 'undo' | 'settings' | 'lock' | 'menu' | 'minus'
+  | 'sun' | 'moon' | 'maximize' | 'minimize' | 'panelRightOpen' | 'undo' | 'settings' | 'lock' | 'menu' | 'minus' | 'share' | 'home'
 
 const PATHS: Record<IconName, JSX.Element> = {
   mic: (
@@ -264,6 +264,20 @@ const PATHS: Record<IconName, JSX.Element> = {
   moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
   menu: <path d="M3 6h18M3 12h18M3 18h18" />,
   minus: <path d="M5 12h14" />,
+  share: (
+    <>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
+    </>
+  ),
+  home: (
+    <>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.8V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.8" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />

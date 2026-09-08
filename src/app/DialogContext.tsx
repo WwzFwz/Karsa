@@ -6,6 +6,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import { Dialog } from '../ui/Dialog'
+import { Icon } from '../ui/icons'
 import { NodePicker } from '../ui/NodePicker'
 import { KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, SHAPE_HINT, STATE_LABEL } from '../ui/labels'
 import { NODE_KINDS, TITLE_MAX } from '../core/rules/invariants'
@@ -24,6 +25,7 @@ export type DialogRequest =
   | { kind: 'relate'; nodeId: NodeId; presetTarget?: NodeId }
   | { kind: 'comment'; nodeId: NodeId }
   | { kind: 'delete'; nodeId: NodeId }
+  | { kind: 'share' }
   | { kind: 'shape' }
   | { kind: 'help' }
 
@@ -77,6 +79,8 @@ function DialogHost({ request, onClose }: { request: DialogRequest; onClose: () 
       return <CommentDialog nodeId={request.nodeId} onClose={onClose} />
     case 'delete':
       return <DeleteDialog nodeId={request.nodeId} onClose={onClose} />
+    case 'share':
+      return <ShareDialog onClose={onClose} />
     case 'shape':
       return <ShapeDialog onClose={onClose} />
     case 'help':
@@ -469,6 +473,68 @@ function DeleteDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void
           </label>
         </fieldset>
       )}
+    </Dialog>
+  )
+}
+
+/**
+ * Sharing is a code, not an invitation.
+ *
+ * There are no accounts to invite, so what gets handed over is the room code
+ * itself -- readable aloud over a call, and typed on the join page by anyone.
+ * The link is a convenience on top of it, never a replacement, because a link
+ * cannot be spoken.
+ */
+function ShareDialog({ onClose }: { onClose: () => void }) {
+  const { doc } = useRoom()
+  const [copied, setCopied] = useState<'kode' | 'tautan' | null>(null)
+  const link = `${window.location.origin}/ruang/${doc.room.id}`
+
+  const copy = async (what: 'kode' | 'tautan') => {
+    const text = what === 'kode' ? doc.room.id : link
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(what)
+      window.setTimeout(() => setCopied(null), 2200)
+    } catch {
+      window.prompt('Salin:', text)
+    }
+  }
+
+  return (
+    <Dialog
+      title="Bagikan ruang"
+      description="Siapa pun yang punya kodenya bisa bergabung. Tanpa akun, tanpa undangan."
+      onClose={onClose}
+      footer={
+        <button type="button" className="btn btn-primary" onClick={onClose}>
+          Selesai
+        </button>
+      }
+    >
+      <p className="field-label">Kode ruang</p>
+      <div className="share-code">
+        <span>{doc.room.id}</span>
+        <button type="button" className="btn btn-small" onClick={() => copy('kode')}>
+          <Icon name={copied === 'kode' ? 'check' : 'copy'} size={15} />
+          {copied === 'kode' ? 'Tersalin' : 'Salin kode'}
+        </button>
+      </div>
+
+      <p className="field-label" style={{ marginTop: 16 }}>
+        Tautan
+      </p>
+      <div className="share-code is-quiet">
+        <span>{link}</span>
+        <button type="button" className="btn btn-small" onClick={() => copy('tautan')}>
+          <Icon name={copied === 'tautan' ? 'check' : 'link'} size={15} />
+          {copied === 'tautan' ? 'Tersalin' : 'Salin tautan'}
+        </button>
+      </div>
+
+      <p className="panel-note" style={{ marginTop: 16, marginBottom: 0 }}>
+        Kode lebih berguna daripada tautan saat rapat sedang berjalan: ia bisa diucapkan.
+      </p>
     </Dialog>
   )
 }

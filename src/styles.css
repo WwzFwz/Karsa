@@ -2410,3 +2410,31 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   .dash-side .sidebar-foot { margin: 0; }
   .dash-search .text-input { width: 180px; }
 }
+
+/* The one solid, dark control in the room: handing the code to someone else is
+   the only action here aimed at a person who is not in the room yet. */
+.btn-dark {
+  background: var(--n8);
+  border-color: transparent;
+  color: var(--n0);
+}
+.btn-dark:hover:not(:disabled) { background: var(--n7); }
+:root[data-theme='dark'] .btn-dark { background: var(--n7); color: var(--n1); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .btn-dark { background: var(--n7); color: var(--n1); }
+}
+
+.share-code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: 18px;
+  font-weight: 680;
+  letter-spacing: 0.04em;
+}
+.share-code.is-quiet { font-size: 12.5px; font-weight: 500; letter-spacing: 0; }
+.share-code > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

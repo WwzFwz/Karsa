@@ -319,6 +319,17 @@ export function CanvasView() {
   const BOARD_SLACK = 320
 
   /*
+    The board has a coordinate space, not a corner.
+
+    Auto layout starts at 0,0, and clamping hand placement to that origin meant
+    a node could never be moved above or to the left of where the algorithm
+    happened to put the first one. If every node has a coordinate, every
+    coordinate on the board should be available to it. ORIGIN is how much room
+    exists on the negative side of the layout's own origin.
+  */
+  const ORIGIN = 800
+
+  /*
     The board is always larger than the window by at least the chrome it hides
     behind.
 
@@ -336,8 +347,8 @@ export function CanvasView() {
     [viewBox, inset],
   )
 
-  const stageW = layout.width
-  const stageH = layout.height
+  const stageW = layout.width + ORIGIN * 2
+  const stageH = layout.height + ORIGIN * 2
   const board = boardSize(zoom, stageW, stageH)
   const sizerW = board.w
   const sizerH = board.h
@@ -401,8 +412,8 @@ export function CanvasView() {
       const { top: padTop, right: padRight, bottom: padBottom, left: padLeft } = pad
 
       const margin = 24
-      const x = offsetX + p.x * zoom
-      const y = offsetY + p.y * zoom
+      const x = offsetX + (p.x + ORIGIN) * zoom
+      const y = offsetY + (p.y + ORIGIN) * zoom
       const nodeW = NODE_W * zoom
       const nodeH = NODE_H * zoom
       const left = vp.scrollLeft
@@ -470,9 +481,12 @@ export function CanvasView() {
       if (!vp) return
       const freeCentreX = inset.left + (vp.clientWidth - inset.left - inset.right) / 2
       const freeCentreY = inset.top + (vp.clientHeight - inset.top - inset.bottom) / 2
-      const { w, h } = boardSize(atZoom, layout.width, layout.height)
-      vp.scrollLeft = w / 2 - freeCentreX
-      vp.scrollTop = h / 2 - freeCentreY
+      const stagedW = layout.width + ORIGIN * 2
+      const stagedH = layout.height + ORIGIN * 2
+      const { w, h } = boardSize(atZoom, stagedW, stagedH)
+      // Centre the diagram, not the padding around it.
+      vp.scrollLeft = (w - stagedW * atZoom) / 2 + (ORIGIN + layout.width / 2) * atZoom - freeCentreX
+      vp.scrollTop = (h - stagedH * atZoom) / 2 + (ORIGIN + layout.height / 2) * atZoom - freeCentreY
     },
     [inset, layout, boardSize],
   )
@@ -497,7 +511,7 @@ export function CanvasView() {
   const centreOf = (id: NodeId) => {
     const p = layout.positions.get(id)
     if (!p) return null
-    return { x: p.x + NODE_W / 2, y: p.y + NODE_H / 2 }
+    return { x: p.x + ORIGIN + NODE_W / 2, y: p.y + ORIGIN + NODE_H / 2 }
   }
 
   const parentEdges = visibleIds
@@ -552,7 +566,7 @@ export function CanvasView() {
   // Where the agent stands: just off the corner of the node it is talking about.
   const agentAnchor = agentTargetId ? layout.positions.get(agentTargetId) : undefined
   const agentPoint = agentAnchor
-    ? { x: agentAnchor.x + NODE_W - 18, y: agentAnchor.y + NODE_H - 10 }
+    ? { x: agentAnchor.x + ORIGIN + NODE_W - 18, y: agentAnchor.y + ORIGIN + NODE_H - 10 }
     : null
 
   /*
@@ -569,8 +583,8 @@ export function CanvasView() {
     if (!vp || vp.clientWidth === 0) return
     didFit.current = true
     const overflows =
-      stageW > vp.clientWidth - inset.left - inset.right ||
-      stageH > vp.clientHeight - inset.top - inset.bottom
+      layout.width > vp.clientWidth - inset.left - inset.right ||
+      layout.height > vp.clientHeight - inset.top - inset.bottom
     window.setTimeout(() => {
       if (!overflows) {
         centreOnContent(zoom)
@@ -610,9 +624,12 @@ export function CanvasView() {
           if (!suppressClickRef.current && Math.hypot(dx, dy) < 4) return
           suppressClickRef.current = true
           setDraggingNode(node.id)
+          // Bounded by the board, not by the layout's origin.
+          const limit = (value: number, extent: number) =>
+            Math.min(extent + ORIGIN - NODE_W, Math.max(-ORIGIN + 12, value))
           setNodeOverride(node.id, {
-            x: Math.max(0, node.from.x + dx),
-            y: Math.max(0, node.from.y + dy),
+            x: limit(node.from.x + dx, layout.width),
+            y: limit(node.from.y + dy, layout.height),
           })
           return
         }
@@ -790,7 +807,7 @@ export function CanvasView() {
                   draggingNode === id ? 'is-dragging' : ''
                 } ${nodeOverrides[id] ? 'is-placed' : ''}`}
                 style={{
-                  transform: `translate(${pos.x}px, ${pos.y}px)`,
+                  transform: `translate(${pos.x + ORIGIN}px, ${pos.y + ORIGIN}px)`,
                   width: NODE_W,
                   minHeight: NODE_H,
                   ['--kh' as string]: String(hue),

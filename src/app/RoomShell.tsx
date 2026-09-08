@@ -34,6 +34,7 @@ import { VoiceDock } from '../features/voice/VoiceDock'
   others, made a person guess which copy was real.
 */
 const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
+  { to: '..', label: 'Dasbor', icon: 'home' },
   { to: '', label: 'Ruang', icon: 'layout' },
   { to: 'ringkasan', label: 'Ringkasan', icon: 'activity' },
   { to: 'pengaturan', label: 'Pengaturan', icon: 'settings' },
@@ -301,6 +302,15 @@ export function RoomShell({ children }: { children: ReactNode }) {
           </ul>
           <button
             type="button"
+            className="btn btn-small btn-dark"
+            onClick={() => dialogs.open({ kind: 'share' })}
+            title="Bagikan kode ruang"
+          >
+            <Icon name="share" size={15} />
+            Bagikan
+          </button>
+          <button
+            type="button"
             className="btn btn-small"
             onClick={() => dialogs.open({ kind: 'shape' })}
             title="Ganti bentuk kanvas"
@@ -354,14 +364,16 @@ export function RoomShell({ children }: { children: ReactNode }) {
             return (
               <NavLink
                 key={tab.label}
-                to={tab.to ? `${base}/${tab.to}` : base}
+                to={tab.to === '..' ? '/ruang' : tab.to ? `${base}/${tab.to}` : base}
                 className={({ isActive }) => {
                   // "Ruang" covers every arrangement of the workspace, so it
                   // stays lit unless one of the two real pages is open.
                   const active =
-                    tab.to === ''
-                      ? !pathname.endsWith('/ringkasan') && !pathname.endsWith('/pengaturan')
-                      : isActive
+                    tab.to === '..'
+                      ? false
+                      : tab.to === ''
+                        ? !pathname.endsWith('/ringkasan') && !pathname.endsWith('/pengaturan')
+                        : isActive
                   return `nav-item ${active ? 'is-active' : ''}`
                 }}
               >
