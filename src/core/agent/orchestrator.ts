@@ -20,14 +20,10 @@
 
 import { expandTemplate, templateSize } from '../templates/expand'
 import { TEMPLATES, templateById } from '../templates/registry'
-import type { NodeId, RoomDoc } from '../model/types'
+import { planWithOllama } from './ollama'
+import type { NodeId } from '../model/types'
+import type { PlanInput, ProviderId } from './provider'
 import type { Plan, PlanStep } from './types'
-
-export interface PlanInput {
-  transcript: string
-  doc: RoomDoc
-  focusId: NodeId | null
-}
 
 /** Words that name a template outright. */
 const NAMED: Record<string, string[]> = {
@@ -80,6 +76,28 @@ function stepFor(templateId: string, parentId: NodeId | null, confidence: number
     confidence,
     commands: expandTemplate(built, parentId),
     source: { kind: spec.id === 'voting' ? 'alat' : 'templat', id: spec.id, label: spec.label },
+  }
+}
+
+/**
+ * The provider chooses who answers; the shape of the answer never changes.
+ *
+ * A failing model falls back to the rule matcher rather than to nothing, and
+ * says so in the reason -- silently degrading would let a demo look like a
+ * local model was working when it was not.
+ */
+export async function planWith(provider: ProviderId, input: PlanInput): Promise<Plan> {
+  if (provider !== 'ollama') return plan(input)
+  try {
+    return await planWithOllama(input)
+  } catch (error) {
+    const fallback = plan(input)
+    return {
+      ...fallback,
+      reason: `Model lokal tidak menjawab (${
+        error instanceof Error ? error.message : 'gagal'
+      }), jadi ini hasil pencocokan aturan. ${fallback.reason}`,
+    }
   }
 }
 

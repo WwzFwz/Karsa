@@ -114,6 +114,12 @@ export function WorkspacePage() {
 
           <span className="toolbar-sep" aria-hidden="true" />
 
+          {/* One card, one row. Two floating bars stacked on the same corner
+              were two things to look past before reaching the board. */}
+          <ToolRail />
+
+          <span className="toolbar-sep" aria-hidden="true" />
+
           {/*
             No selection label, and no Pindah or Hubung buttons. The node is
             already highlighted, so naming it again in a bar was a caption for
@@ -168,12 +174,7 @@ export function WorkspacePage() {
 
         <div className={`stage-grid view-${view}`}>
           {view === 'canvas' ? (
-            <>
-              <CanvasView />
-              {/* Floats over the canvas like everything else (D25), so hiding
-                  the panels hands the space straight back to the board. */}
-              <ToolRail />
-            </>
+            <CanvasView />
           ) : (
             <div className="outline-pane">
               <OutlineTree />

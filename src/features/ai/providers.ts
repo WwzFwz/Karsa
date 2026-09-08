@@ -12,7 +12,7 @@
  * to somebody's server.
  */
 
-export type ProviderId = 'ollama' | 'webllm' | 'vllm' | 'cloud'
+export type ProviderId = 'rules' | 'ollama' | 'webllm' | 'vllm' | 'cloud'
 export type ProviderStatus = 'active' | 'planned'
 
 export interface ModelProvider {
@@ -27,6 +27,14 @@ export interface ModelProvider {
 }
 
 export const PROVIDERS: ModelProvider[] = [
+  {
+    id: 'rules',
+    name: 'Pencocokan aturan',
+    detail:
+      'Tanpa model sama sekali. Cepat, deterministik, dan jalan di kelas yang tidak punya jaringan maupun Ollama.',
+    dataPath: 'Tidak ada yang keluar dari perangkat.',
+    status: 'active',
+  },
   {
     id: 'ollama',
     name: 'Ollama di perangkat',
@@ -59,4 +67,5 @@ export const PROVIDERS: ModelProvider[] = [
   },
 ]
 
-export const ACTIVE_PROVIDER: ProviderId = 'ollama'
+/** Selectable today. The rest are shown disabled on purpose -- see the header. */
+export const SELECTABLE: ProviderId[] = ['rules', 'ollama']

@@ -30,6 +30,8 @@ import type { InputPath, NodeId, RoomDoc, RoomShape } from '../core/model/types'
 import type { Point } from '../core/shape/layout'
 import { countVotes, hasVoted } from '../core/tools/tally'
 import { templateById } from '../core/templates/registry'
+import { probeOllama } from '../core/agent/ollama'
+import { readProvider, writeProvider, type ProviderId } from '../core/agent/provider'
 import { expandTemplate, templateSize } from '../core/templates/expand'
 import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/project'
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
@@ -108,6 +110,11 @@ interface RoomApi {
   votesOn: (id: NodeId) => number
   /** Drops a whole template under a parent, as one undo step and one sentence. */
   insertTemplate: (templateId: string, parentId: NodeId | null) => void
+
+  /** Who answers a voice turn. Shown, never silently swapped (section 8). */
+  provider: ProviderId
+  setProvider: (id: ProviderId) => void
+  providerState: { ready: boolean; detail: string }
 
   view: ViewMode
   setView: (view: ViewMode) => void
@@ -211,6 +218,36 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const [mode, setModeState] = useState<SessionMode>('meeting')
   const [soundProfile, setSoundProfileState] = useState<SoundProfile>('sparse')
   const [lastError, setLastError] = useState<string | null>(null)
+
+  /*
+    Which engine answers. Read once, changed only by a person, and probed so the
+    interface can say what is actually there rather than what is configured --
+    "Ollama selected" and "Ollama running" are different facts.
+  */
+  const [provider, setProviderState] = useState<ProviderId>(readProvider)
+  const [providerState, setProbe] = useState({ ready: false, detail: 'Belum diperiksa.' })
+  const providerRef = useRef<ProviderId>(provider)
+  providerRef.current = provider
+
+  useEffect(() => {
+    let alive = true
+    if (provider !== 'ollama') {
+      setProbe({ ready: true, detail: 'Pencocokan aturan, tanpa model.' })
+      return
+    }
+    setProbe({ ready: false, detail: 'Memeriksa Ollama...' })
+    void probeOllama().then((result) => {
+      if (alive) setProbe(result)
+    })
+    return () => {
+      alive = false
+    }
+  }, [provider])
+
+  const setProvider = useCallback((id: ProviderId) => {
+    writeProvider(id)
+    setProviderState(id)
+  }, [])
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [talking, setTalking] = useState(false)
   const [traversing, setTraversing] = useState(false)
@@ -514,8 +551,11 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     utteranceIndex.current += 1
     setDraft((d) => ({ ...d, status: 'thinking', transcript: utterance.transcript }))
 
-    window.setTimeout(() => {
-      const next = buildDraft(utterance, store.getDoc(), tree, focusId)
+    // The rule matcher answers instantly; a 7B model takes a couple of seconds.
+    // The transcript is already on screen either way, which is what makes the
+    // wait feel like nothing (section 10).
+    void (async () => {
+      const next = await buildDraft(utterance, store.getDoc(), tree, focusId, providerRef.current)
       setDraft(next)
       audioBus.emit({ earcon: 'draftReady', force: true })
       if (next.operations.length > 0) {
@@ -531,7 +571,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       } else {
         announcer.announce('Ucapan tidak dikenali. Teksnya bisa disunting sebelum diterapkan.', 'assertive')
       }
-    }, 850)
+    })()
   }, [store, announcer, focusId, tree])
 
   /*
@@ -742,6 +782,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     votedByMe: (id: NodeId) => hasVoted(doc, id, SELF_ID),
     votesOn: (id: NodeId) => countVotes(doc, id),
     insertTemplate,
+    provider,
+    setProvider,
+    providerState,
     view,
     setView,
     panelHidden,

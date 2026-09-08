@@ -10,7 +10,7 @@
 
 import { useRoom } from '../app/RoomContext'
 import { useTheme, type ThemeChoice } from '../ui/theme'
-import { ACTIVE_PROVIDER, PROVIDERS } from '../features/ai/providers'
+import { PROVIDERS, SELECTABLE } from '../features/ai/providers'
 import { MODE_HINT, MODE_LABEL } from '../ui/labels'
 import { Icon } from '../ui/icons'
 import type { SoundProfile } from '../audio/earcons'
@@ -28,7 +28,8 @@ const THEME_LABEL: Record<ThemeChoice, string> = {
 }
 
 export function SettingsPage() {
-  const { mode, setMode, soundProfile, setSoundProfile } = useRoom()
+  const room = useRoom()
+  const { mode, setMode, soundProfile, setSoundProfile } = room
   const theme = useTheme()
 
   return (
@@ -51,24 +52,37 @@ export function SettingsPage() {
             pilihan di halaman ini berlaku untuk perangkat ini saja.
           </p>
 
-          <ul className="provider-list">
+          {/*
+            Buttons, not native radios. A controlled radio group where some
+            members are disabled fights React over which one the DOM thinks is
+            checked, and the loser is the person clicking. `role="radio"` keeps
+            the semantics a screen reader needs without the browser's own
+            grouping getting a vote.
+          */}
+          <ul className="provider-list" role="radiogroup" aria-labelledby="provider-heading">
             {PROVIDERS.map((p) => {
-              const active = p.id === ACTIVE_PROVIDER
+              const active = p.id === room.provider
+              const selectable = SELECTABLE.includes(p.id)
               return (
                 <li key={p.id}>
-                  <label className={`provider ${active ? 'is-on' : 'is-off'}`}>
-                    <input
-                      type="radio"
-                      name="provider"
-                      checked={active}
-                      disabled={p.status !== 'active'}
-                      readOnly
-                    />
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    disabled={!selectable}
+                    className={`provider ${active ? 'is-on' : 'is-off'}`}
+                    onClick={() => room.setProvider(p.id as 'rules' | 'ollama')}
+                  >
+                    <span className="provider-mark" aria-hidden="true" />
                     <span className="provider-body">
                       <span className="provider-name">
                         {p.name}
                         {active ? (
-                          <span className="pill pill-ok">aktif</span>
+                          <span className={`pill ${room.providerState.ready ? 'pill-ok' : 'pill-warn'}`}>
+                            {room.providerState.ready ? 'aktif' : 'dipilih, belum siap'}
+                          </span>
+                        ) : selectable ? (
+                          <span className="pill">tersedia</span>
                         ) : (
                           <span className="pill">
                             <Icon name="lock" size={11} />
@@ -77,6 +91,13 @@ export function SettingsPage() {
                         )}
                       </span>
                       <span className="provider-detail">{p.detail}</span>
+                      {/* What is actually there, not what is configured. Those
+                          are different facts and only one of them helps. */}
+                      {active && (
+                        <span className="provider-detail">
+                          <strong>{room.providerState.detail}</strong>
+                        </span>
+                      )}
                       <span
                         className={`provider-path ${
                           p.dataPath.startsWith('Tidak') ? '' : 'is-warn'
@@ -87,7 +108,7 @@ export function SettingsPage() {
                       </span>
                       {p.warning && <span className="provider-warning">{p.warning}</span>}
                     </span>
-                  </label>
+                  </button>
                 </li>
               )
             })}

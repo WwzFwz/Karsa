@@ -21,6 +21,7 @@
  * read.
  */
 
+import { useState } from 'react'
 import { useRoom } from '../../app/RoomContext'
 import { Icon } from '../../ui/icons'
 
@@ -56,6 +57,10 @@ export function VoiceDock() {
     linkingFrom,
   } = useRoom()
 
+  // Folded away by choice, not by state: somebody who trusts the capture
+  // should not have to keep reading it.
+  const [quietTranscript, setQuietTranscript] = useState(false)
+
   const accepted = draft.operations.filter((op) => op.accepted).length
   const waiting = draft.status === 'ready'
   const busy = draft.status === 'listening' || draft.status === 'thinking'
@@ -87,16 +92,40 @@ export function VoiceDock() {
 
   return (
     <div className="dock-layer">
-      {(busy || waiting) && draft.transcript && !canvasMounted && (
-        <div className="floater transcript-float">
-          <p className="floater-label">
-            <Icon name="mic" size={12} />
-            Transkripsi
-          </p>
-          <p className="transcript-text">
-            {draft.transcript}
-            {draft.status === 'listening' && <span className="caret" aria-hidden="true" />}
-          </p>
+      {/*
+        While recording, the words appear here on every page -- including the
+        canvas, where they used to be hidden because the agent cursor was
+        considered enough. It is not: the cursor says what will be *done*, and
+        this says what was *heard*, and the gap between those two is exactly
+        where a mishearing hides. Streaming it is also what makes three seconds
+        of thinking feel like none (section 10).
+
+        Once a proposal is standing, the canvas hands the job back to the cursor,
+        which says the same thing at the place it will land.
+      */}
+      {(busy || (waiting && !canvasMounted)) && draft.transcript && (
+        <div className={`floater transcript-float ${quietTranscript ? 'is-quiet' : ''}`}>
+          <div className="floater-bar">
+            <p className="floater-label">
+              <Icon name="mic" size={12} />
+              Transkripsi
+            </p>
+            <button
+              type="button"
+              className="floater-fold"
+              aria-expanded={!quietTranscript}
+              aria-label={quietTranscript ? 'Tampilkan transkripsi' : 'Sembunyikan transkripsi'}
+              onClick={() => setQuietTranscript((current) => !current)}
+            >
+              <Icon name={quietTranscript ? 'chevronRight' : 'chevronDown'} size={15} />
+            </button>
+          </div>
+          {!quietTranscript && (
+            <p className="transcript-text">
+              {draft.transcript}
+              {draft.status === 'listening' && <span className="caret" aria-hidden="true" />}
+            </p>
+          )}
         </div>
       )}
 

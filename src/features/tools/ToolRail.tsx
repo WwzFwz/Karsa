@@ -1,19 +1,25 @@
 /**
- * The horizontal rail: making things without speaking.
+ * Making things without speaking.
  *
  * Trido has a vertical rail of pen, shape and text. We cannot copy that list --
  * rule 3 forbids free drawing, so a pen tool would be a button that produces
- * content the outline cannot read. What we copy is the *shape* of the thing: a
- * small floating rail with the common act first and a "..." that opens the rest.
+ * content the outline cannot read. What we copy is the *shape* of the thing:
+ * the common act first, and a "..." that opens the rest.
  *
- * What goes in it is the honest test: things with no other pointer route. Every
- * button here has a keyboard equivalent already, so this rail adds a route
- * rather than owning one (rule 6, D6b). The one real gap it closes is templates
- * -- until now a person could only get a tool by converting a node they had
- * already made, which is a strange way to start a retro.
+ * It lives inside the canvas toolbar rather than in a bar of its own. Two
+ * floating cards stacked on the same corner were two things to look past before
+ * reaching the board, and the board is what people came for (D25). The sheet is
+ * portalled to the body because the toolbar scrolls sideways on a narrow window
+ * and would otherwise clip its own menu.
+ *
+ * Every button here has a keyboard equivalent already, so this adds a route
+ * rather than owning one (rule 6, D6b). The one real gap it closes is
+ * templates: until now a person could only get a tool by converting a node they
+ * had already made, which is a strange way to start a retro.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRoom } from '../../app/RoomContext'
 import { useDialogs } from '../../app/DialogContext'
 import { Icon } from '../../ui/icons'
@@ -29,13 +35,25 @@ export function ToolRail() {
   const dialogs = useDialogs()
   const { focusId, doc, run, insertTemplate } = room
   const [sheet, setSheet] = useState<Sheet>(null)
-  const rail = useRef<HTMLDivElement>(null)
+  const [at, setAt] = useState({ left: 0, top: 0 })
+  const group = useRef<HTMLSpanElement>(null)
+  const anchor = useRef<HTMLButtonElement>(null)
+
+  // Placed against the button that opened it, measured once it exists.
+  useLayoutEffect(() => {
+    if (!sheet) return
+    const box = anchor.current?.getBoundingClientRect()
+    if (box) setAt({ left: box.left, top: box.bottom + 8 })
+  }, [sheet])
 
   // A sheet that will not close is a sheet that covers the canvas forever.
   useEffect(() => {
     if (!sheet) return
     const onDown = (event: PointerEvent) => {
-      if (!rail.current?.contains(event.target as globalThis.Node)) setSheet(null)
+      const target = event.target as globalThis.Node
+      if (group.current?.contains(target)) return
+      if ((target as HTMLElement).closest?.('.rail-sheet')) return
+      setSheet(null)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setSheet(null)
@@ -51,8 +69,8 @@ export function ToolRail() {
   /*
     Everything lands under the focused node, or under the room root when nothing
     is focused. Never at a coordinate: where a thing sits is the layout's
-    business, and asking a person to aim would make the rail useless to anyone
-    who cannot aim.
+    business, and asking a person to aim would make this useless to anyone who
+    cannot aim.
   */
   const focused = focusId ? doc.nodes[focusId] : null
   const parentId = focused?.id ?? null
@@ -63,23 +81,29 @@ export function ToolRail() {
     setSheet(null)
   }
 
+  const toggle = (which: Exclude<Sheet, null>) =>
+    setSheet((current) => (current === which ? null : which))
+
   return (
-    <div className="tool-rail" ref={rail}>
-      <div className="rail-bar" role="toolbar" aria-label="Alat kanvas">
+    <>
+      <span className="rail-group" ref={group}>
         <button
           type="button"
-          className={`rail-btn ${sheet === 'simpul' ? 'is-on' : ''}`}
+          className={`icon-btn ${sheet === 'simpul' ? 'is-on' : ''}`}
           aria-expanded={sheet === 'simpul'}
           aria-haspopup="true"
+          aria-label="Tambah simpul"
           title="Tambah simpul (n)"
-          onClick={() => setSheet((current) => (current === 'simpul' ? null : 'simpul'))}
+          ref={sheet === 'simpul' ? anchor : undefined}
+          onClick={() => toggle('simpul')}
         >
           <Icon name="plus" size={18} />
         </button>
 
         <button
           type="button"
-          className="rail-btn"
+          className="icon-btn"
+          aria-label="Hubungkan simpul terfokus"
           title="Hubungkan simpul terfokus (r)"
           disabled={!focusId}
           onClick={() => focusId && dialogs.open({ kind: 'relate', nodeId: focusId })}
@@ -89,73 +113,83 @@ export function ToolRail() {
 
         <button
           type="button"
-          className="rail-btn"
-          title="Tulis komentar pada simpul terfokus (c)"
+          className="icon-btn"
+          aria-label="Tulis komentar pada simpul terfokus"
+          title="Tulis komentar (c)"
           disabled={!focusId}
           onClick={() => focusId && dialogs.open({ kind: 'comment', nodeId: focusId })}
         >
           <Icon name="message" size={17} />
         </button>
 
-        <span className="rail-sep" aria-hidden="true" />
-
         <button
           type="button"
-          className={`rail-btn ${sheet === 'templat' ? 'is-on' : ''}`}
+          className={`icon-btn ${sheet === 'templat' ? 'is-on' : ''}`}
           aria-expanded={sheet === 'templat'}
           aria-haspopup="true"
+          aria-label="Alat dan templat"
           title="Alat dan templat (a)"
-          onClick={() => setSheet((current) => (current === 'templat' ? null : 'templat'))}
+          ref={sheet === 'templat' ? anchor : undefined}
+          onClick={() => toggle('templat')}
         >
           <Icon name="more" size={18} />
         </button>
-      </div>
+      </span>
 
-      {sheet === 'simpul' && (
-        <div className="rail-sheet rail-sheet-narrow" role="group" aria-label="Tipe simpul baru">
-          <p className="rail-sheet-head">Tambah di bawah {parentTitle}</p>
-          <ul className="rail-kinds">
-            {NODE_KINDS.filter((kind) => kind !== 'root').map((kind) => (
-              <li key={kind}>
-                <button type="button" className="rail-item" onClick={() => addNode(kind)}>
-                  <Icon name="plus" size={14} />
-                  {KIND_LABEL[kind]}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {sheet === 'templat' && (
-        <div className="rail-sheet" role="group" aria-label="Alat dan templat">
-          <p className="rail-sheet-head">Alat &amp; templat · masuk di bawah {parentTitle}</p>
-          <ul className="rail-grid">
-            {TEMPLATES.map((template) => (
-              <li key={template.id}>
-                <button
-                  type="button"
-                  className="rail-card"
-                  onClick={() => {
-                    insertTemplate(template.id, parentId)
-                    setSheet(null)
-                  }}
-                >
-                  <span className="rail-card-icon" aria-hidden="true">
-                    <Icon name={template.icon} size={17} />
-                  </span>
-                  <span className="rail-card-label">{template.label}</span>
-                  <span className="rail-card-hint">{template.hint}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p className="rail-note">
-            Templat cuma sekumpulan simpul bertipe — bisa dibatalkan sekali tekan, dan terbaca di
-            outline begitu mendarat.
-          </p>
-        </div>
-      )}
-    </div>
+      {sheet &&
+        createPortal(
+          <div
+            className={`rail-sheet ${sheet === 'simpul' ? 'rail-sheet-narrow' : ''}`}
+            style={{ left: at.left, top: at.top }}
+            role="group"
+            aria-label={sheet === 'simpul' ? 'Tipe simpul baru' : 'Alat dan templat'}
+          >
+            {sheet === 'simpul' ? (
+              <>
+                <p className="rail-sheet-head">Tambah di bawah {parentTitle}</p>
+                <ul className="rail-kinds">
+                  {NODE_KINDS.filter((kind) => kind !== 'root').map((kind) => (
+                    <li key={kind}>
+                      <button type="button" className="rail-item" onClick={() => addNode(kind)}>
+                        <Icon name="plus" size={14} />
+                        {KIND_LABEL[kind]}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <p className="rail-sheet-head">Alat &amp; templat · masuk di bawah {parentTitle}</p>
+                <ul className="rail-grid">
+                  {TEMPLATES.map((template) => (
+                    <li key={template.id}>
+                      <button
+                        type="button"
+                        className="rail-card"
+                        onClick={() => {
+                          insertTemplate(template.id, parentId)
+                          setSheet(null)
+                        }}
+                      >
+                        <span className="rail-card-icon" aria-hidden="true">
+                          <Icon name={template.icon} size={17} />
+                        </span>
+                        <span className="rail-card-label">{template.label}</span>
+                        <span className="rail-card-hint">{template.hint}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="rail-note">
+                  Templat cuma sekumpulan simpul bertipe — bisa dibatalkan sekali tekan, dan
+                  terbaca di outline begitu mendarat.
+                </p>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
   )
 }

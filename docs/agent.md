@@ -2,17 +2,43 @@
 
 Sumber kebenarannya `src/core/agent/`.
 
-## Yang dibangun sekarang: sambungannya, bukan mesinnya
+## Dua penyedia, satu antarmuka
 
-Isi `plan()` hari ini adalah pencocok kata kunci. **Tanda tangannya** yang
-sungguhan, dan itu disengaja: semua yang di hilir — panel draf, kursor agen,
-pertunjukan penerapan — cuma membaca bentuk `Plan` dan tidak membaca yang lain.
-Hari model lokal masuk, yang berubah satu badan fungsi, bukan satu berkas pun
-yang lain.
+Klaim "hari model lokal masuk, yang berubah satu badan fungsi" sudah dibuktikan,
+bukan dijanjikan: `PlanProvider` punya dua implementasi.
 
-Alasannya ada di bagian 14 CLAUDE.md: tenggat terdekat adalah tampilan yang bisa
-dilihat dan diklik, bukan sistem yang berfungsi penuh. Nilai demonya sama
-persis, risikonya jauh lebih kecil, dan tidak ada pekerjaan yang terbuang.
+| Penyedia | Isinya | Kapan dipakai |
+| -------- | ------ | ------------- |
+| **Pencocokan aturan** | Tanpa model. Deterministik, instan. | Bawaan. Jalan di kelas tanpa jaringan maupun Ollama. |
+| **Ollama di perangkat** | `qwen2.5:7b`, constrained decoding berskema JSON. | Dipilih sadar di Pengaturan. |
+
+Tidak ada yang jadi cadangan diam-diam. Kalau model gagal menjawab, hasilnya
+tetap muncul dari pencocokan aturan **dan kalimat alasannya menyebutkan
+kegagalan itu** — demo yang tampak seperti model lokal padahal bukan adalah
+kebohongan yang paling mudah dibuat dan paling sulit dimaafkan.
+
+Pengaturan menampilkan dua fakta berbeda yang gampang dikira satu: **mana yang
+dipilih** dan **mana yang benar-benar siap**. Probe ke `/api/tags` yang
+menentukan yang kedua, dan bunyinya apa adanya — "Ollama jalan, tapi qwen2.5:7b
+belum diunduh" lebih berguna daripada centang hijau.
+
+## Kenapa model kecil bisa dipakai
+
+Dua hal, dan keduanya soal bentuk keluaran, bukan soal ukuran model.
+
+**Constrained decoding berskema JSON**, bukan "tolong balas dalam JSON".
+`format` di Ollama menerima skema, dan samplernya dibatasi ke token yang menjaga
+keluaran tetap sah. Model kecil gagal bukan karena bodoh, melainkan karena
+bentuk keluarannya melenceng (bagian 8).
+
+**Model memilih rute dan judul; kode yang menyusun perintah.** Model tidak
+pernah memilih id simpul, tidak pernah memilih koordinat, dan tidak pernah
+mengeluarkan perintah langsung. Perintahnya dibangun dari registry templat, jadi
+field yang dihalusinasikan tidak bisa menjadi dokumen yang rusak. **Model punya
+pendapat; kode yang memegang aturan.**
+
+Ongkosnya: sekitar 2–3 detik pada panggilan hangat, 11 detik pertama karena
+model dimuat. Ditutupi transkrip yang mengalir (bagian 10).
 
 ## Tiga jalur, berurutan
 

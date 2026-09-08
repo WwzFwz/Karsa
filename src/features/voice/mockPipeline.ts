@@ -12,7 +12,8 @@
  */
 
 import { newDraftId } from '../../core/model/ids'
-import { plan } from '../../core/agent/orchestrator'
+import { planWith } from '../../core/agent/orchestrator'
+import type { ProviderId } from '../../core/agent/provider'
 import { buildContext, renderContext } from '../../core/agent/context'
 import type { TreeProjection } from '../../core/tree/project'
 import type { Command } from '../../core/commands/types'
@@ -186,13 +187,19 @@ export function emptyDraft(): Draft {
  * only ever looking for nouns. Only when nothing about the sentence asks for a
  * tool does it fall through to the stage that reads it as ordinary content.
  */
-export function buildDraft(
+export async function buildDraft(
   utterance: Utterance,
   doc: RoomDoc,
   tree: TreeProjection,
   focusId: NodeId | null,
-): Draft {
-  const routed = plan({ transcript: utterance.transcript, doc, focusId })
+  provider: ProviderId,
+): Promise<Draft> {
+  const routed = await planWith(provider, {
+    transcript: utterance.transcript,
+    doc,
+    tree,
+    focusId,
+  })
   const context = renderContext(buildContext(doc, tree, focusId))
 
   if (routed.steps.length > 0 || routed.question) {
