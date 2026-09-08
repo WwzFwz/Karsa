@@ -318,10 +318,29 @@ export function CanvasView() {
 
   const BOARD_SLACK = 320
 
+  /*
+    The board is always larger than the window by at least the chrome it hides
+    behind.
+
+    Sizing it to `max(window, content)` looked right and was the bug: when the
+    diagram fitted, scrollWidth equalled clientWidth, the scroll range was zero,
+    and any node sitting under the inspector could never be pulled out from
+    under it. Scroll range has to exist precisely where a panel covers the
+    canvas, or that strip of board is unreachable.
+  */
+  const boardSize = useCallback(
+    (atZoom: number, contentW: number, contentH: number) => ({
+      w: Math.max(viewBox.w + inset.left + inset.right, contentW * atZoom + BOARD_SLACK * 2),
+      h: Math.max(viewBox.h + inset.top + inset.bottom, contentH * atZoom + BOARD_SLACK * 2),
+    }),
+    [viewBox, inset],
+  )
+
   const stageW = layout.width
   const stageH = layout.height
-  const sizerW = Math.max(viewBox.w, stageW * zoom + BOARD_SLACK * 2)
-  const sizerH = Math.max(viewBox.h, stageH * zoom + BOARD_SLACK * 2)
+  const board = boardSize(zoom, stageW, stageH)
+  const sizerW = board.w
+  const sizerH = board.h
   const offsetX = (sizerW - stageW * zoom) / 2
   const offsetY = (sizerH - stageH * zoom) / 2
 
@@ -451,12 +470,11 @@ export function CanvasView() {
       if (!vp) return
       const freeCentreX = inset.left + (vp.clientWidth - inset.left - inset.right) / 2
       const freeCentreY = inset.top + (vp.clientHeight - inset.top - inset.bottom) / 2
-      const w = Math.max(vp.clientWidth, layout.width * atZoom + BOARD_SLACK * 2)
-      const h = Math.max(vp.clientHeight, layout.height * atZoom + BOARD_SLACK * 2)
+      const { w, h } = boardSize(atZoom, layout.width, layout.height)
       vp.scrollLeft = w / 2 - freeCentreX
       vp.scrollTop = h / 2 - freeCentreY
     },
-    [inset, layout],
+    [inset, layout, boardSize],
   )
 
   /** Shrink until the whole diagram fits the space the chrome leaves free. */
@@ -569,6 +587,7 @@ export function CanvasView() {
 
 
   return (
+    <>
     <div
       className={`canvas-viewport ${panning ? 'is-panning' : ''}`}
       ref={viewportRef}
@@ -939,6 +958,13 @@ export function CanvasView() {
       </div>
       </div>
 
+    </div>
+
+    {/*
+      Outside the scroll container on purpose. Absolutely positioned inside it,
+      the zoom bar scrolled away with the board and ended up hundreds of pixels
+      off-screen.
+    */}
       <div className="zoom-bar" role="group" aria-label="Perbesaran kanvas">
         <button
           type="button"
@@ -980,7 +1006,7 @@ export function CanvasView() {
           <Icon name="maximize" size={17} />
         </button>
       </div>
-    </div>
+    </>
   )
 }
 
