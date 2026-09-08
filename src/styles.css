@@ -2020,9 +2020,14 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   backdrop-filter: blur(12px);
 }
 
-/* Anything sliding beneath the chrome should read as behind it, not cut off. */
-.sidebar,
-.inspector { background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); }
+/*
+  Only the sidebar is a panel. The inspector is a *column* that holds cards, and
+  giving a column a background was the mistake: the column is as tall as the
+  chrome band, its cards are as tall as their content, and the difference showed
+  up as a slab of empty white where the canvas should have been. Columns are
+  invisible; only the cards inside them are drawn.
+*/
+.sidebar { background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); }
 
 .sidebar {
   position: absolute;
@@ -2096,7 +2101,14 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   width: 348px;
   overflow: auto;
   z-index: 20;
+  /*
+    The column is a place to stack cards, not a surface. Where it holds nothing
+    it must not swallow the pointer either, or panning would die in a stripe of
+    apparently empty canvas.
+  */
+  pointer-events: none;
 }
+.inspector > * { pointer-events: auto; }
 
 /* The outline floats over the canvas the same way every other panel does. */
 .outline-pane {
