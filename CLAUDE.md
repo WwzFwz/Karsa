@@ -306,7 +306,10 @@ riasan:
 - `docs/tools.md` - alat: kenapa alat itu tata letak di atas sub-pohon dan bukan
   jendela mengambang, dan cara menambah alat baru.
 - `docs/agent.md` - orchestrator: tiga jalur perutean, tahap-tahap yang diberi
-  nama, dan cara menukar pencocok kata kunci dengan model sungguhan.
+  nama, set uji, dan cara menukar pencocok kata kunci dengan model sungguhan.
+- `docs/agent-design.md` - rancangan multi-agent yang belum dibangun: jalur suara
+  sampai keputusan, banyak orang dengan masukan berbeda, kenapa peletakan bukan
+  agen, dan pengamat dinamika yang mati secara bawaan.
 
 ## 16. Catatan keputusan
 
