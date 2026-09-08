@@ -307,6 +307,9 @@ riasan:
   jendela mengambang, dan cara menambah alat baru.
 - `docs/agent.md` - orchestrator: tiga jalur perutean, tahap-tahap yang diberi
   nama, set uji, dan cara menukar pencocok kata kunci dengan model sungguhan.
+- `docs/roadmap.md` - keadaan proyek apa adanya: yang sudah berjalan, yang belum
+  ada beserta ongkos tidak adanya, dan urutan pengerjaan menurut risiko yang
+  dihilangkan per jam kerja.
 - `docs/architecture.md` - bentuk sistem: lapisan, satu pintu menuju data, model
   data, jalur suara, penyimpanan, struktur folder, dan daftar yang belum
   dibangun. Diagramnya juga tersedia sebagai PNG di `docs/img/`.
