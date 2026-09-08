@@ -24,6 +24,7 @@ import { useRoom } from '../../app/RoomContext'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { layoutFor, NODE_H, NODE_W, sizeOf } from '../../core/shape/layout'
 import { toolOf } from '../../core/tools/registry'
+import { ToolCard } from './ToolCard'
 import { KIND_HUE, KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../../ui/labels'
 import { Icon, KindGlyph } from '../../ui/icons'
 import { InlineTitle } from '../../ui/InlineTitle'
@@ -876,9 +877,6 @@ export function CanvasView() {
             const hue = KIND_HUE[node.kind]
             const spec = toolOf(node.tool)
             const size = sizeOf(tree, id)
-            const topVotes = spec
-              ? entry.childIds.reduce((most, childId) => Math.max(most, votesOn(childId)), 0)
-              : 0
 
             return (
               <li
@@ -981,44 +979,20 @@ export function CanvasView() {
                   </span>
                 )}
                 {spec && (
-                  <ul className="tool-options">
-                    {entry.childIds.map((childId) => {
-                      const option = doc.nodes[childId]
-                      if (!option) return null
-                      const votes = votesOn(childId)
-                      const mine = votedByMe(childId)
-                      return (
-                        <li key={childId} className={`tool-option ${mine ? 'is-mine' : ''}`}>
-                          <button
-                            type="button"
-                            className="tool-vote"
-                            aria-pressed={mine}
-                            aria-label={`${mine ? 'Tarik pilihan dari' : 'Pilih'} ${option.title}, ${votes} suara`}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              run({ type: 'voteNode', id: childId }, 'pointer')
-                            }}
-                          >
-                            <Icon name={mine ? 'check' : 'plus'} size={12} />
-                          </button>
-                          <span className="tool-option-title">{option.title}</span>
-                          <span className="tool-count" aria-hidden="true">
-                            {votes}
-                          </span>
-                          {/* The bar is decoration; the number beside it is the
-                              fact, and the sentence in the log carries it too. */}
-                          <span
-                            className="tool-bar"
-                            aria-hidden="true"
-                            style={{ ['--fill' as string]: `${votes === 0 ? 0 : (votes / Math.max(1, topVotes)) * 100}%` }}
-                          />
-                        </li>
-                      )
-                    })}
-                    {entry.childIds.length === 0 && (
-                      <li className="tool-empty">Belum ada {spec.itemWord}. Tekan Tab untuk menambah.</li>
-                    )}
-                  </ul>
+                  <ToolCard
+                    spec={spec}
+                    id={id}
+                    doc={doc}
+                    tree={tree}
+                    votesOn={votesOn}
+                    votedByMe={votedByMe}
+                    dropParent={dropParent}
+                    onVote={(target) => run({ type: 'voteNode', id: target }, 'pointer')}
+                    onFocus={(target) => {
+                      wantsFocus.current = true
+                      setFocus(target)
+                    }}
+                  />
                 )}
                 {draftTargets.has(id) && (
                   <span className="node-proposed" aria-hidden="true">

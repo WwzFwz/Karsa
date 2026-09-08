@@ -64,6 +64,7 @@ export const TEMPLATES: TemplateSpec[] = [
     build: () => ({
       kind: 'group',
       title: 'Retro sprint',
+      tool: 'retro',
       children: [
         { kind: 'group', title: 'Mulai lakukan' },
         { kind: 'group', title: 'Hentikan' },
@@ -79,6 +80,7 @@ export const TEMPLATES: TemplateSpec[] = [
     build: () => ({
       kind: 'group',
       title: 'Prioritas: dampak dan usaha',
+      tool: 'matriks',
       note: 'Kuadran adalah kelompok, bukan koordinat. Karena itu outline bisa menyebutkan letak sebuah item dengan kata-kata, dan memindahkannya cuma mengganti induk.',
       children: [
         { kind: 'group', title: 'Dampak besar · usaha kecil' },

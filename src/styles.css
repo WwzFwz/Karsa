@@ -3042,3 +3042,63 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   line-height: 1.5;
   color: var(--ink-3);
 }
+
+/* ---- retro: one column per child group ---- */
+
+.tool-columns {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 8px;
+}
+.tool-column, .tool-cell {
+  min-width: 0;
+  padding: 6px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.tool-column-head, .tool-cell-head {
+  margin: 0 0 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  line-height: 1.3;
+}
+.tool-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.tool-item { min-width: 0; }
+.tool-item-btn {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  text-align: start;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-item-btn:hover { background: var(--accent-soft); }
+
+/* ---- the matrix: four quadrants, each one a group node ---- */
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 8px;
+}
+
+/* A quadrant is a parent, so the drop highlight belongs on it as much as on a
+   node -- dragging a card into it is a reparent, not a placement. */
+.tool-column.is-droptarget,
+.tool-cell.is-droptarget {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}

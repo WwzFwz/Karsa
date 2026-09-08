@@ -14,9 +14,24 @@ simpul beserta anak-anaknya.
 
 Isi sebuah alat **adalah anak-anaknya sendiri**:
 
-| Alat | Anaknya adalah |
-| ---- | -------------- |
-| Voting | pilihan-pilihannya |
+| Alat | Anaknya adalah | Digambar sebagai |
+| ---- | -------------- | ---------------- |
+| Voting | pilihan-pilihannya | daftar dengan hitungan suara |
+| Retro | kolom-kolomnya | tiga kolom berdampingan |
+| Matriks dampak-usaha | kuadran-kuadrannya | kisi 2x2 |
+
+Matriksnya yang paling layak ditunjuk, karena dia argumen aturan 2 yang selama
+ini dibuat: **kuadran itu simpul kelompok, bukan wilayah di layar.** Jadi letak
+sebuah item adalah posisinya di pohon, dan outline bisa menyebutnya dengan
+kata — "Dampak besar · usaha kecil › Tambah praktikum aksesibilitas" — persis
+yang hilang total di 2×2 Miro bagi yang tidak melihat. Memindahkan item antar
+kuadran cuma `moveNode`, jadi bisa dibatalkan, dinarasikan, dan diatribusikan
+tanpa satu baris pun ditulis untuk itu.
+
+Kolom dan kuadran membawa `data-node-id`, dan uji-tumbuk seret di kanvas mencari
+`[data-node-id]` terdekat — jadi **menjatuhkan simpul ke dalam kuadran bekerja
+tanpa kode tambahan sama sekali**. Itu bisa terjadi justru karena kuadran
+benar-benar induk, bukan wilayah.
 
 `Node.tool` cuma menyatakan cara menggambar. Tidak ada isi yang cuma dimiliki
 alat, dan tidak ada bidang data baru.

@@ -11,6 +11,7 @@
  * person, so the caller keeps previous positions and eases towards new ones.
  */
 
+import { TOOLS } from '../tools/registry'
 import type { NodeId, RoomShape } from '../model/types'
 import type { TreeProjection } from '../tree/project'
 
@@ -27,8 +28,6 @@ export interface LayoutResult {
 
 export const NODE_W = 188
 export const NODE_H = 62
-/** A tool card carries a list, so it needs more room than a title does. */
-export const TOOL_W = 268
 const GAP_X = 72
 /*
   Tight enough that a twenty-node tree does not become a column taller than any
@@ -60,7 +59,8 @@ export function sizeOf(
   measured?: ReadonlyMap<NodeId, number>,
 ): NodeSize {
   const entry = tree.byId.get(id)
-  const w = entry?.node.tool ? TOOL_W : NODE_W
+  const tool = entry?.node.tool ? TOOLS[entry.node.tool] : null
+  const w = tool ? tool.width : NODE_W
   /*
     A measured height beats a guessed one, always.
 
@@ -73,9 +73,9 @@ export function sizeOf(
   */
   const real = measured?.get(id)
   if (real && real > 0) return { w, h: real }
-  if (!entry?.node.tool) return { w, h: NODE_H }
-  // Fallback for the first frame only: head, a row per option, bottom padding.
-  return { w, h: NODE_H + entry.childIds.length * 26 + 14 }
+  if (!tool) return { w, h: NODE_H }
+  // First frame only; the measured height replaces this as soon as it paints.
+  return { w, h: NODE_H + (entry?.childIds.length ?? 0) * 26 + 14 }
 }
 
 /**

@@ -55,7 +55,7 @@ export type RoomShape = 'mindmap' | 'hierarchy' | 'flow' | 'timeline' | 'columns
  * So a vote's options are child nodes, a checklist's items are child nodes, and
  * the tool field only says how to draw and operate them. See docs/tools.md.
  */
-export type ToolKind = 'suara'
+export type ToolKind = 'suara' | 'retro' | 'matriks'
 
 export interface Node {
   id: NodeId

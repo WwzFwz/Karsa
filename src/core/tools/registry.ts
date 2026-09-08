@@ -22,6 +22,11 @@ export interface ToolSpec {
   hint: string
   /** What a child of this node is called, so every sentence can say it. */
   itemWord: string
+  /**
+   * How wide the card is. Height is measured after painting, but width has to
+   * be decided before: a three-column retro cannot be discovered from content.
+   */
+  width: number
   /** The kind a new child gets, so speaking a tool into being types it too. */
   itemKind: NodeKind
   /**
@@ -40,9 +45,35 @@ export const TOOLS: Record<ToolKind, ToolSpec> = {
     hint: 'Pilihan jadi anak simpul ini, dan suaranya dihitung dari catatan peristiwa.',
     itemWord: 'pilihan',
     itemKind: 'idea',
+    width: 268,
     schema: [
       { field: 'judul', type: 'string', required: true, note: 'Yang sedang diputuskan.' },
       { field: 'pilihan', type: 'string[]', required: true, note: 'Dua atau lebih.' },
+    ],
+  },
+  retro: {
+    id: 'retro',
+    label: 'Retro',
+    icon: 'activity',
+    hint: 'Tiap kolom adalah kelompok. Memindahkan catatan antar kolom cuma mengganti induknya.',
+    itemWord: 'kolom',
+    itemKind: 'group',
+    width: 360,
+    schema: [
+      { field: 'judul', type: 'string', required: true, note: 'Sprint atau periode yang ditinjau.' },
+      { field: 'kolom', type: 'string[]', required: false, note: 'Bawaannya mulai, hentikan, lanjutkan.' },
+    ],
+  },
+  matriks: {
+    id: 'matriks',
+    label: 'Matriks dampak-usaha',
+    icon: 'layout',
+    hint: 'Kuadran adalah kelompok, bukan koordinat -- jadi letak sebuah item bisa disebutkan dengan kata.',
+    itemWord: 'kuadran',
+    itemKind: 'group',
+    width: 320,
+    schema: [
+      { field: 'judul', type: 'string', required: true, note: 'Yang sedang diprioritaskan.' },
     ],
   },
 }

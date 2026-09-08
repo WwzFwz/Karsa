@@ -93,7 +93,11 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
         // A tool's own row says what it is; each option's row carries its
         // tally. Between them the outline holds everything the card holds,
         // which is the only reason a tool is allowed to exist at all.
-        const parentSpec = toolOf(entry.parentId ? doc.nodes[entry.parentId]?.tool : undefined)
+        const parentTool = toolOf(entry.parentId ? doc.nodes[entry.parentId]?.tool : undefined)
+        // Only under a vote. A retro column and a matrix quadrant are tools
+        // too, and offering to "vote" on their contents would be a control
+        // that does nothing -- worse than a missing one.
+        const parentSpec = parentTool?.id === 'suara' ? parentTool : null
         const votes = parentSpec ? votesOn(id) : 0
         const mine = parentSpec ? votedByMe(id) : false
 
