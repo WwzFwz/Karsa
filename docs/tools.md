@@ -80,6 +80,26 @@ dikenali orang. Peristiwanya tetap terpisah — aturan 5 soal catatan, dan meman
 enam hal terjadi — tapi yang **diumumkan** cuma satu kalimat, karena meredam
 ledakan perubahan itu justru tugas D7.
 
+## Berdiri sendiri, dan tetap rapi
+
+Templat mendarat sebagai **akar tersendiri**, tidak menempel ke simpul yang
+kebetulan terfokus (D53). Kalau memang mau menempel, seret kartunya ke simpul
+itu — gerakan yang sudah ada.
+
+Supaya itu aman, tata letak harus benar untuk banyak akar sekaligus, di kelima
+bentuk:
+
+- **Peta gagasan / Hierarki / Diagram alur** — akar disusun berurutan pada sumbu
+  yang sama, dan jarak antar tingkat dihitung dari kartu terlebar di tingkat itu.
+- **Bagan kolom** — tiap akar punya pita horizontal sendiri, kolomnya menumpuk
+  kumulatif (D55).
+- **Garis waktu** — posisi kumulatif, bukan indeks dikali lebar.
+
+Tingginya **diukur, bukan ditebak** (D54): kanvas mengukur kartu yang sudah
+digambar dan menyerahkan angkanya ke tata letak. Tidak ada yang menetapkan
+tinggi eksplisit, jadi isi yang menentukan tinggi dan tata letak cuma menentukan
+jaraknya.
+
 ## Menambah alat baru
 
 1. Tambah nilai ke `ToolKind` di `core/model/types.ts`.

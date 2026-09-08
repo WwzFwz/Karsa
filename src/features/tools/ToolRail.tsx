@@ -160,7 +160,7 @@ export function ToolRail() {
               </>
             ) : (
               <>
-                <p className="rail-sheet-head">Alat &amp; templat · masuk di bawah {parentTitle}</p>
+                <p className="rail-sheet-head">Alat &amp; templat</p>
                 <ul className="rail-grid">
                   {TEMPLATES.map((template) => (
                     <li key={template.id}>
@@ -168,7 +168,13 @@ export function ToolRail() {
                         type="button"
                         className="rail-card"
                         onClick={() => {
-                          insertTemplate(template.id, parentId)
+                          // Free-standing, always. A vote or a retro board is
+                          // its own errand, and burying it under whatever
+                          // happened to be selected makes the outline read out
+                          // a relationship nobody meant. Wanting it attached is
+                          // rarer than not, and there is already a gesture for
+                          // it: drag the card onto the node it belongs to.
+                          insertTemplate(template.id, null)
                           setSheet(null)
                         }}
                       >
@@ -182,8 +188,8 @@ export function ToolRail() {
                   ))}
                 </ul>
                 <p className="rail-note">
-                  Templat cuma sekumpulan simpul bertipe — bisa dibatalkan sekali tekan, dan
-                  terbaca di outline begitu mendarat.
+                  Berdiri sendiri di ruang. Seret kartunya ke sebuah simpul kalau memang mau
+                  menempel di situ. Bisa dibatalkan sekali tekan.
                 </p>
               </>
             )}

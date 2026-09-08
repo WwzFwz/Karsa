@@ -22,11 +22,8 @@ import { useDialogs } from '../../app/DialogContext'
 import { useAnnouncer } from '../../a11y/Announcer'
 import { useRoom } from '../../app/RoomContext'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
-import { layoutFor, NODE_H, NODE_W } from '../../core/shape/layout'
+import { layoutFor, NODE_H, NODE_W, sizeOf } from '../../core/shape/layout'
 import { toolOf } from '../../core/tools/registry'
-
-/** A tool card carries a list, so it gets more width than a title needs. */
-const TOOL_W = 268
 import { KIND_HUE, KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../../ui/labels'
 import { Icon, KindGlyph } from '../../ui/icons'
 import { InlineTitle } from '../../ui/InlineTitle'
@@ -299,9 +296,23 @@ export function CanvasView() {
     }
   }, [focusId])
 
+  /*
+    What the cards actually turned out to be.
+
+    A card is as tall as its title wraps plus whatever tags it carries, and no
+    constant can know that in advance -- NODE_H was only ever the height of the
+    shortest possible card, so every long title quietly overlapped the sibling
+    below it. The canvas measures what it painted and hands the numbers to the
+    layout, which spaces the next frame with real heights.
+
+    It cannot chase its own tail because nothing sets an explicit height:
+    content decides how tall a card is, and the layout decides only the gaps.
+  */
+  const [measured, setMeasured] = useState<ReadonlyMap<NodeId, number>>(() => new Map())
+
   const computed = useMemo(
-    () => layoutFor(doc.room.shape, tree, visible),
-    [doc.room.shape, tree, visible],
+    () => layoutFor(doc.room.shape, tree, visible, measured),
+    [doc.room.shape, tree, visible, measured],
   )
 
   /*
@@ -556,7 +567,8 @@ export function CanvasView() {
   const centreOf = (id: NodeId) => {
     const p = layout.positions.get(id)
     if (!p) return null
-    return { x: p.x + ORIGIN + NODE_W / 2, y: p.y + ORIGIN + NODE_H / 2 }
+    const size = sizeOf(tree, id)
+    return { x: p.x + ORIGIN + size.w / 2, y: p.y + ORIGIN + size.h / 2 }
   }
 
   const parentEdges = visibleIds
@@ -644,6 +656,27 @@ export function CanvasView() {
     }, 140)
   }, [stageW, stageH, inset, layout, centreOnContent, zoom])
 
+
+  useLayoutEffect(() => {
+    let changed = false
+    const next = new Map<NodeId, number>(measured)
+    for (const [id, el] of refs.current.entries()) {
+      const height = el.offsetHeight
+      if (height <= 0) continue
+      // A pixel of jitter is not news, and reacting to it would relayout forever.
+      if (Math.abs((next.get(id) ?? 0) - height) > 1) {
+        next.set(id, height)
+        changed = true
+      }
+    }
+    for (const id of [...next.keys()]) {
+      if (!refs.current.has(id)) {
+        next.delete(id)
+        changed = true
+      }
+    }
+    if (changed) setMeasured(next)
+  })
 
   return (
     <>
@@ -842,6 +875,7 @@ export function CanvasView() {
             const hasChildren = entry.childIds.length > 0
             const hue = KIND_HUE[node.kind]
             const spec = toolOf(node.tool)
+            const size = sizeOf(tree, id)
             const topVotes = spec
               ? entry.childIds.reduce((most, childId) => Math.max(most, votesOn(childId)), 0)
               : 0
@@ -875,7 +909,9 @@ export function CanvasView() {
                 } ${spec ? `node-tool tool-${spec.id}` : ''}`}
                 style={{
                   transform: `translate(${pos.x + ORIGIN}px, ${pos.y + ORIGIN}px)`,
-                  width: spec ? TOOL_W : NODE_W,
+                  // Width is fixed by kind; height belongs to the content, and
+                  // the layout finds out what it was by measuring afterwards.
+                  width: size.w,
                   minHeight: NODE_H,
                   ['--kh' as string]: String(hue),
                 }}

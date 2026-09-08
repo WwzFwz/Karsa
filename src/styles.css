@@ -2907,3 +2907,26 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 }
 .floater-fold:hover { background: var(--surface-2); color: var(--ink); }
 .transcript-float.is-quiet { padding-bottom: 8px; }
+
+/*
+  A row that can shrink.
+
+  The waiting list put an avatar, a two-line description, an email and two
+  buttons on one line, and none of them could give ground: the email would not
+  truncate, the actions would not wrap, and the row grew until it hung outside
+  the panel. Flex children default to min-width:auto, so a row like this must
+  say otherwise at every level or the widest word wins.
+*/
+.person { min-width: 0; flex-wrap: wrap; }
+.person-body { flex: 1 1 150px; min-width: 0; }
+.person-where { flex-wrap: wrap; min-width: 0; }
+.person-where .tag {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Below the person on a narrow panel, beside them when there is room. */
+.person-actions { flex: 0 0 auto; margin-inline-start: auto; }
+.waiting .person { align-items: flex-start; }
+.waiting .person + .person { margin-top: 4px; }
