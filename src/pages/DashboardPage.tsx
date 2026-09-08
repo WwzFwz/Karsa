@@ -15,7 +15,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon, type IconName } from '../ui/icons'
 import { SHAPE_LABEL } from '../ui/labels'
-import { useTheme } from '../ui/theme'
+import { ThemeSwitch } from '../ui/ThemeSwitch'
 import { agoLabel, createRoom, lastRoom, listRooms, type RoomSummary } from '../features/rooms/rooms'
 import { RoomThumbnail } from '../features/rooms/RoomThumbnail'
 
@@ -29,7 +29,6 @@ const SCOPES: { id: Scope; label: string; icon: IconName }[] = [
 
 export function DashboardPage({ name }: { name: string }) {
   const navigate = useNavigate()
-  const theme = useTheme()
   const [scope, setScope] = useState<Scope>('semua')
   const [query, setQuery] = useState('')
   const [rooms, setRooms] = useState<RoomSummary[]>(() => listRooms())
@@ -99,13 +98,12 @@ export function DashboardPage({ name }: { name: string }) {
         </nav>
 
         <div className="sidebar-foot">
-          {/* The same place as in a room, so the control does not move when you
-              walk between the two. */}
-          <button type="button" className="theme-toggle" onClick={theme.toggle}>
-            <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={17} />
-            Tampilan
-            <span className="theme-state">{theme.active === 'dark' ? 'Gelap' : 'Terang'}</span>
-          </button>
+          {/*
+            A switch, drawn as one. It reads as `role="switch"` too, so a screen
+            reader says "mode gelap, aktif" rather than leaving someone to guess
+            what a button called "Tampilan" would do next.
+          */}
+          <ThemeSwitch />
 
           <div className="side-card">
             <p className="side-card-label">Masuk sebagai</p>

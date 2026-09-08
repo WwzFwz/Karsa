@@ -24,7 +24,7 @@ import { isTypingTarget } from '../a11y/keys'
 import { audioBus } from '../audio/bus'
 import { Icon, type IconName } from '../ui/icons'
 import { SHAPE_LABEL } from '../ui/labels'
-import { useTheme } from '../ui/theme'
+import { ThemeSwitch } from '../ui/ThemeSwitch'
 import { VoiceDock } from '../features/voice/VoiceDock'
 import { rememberLastRoom } from '../features/rooms/rooms'
 
@@ -47,7 +47,6 @@ export function RoomShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { roomId } = useParams()
   const { pathname } = useLocation()
-  const theme = useTheme()
 
   /*
     The chrome offset is measured, not guessed. A hard-coded 82px was right
@@ -383,16 +382,11 @@ export function RoomShell({ children }: { children: ReactNode }) {
 
         <div className="sidebar-foot">
           {/*
-            Light and dark belong with the other things you set and forget, not
-            in the top bar beside the actions you reach for during a meeting.
-            It reads its own state out loud -- "Tampilan / Terang" -- so nobody
-            has to work out which way a half-filled sun is pointing.
+            A switch, drawn as one. It reads as `role="switch"` too, so a screen
+            reader says "mode gelap, aktif" rather than leaving someone to guess
+            what a button called "Tampilan" would do next.
           */}
-          <button type="button" className="theme-toggle" onClick={theme.toggle}>
-            <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={17} />
-            Tampilan
-            <span className="theme-state">{theme.active === 'dark' ? 'Gelap' : 'Terang'}</span>
-          </button>
+          <ThemeSwitch />
 
           {/*
             One card, not two. "Diproses di perangkat" already sits in the top
