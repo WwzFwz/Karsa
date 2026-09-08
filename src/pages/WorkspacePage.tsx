@@ -7,7 +7,7 @@
  * one. Worse, it hid the actual proposition: the canvas and the outline are the
  * same model, and the fastest way to say so is to put them side by side.
  *
- * So there are three arrangements of one room -- canvas, split, outline -- and a
+ * So there are two arrangements of one room -- canvas and outline -- and a
  * single inspector on the right whose contents you switch. Each thing appears
  * exactly once. The URL still names each arrangement, so every screen is its own
  * link.
@@ -23,15 +23,19 @@ import { PresencePanel } from '../features/presence/PresencePanel'
 import { CommentsPanel } from '../features/comments/CommentsPanel'
 import { useRoom } from '../app/RoomContext'
 import { useDialogs } from '../app/DialogContext'
-import { KIND_LABEL, SHAPE_LABEL } from '../ui/labels'
-import { Icon, KIND_ICON, type IconName } from '../ui/icons'
+import { SHAPE_LABEL } from '../ui/labels'
+import { Icon, type IconName } from '../ui/icons'
 
-type ViewId = 'canvas' | 'split' | 'outline'
+type ViewId = 'canvas' | 'outline'
 type InspectorId = 'jejak' | 'perintah' | 'peserta' | 'komentar'
 
+/*
+  Two arrangements, not three. "Terbelah" was a third thing to choose between
+  for a benefit the outline panel already gives, and every extra choice in a
+  toolbar is paid for by everyone who has to read past it.
+*/
 const VIEWS: { id: ViewId; slug: string; label: string; icon: IconName }[] = [
   { id: 'canvas', slug: '', label: 'Kanvas', icon: 'layout' },
-  { id: 'split', slug: 'terbelah', label: 'Terbelah', icon: 'panelRight' },
   { id: 'outline', slug: 'outline', label: 'Outline', icon: 'list' },
 ]
 
@@ -43,9 +47,7 @@ const INSPECTORS: { id: InspectorId; label: string; icon: IconName }[] = [
 ]
 
 function viewFromPath(pathname: string): ViewId {
-  if (pathname.endsWith('/outline')) return 'outline'
-  if (pathname.endsWith('/terbelah')) return 'split'
-  return 'canvas'
+  return pathname.endsWith('/outline') ? 'outline' : 'canvas'
 }
 
 function inspectorFromPath(pathname: string): InspectorId {
@@ -67,7 +69,6 @@ export function WorkspacePage() {
     suggestion,
     focusId,
     tree,
-    pointAt,
     panelHidden,
     togglePanel,
     focusMode,
@@ -110,52 +111,23 @@ export function WorkspacePage() {
 
           <span className="toolbar-sep" aria-hidden="true" />
 
-          {focused ? (
-            <>
-              <span className="sel-label">
-                <Icon name={KIND_ICON[focused.node.kind]} size={16} />
-                <span className="sel-name">{focused.node.title}</span>
-                <span className="pill">{KIND_LABEL[focused.node.kind]}</span>
-              </span>
-              <button
-                type="button"
-                className="btn btn-small"
-                onClick={() => dialogs.open({ kind: 'move', nodeId: focused.node.id })}
-                title="Pindahkan ke induk lain (m)"
-              >
-                <Icon name="move" size={15} />
-                Pindah
-              </button>
-              <button
-                type="button"
-                className="btn btn-small"
-                onClick={() => dialogs.open({ kind: 'relate', nodeId: focused.node.id })}
-                title="Hubungkan ke simpul lain (r)"
-              >
-                <Icon name="link" size={15} />
-                Hubung
-              </button>
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Tunjuk simpul ini untuk semua orang"
-                title="Tunjuk untuk semua orang (p)"
-                onClick={() => pointAt(focused.node.id)}
-              >
-                <Icon name="pointer" size={17} />
-              </button>
-              <button
-                type="button"
-                className="icon-btn is-danger"
-                aria-label="Hapus simpul"
-                title="Hapus simpul (Delete)"
-                onClick={() => dialogs.open({ kind: 'delete', nodeId: focused.node.id })}
-              >
-                <Icon name="trash" size={17} />
-              </button>
-            </>
-          ) : (
-            <span className="sel-label">Pilih sebuah simpul untuk melihat aksinya.</span>
+          {/*
+            No selection label, and no Pindah or Hubung buttons. The node is
+            already highlighted, so naming it again in a bar was a caption for
+            something you are looking at, and both operations have their own
+            afordans on the node: the edge anchors draw a relation, and `m` and
+            the command list still open the move picker.
+          */}
+          {focused && (
+            <button
+              type="button"
+              className="icon-btn is-danger"
+              aria-label={`Hapus ${focused.node.title}`}
+              title="Hapus simpul (Delete)"
+              onClick={() => dialogs.open({ kind: 'delete', nodeId: focused.node.id })}
+            >
+              <Icon name="trash" size={17} />
+            </button>
           )}
 
           <span className="topbar-spacer" />
@@ -177,21 +149,23 @@ export function WorkspacePage() {
           )}
 
           {/* Panel visibility now lives on the panel's own tabs. */}
+          {/* A known icon does not need a caption. */}
           <button
             type="button"
-            className="btn btn-small"
+            className="icon-btn"
             aria-pressed={focusMode}
+            aria-label={focusMode ? 'Keluar dari layar penuh' : 'Kanvas layar penuh'}
             onClick={() => toggleFocusMode()}
-            title="Kanvas penuh, keluar dengan Escape (f)"
+            title="Layar penuh (f), keluar dengan Escape"
           >
-            <Icon name={focusMode ? 'minimize' : 'maximize'} size={15} />
-            <span className="hide-narrow">{focusMode ? 'Keluar' : 'Layar penuh'}</span>
+            <Icon name={focusMode ? 'minimize' : 'maximize'} size={17} />
           </button>
         </div>
 
         <div className={`stage-grid view-${view}`}>
-          {view !== 'outline' && <CanvasView />}
-          {view !== 'canvas' && (
+          {view === 'canvas' ? (
+            <CanvasView />
+          ) : (
             <div className="outline-pane">
               <OutlineTree />
             </div>

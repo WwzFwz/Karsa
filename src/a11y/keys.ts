@@ -28,7 +28,7 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'palette', keys: ['Ctrl', 'K'], label: 'Buka daftar perintah', scope: 'global', mutates: false },
   { id: 'view-canvas', keys: ['1'], label: 'Pindah ke kanvas', scope: 'global', mutates: false },
   { id: 'view-outline', keys: ['2'], label: 'Pindah ke outline', scope: 'global', mutates: false },
-  { id: 'view-split', keys: ['3'], label: 'Tampilkan kanvas dan outline berdampingan', scope: 'global', mutates: false },
+  { id: 'view-draft', keys: ['3'], label: 'Buka panel perintah', scope: 'global', mutates: false },
   { id: 'talk', keys: ['Spasi'], label: 'Ketuk untuk mengunci mikrofon, atau tahan selama bicara', scope: 'global', mutates: false },
   { id: 'traverse', keys: ['.'], label: 'Mulai atau hentikan telusur audio', scope: 'global', mutates: false },
   { id: 'mode', keys: ['Ctrl', 'M'], label: 'Ganti mode rapat dan mode telaah', scope: 'global', mutates: false },

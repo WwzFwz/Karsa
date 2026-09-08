@@ -1775,20 +1775,12 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .workspace-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
 
 /*
-  Canvas and outline side by side is the product's whole claim made visible:
-  change a title in one and watch it change in the other. It is a layout of one
-  room, not two pages.
+  One stage, holding whichever of the two views is open. They read the same
+  projection, so switching between them is a change of drawing, not of place.
 */
 .stage-grid { display: grid; gap: 12px; min-width: 0; }
-.stage-grid.view-split { grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr); }
-
-@media (max-width: 900px) {
-  .stage-grid.view-split { grid-template-columns: minmax(0, 1fr); }
-}
-
 .outline-pane { min-width: 0; }
-.stage-grid.view-outline .outline-shell,
-.stage-grid.view-split .outline-shell { max-height: calc(100vh - 182px); }
+.stage-grid.view-outline .outline-shell { max-height: calc(100vh - 182px); }
 
 /* segmented control */
 .seg {
@@ -2132,10 +2124,6 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   bottom: var(--chrome-bottom);
   z-index: 15;
 }
-.stage-grid.view-split .outline-pane {
-  right: var(--chrome-right);
-  width: min(420px, 34vw);
-}
 .stage-grid.view-outline .outline-pane {
   left: var(--chrome-left);
   right: var(--chrome-right);
@@ -2165,7 +2153,6 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
     bottom: var(--chrome-bottom);
     height: 46vh;
   }
-  .stage-grid.view-split .outline-pane { right: var(--gap); }
   .stage-grid.view-outline .outline-pane { right: var(--gap); }
 }
 

@@ -39,7 +39,6 @@ export function App() {
                       {/* One workspace under several links, so each arrangement
                           keeps its own URL without becoming its own page. */}
                       <Route index element={<WorkspacePage />} />
-                      <Route path="terbelah" element={<WorkspacePage />} />
                       <Route path="outline" element={<WorkspacePage />} />
                       <Route path="perintah" element={<WorkspacePage />} />
                       <Route path="peserta" element={<WorkspacePage />} />

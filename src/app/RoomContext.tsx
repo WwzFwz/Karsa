@@ -35,7 +35,7 @@ import { buildSeedDoc, buildSeedParticipants, SELF_ID } from '../store/seed/room
 import { buildDraft, CONFIRM_UTTERANCE, emptyDraft, UTTERANCES } from '../features/voice/mockPipeline'
 import type { Draft, DraftOperation } from '../features/voice/types'
 
-export type ViewMode = 'canvas' | 'outline' | 'split'
+export type ViewMode = 'canvas' | 'outline'
 export type SessionMode = 'meeting' | 'review'
 
 interface RoomApi {
