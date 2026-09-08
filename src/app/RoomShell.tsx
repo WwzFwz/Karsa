@@ -26,6 +26,7 @@ import { Icon, type IconName } from '../ui/icons'
 import { SHAPE_LABEL } from '../ui/labels'
 import { useTheme } from '../ui/theme'
 import { VoiceDock } from '../features/voice/VoiceDock'
+import { rememberLastRoom } from '../features/rooms/rooms'
 
 /*
   Three places, not six. The room is one workspace whose arrangement and side
@@ -234,6 +235,10 @@ export function RoomShell({ children }: { children: ReactNode }) {
     audioBus.setMuted(soundProfile === 'silent')
   }, [soundProfile])
 
+  useEffect(() => {
+    rememberLastRoom(roomId ?? doc.room.id)
+  }, [roomId, doc.room.id])
+
   const base = `/ruang/${roomId ?? doc.room.id}`
   const online = participants.filter((p) => p.online)
   const pendingOps = draft.status === 'ready' ? draft.operations.filter((o) => o.accepted).length : 0
@@ -321,15 +326,6 @@ export function RoomShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             className="icon-btn"
-            aria-label={theme.active === 'dark' ? 'Beralih ke tema terang' : 'Beralih ke tema gelap'}
-            title={theme.active === 'dark' ? 'Tema gelap' : 'Tema terang'}
-            onClick={theme.toggle}
-          >
-            <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={18} />
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
             aria-label="Pintasan papan ketik"
             title="Pintasan papan ketik (?)"
             onClick={() => dialogs.open({ kind: 'help' })}
@@ -386,6 +382,18 @@ export function RoomShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="sidebar-foot">
+          {/*
+            Light and dark belong with the other things you set and forget, not
+            in the top bar beside the actions you reach for during a meeting.
+            It reads its own state out loud -- "Tampilan / Terang" -- so nobody
+            has to work out which way a half-filled sun is pointing.
+          */}
+          <button type="button" className="theme-toggle" onClick={theme.toggle}>
+            <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={17} />
+            Tampilan
+            <span className="theme-state">{theme.active === 'dark' ? 'Gelap' : 'Terang'}</span>
+          </button>
+
           {/*
             One card, not two. "Diproses di perangkat" already sits in the top
             bar badge, and naming a single speaker here breaks the moment two

@@ -119,6 +119,25 @@ export function forgetRoom(id: string): void {
   write(read().filter((room) => room.id !== id))
 }
 
+const LAST_KEY = 'kanvas-setara:ruang-terakhir'
+
+/** So the dashboard can offer a way back into the room you just left. */
+export function rememberLastRoom(id: string): void {
+  try {
+    localStorage.setItem(LAST_KEY, id)
+  } catch {
+    // Losing the breadcrumb is survivable; every room is still in the list.
+  }
+}
+
+export function lastRoom(): string | null {
+  try {
+    return localStorage.getItem(LAST_KEY)
+  } catch {
+    return null
+  }
+}
+
 /** "12 menit lalu", in the one place that needs it. */
 export function agoLabel(at: number, now = Date.now()): string {
   const minutes = Math.max(0, Math.round((now - at) / MINUTE))

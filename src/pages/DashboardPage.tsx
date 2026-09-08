@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icon, type IconName } from '../ui/icons'
 import { SHAPE_LABEL } from '../ui/labels'
 import { useTheme } from '../ui/theme'
-import { agoLabel, createRoom, listRooms, type RoomSummary } from '../features/rooms/rooms'
+import { agoLabel, createRoom, lastRoom, listRooms, type RoomSummary } from '../features/rooms/rooms'
 import { RoomThumbnail } from '../features/rooms/RoomThumbnail'
 
 type Scope = 'semua' | 'milik' | 'dibagikan'
@@ -34,6 +34,10 @@ export function DashboardPage({ name }: { name: string }) {
   const [query, setQuery] = useState('')
   const [rooms, setRooms] = useState<RoomSummary[]>(() => listRooms())
   const [copied, setCopied] = useState<string | null>(null)
+  const back = useMemo(() => {
+    const id = lastRoom()
+    return id ? rooms.find((room) => room.id === id) ?? null : null
+  }, [rooms])
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -70,6 +74,15 @@ export function DashboardPage({ name }: { name: string }) {
           </div>
         </div>
 
+        {/* The room you just left, so leaving the dashboard is as easy as
+            arriving at it. */}
+        {back && (
+          <button type="button" className="nav-item" onClick={() => openRoom(back.id)}>
+            <Icon name="cornerDownRight" size={19} />
+            <span className="nav-label">Kembali ke {back.id}</span>
+          </button>
+        )}
+
         <nav aria-label="Saringan ruang">
           {SCOPES.map((item) => (
             <button
@@ -86,6 +99,14 @@ export function DashboardPage({ name }: { name: string }) {
         </nav>
 
         <div className="sidebar-foot">
+          {/* The same place as in a room, so the control does not move when you
+              walk between the two. */}
+          <button type="button" className="theme-toggle" onClick={theme.toggle}>
+            <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={17} />
+            Tampilan
+            <span className="theme-state">{theme.active === 'dark' ? 'Gelap' : 'Terang'}</span>
+          </button>
+
           <div className="side-card">
             <p className="side-card-label">Masuk sebagai</p>
             <p className="side-card-value">
@@ -122,14 +143,6 @@ export function DashboardPage({ name }: { name: string }) {
             </label>
             <button
               type="button"
-              className="icon-btn"
-              aria-label={theme.active === 'dark' ? 'Beralih ke tema terang' : 'Beralih ke tema gelap'}
-              onClick={theme.toggle}
-            >
-              <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={18} />
-            </button>
-            <button
-              type="button"
               className="btn btn-primary"
               onClick={() => {
                 const room = createRoom('Ruang baru')
@@ -149,12 +162,29 @@ export function DashboardPage({ name }: { name: string }) {
           siapa pun yang punya kodenya bisa bergabung tanpa akun.
         </p>
 
-        {shown.length === 0 ? (
+        {shown.length === 0 && query.trim() ? (
           <p className="dash-empty">
-            Tidak ada ruang yang cocok. Coba kata lain, atau buat ruang baru.
+            Tidak ada ruang yang cocok dengan pencarian itu.
           </p>
         ) : (
           <ul className="dash-grid">
+            <li>
+              <button
+                type="button"
+                className="room-new"
+                onClick={() => {
+                  const room = createRoom('Ruang baru')
+                  setRooms(listRooms())
+                  openRoom(room.id)
+                }}
+              >
+                <span className="room-new-icon" aria-hidden="true">
+                  <Icon name="plus" size={20} />
+                </span>
+                <span className="room-new-title">Ruang baru</span>
+                <span className="room-new-sub">Kosong, siap diisi dengan suara</span>
+              </button>
+            </li>
             {shown.map((room) => (
               <li key={room.id} className="room-card">
                 <button
