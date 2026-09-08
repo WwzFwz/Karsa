@@ -33,7 +33,7 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'traverse', keys: ['.'], label: 'Mulai atau hentikan telusur audio', scope: 'global', mutates: false },
   { id: 'mode', keys: ['Ctrl', 'M'], label: 'Ganti mode rapat dan mode telaah', scope: 'global', mutates: false },
   { id: 'sound', keys: ['Ctrl', 'B'], label: 'Nyalakan atau matikan bunyi', scope: 'global', mutates: false },
-  { id: 'panel', keys: ['\\'], label: 'Sembunyikan atau tampilkan panel kanan', scope: 'global', mutates: false },
+  { id: 'panel', keys: ['\\'], label: 'Buka atau tutup panel kanan', scope: 'global', mutates: false },
   { id: 'focus-mode', keys: ['f'], label: 'Kanvas layar penuh, keluar dengan Escape', scope: 'global', mutates: false },
   { id: 'undo', keys: ['Ctrl', 'Z'], label: 'Batalkan perubahan terakhir', scope: 'global', mutates: true },
   { id: 'zoom-in', keys: ['Ctrl', '+'], label: 'Perbesar kanvas', scope: 'global', mutates: false },

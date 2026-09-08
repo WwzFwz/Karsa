@@ -5,6 +5,7 @@ import { RoomProvider } from './RoomContext'
 import { DialogProvider } from './DialogContext'
 import { RoomShell } from './RoomShell'
 import { JoinPage } from '../pages/JoinPage'
+import { DashboardPage } from '../pages/DashboardPage'
 import { WorkspacePage } from '../pages/WorkspacePage'
 import { SummaryPage } from '../pages/SummaryPage'
 import { SettingsPage } from '../pages/SettingsPage'
@@ -23,6 +24,10 @@ export function App() {
     <AnnouncerProvider>
       <Routes>
         <Route path="/" element={<JoinPage onJoin={join} />} />
+        <Route
+          path="/ruang"
+          element={name ? <DashboardPage name={name} /> : <Navigate to="/" replace />}
+        />
         <Route
           path="/ruang/:roomId/*"
           element={

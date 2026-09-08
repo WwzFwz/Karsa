@@ -1802,6 +1802,21 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .seg-wide .seg-btn { flex: 1 1 0; min-width: 0; justify-content: center; overflow: hidden; }
 .seg-wide .seg-btn span { overflow: hidden; text-overflow: ellipsis; }
 
+/*
+  Collapsed, the panel keeps its tabs as a narrow rail on the right edge. A
+  panel you can close needs a visible way back, and the way back should be the
+  same control that closed it.
+*/
+.inspector.is-collapsed { width: auto; overflow: visible; }
+.inspector.is-collapsed .seg { flex-direction: column; width: auto; }
+.inspector.is-collapsed .seg-btn { flex: none; padding: 9px 10px; }
+.inspector.is-collapsed .seg-label { display: none; }
+.inspector .seg {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--e2);
+}
+
 .seg-btn {
   display: inline-flex;
   align-items: center;
@@ -2000,7 +2015,7 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 }
 
 .app.is-sidebar-hidden { --chrome-left: 12px; }
-.app.is-panel-hidden { --chrome-right: 12px; }
+.app.is-panel-hidden { --chrome-right: 76px; }
 .app.is-focus-mode {
   --chrome-top: 12px;
   --chrome-left: 12px;
@@ -2241,4 +2256,157 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), var(--e3);
   cursor: grabbing;
   z-index: 6;
+}
+
+/* ============================ dashboard ============================ */
+
+/*
+  Mermaid's file dashboard, in our vocabulary: a labelled sidebar, the primary
+  action first in the content area, and a picture on every card so the list is
+  scannable before it is read.
+*/
+.dash {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 244px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+}
+
+.dash-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--e2);
+  overflow-y: auto;
+}
+
+.dash-brand { display: flex; align-items: center; gap: 10px; padding: 2px 4px 6px; }
+.dash-side nav { display: grid; gap: 3px; }
+.dash-side .nav-item {
+  border: 0;
+  width: 100%;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+  background: transparent;
+}
+
+.dash-main {
+  min-width: 0;
+  overflow: auto;
+  padding: 4px 4px 32px;
+}
+
+.dash-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.dash-head h1 { font-size: 22px; }
+.dash-sub { font-size: 13px; color: var(--ink-3); margin-top: 4px; }
+
+.dash-actions { display: flex; align-items: center; gap: 8px; }
+
+.dash-search { position: relative; display: flex; align-items: center; }
+.dash-search .icon { position: absolute; inset-inline-start: 11px; color: var(--ink-3); }
+.dash-search .text-input { width: 260px; padding-inline-start: 34px; }
+
+.dash-note {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  background: var(--ok-soft);
+  border-radius: var(--r-lg);
+  padding: 11px 14px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.dash-note .icon { color: var(--ok); margin-top: 1px; }
+
+.dash-empty { font-size: 13.5px; color: var(--ink-3); padding: 32px 4px; }
+
+.dash-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 14px;
+}
+
+.room-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--e2);
+  overflow: hidden;
+  transition: box-shadow 140ms ease, transform 140ms ease;
+}
+.room-card:hover { box-shadow: var(--e3); transform: translateY(-1px); }
+:root[data-theme='dark'] .room-card,
+:root[data-theme='dark'] .dash-side { border: 1px solid var(--line); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .room-card,
+  :root:not([data-theme='light']) .dash-side { border: 1px solid var(--line); }
+}
+
+.room-open {
+  display: grid;
+  gap: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.room-thumb {
+  display: block;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.thumb { display: block; width: 100%; height: auto; }
+.thumb-edge { stroke: var(--line-strong); stroke-width: 1.4; }
+
+.room-body { display: grid; gap: 5px; padding: 12px 14px 10px; }
+.room-title { font-size: 14px; font-weight: 640; line-height: 1.3; }
+.room-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.room-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px 12px;
+}
+.room-nobody { font-size: 11.5px; color: var(--ink-3); list-style: none; }
+
+.join-actions.is-single { grid-template-columns: 1fr; }
+
+@media (max-width: 860px) {
+  .dash { grid-template-columns: minmax(0, 1fr); }
+  .dash-side { flex-direction: row; align-items: center; overflow-x: auto; }
+  .dash-side nav { grid-auto-flow: column; }
+  .dash-side .sidebar-foot { margin: 0; }
+  .dash-search .text-input { width: 180px; }
 }

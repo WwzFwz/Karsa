@@ -176,17 +176,7 @@ export function WorkspacePage() {
             </button>
           )}
 
-          {/* The two controls that decide how much of the room you can see. */}
-          <button
-            type="button"
-            className="btn btn-small"
-            aria-pressed={panelHidden}
-            onClick={togglePanel}
-            title="Sembunyikan atau tampilkan panel kanan (\)"
-          >
-            <Icon name={panelHidden ? 'panelRightOpen' : 'panelRight'} size={15} />
-            <span className="hide-narrow">{panelHidden ? 'Tampilkan panel' : 'Sembunyikan panel'}</span>
-          </button>
+          {/* Panel visibility now lives on the panel's own tabs. */}
           <button
             type="button"
             className="btn btn-small"
@@ -210,26 +200,45 @@ export function WorkspacePage() {
 
       </section>
 
-      {!panelHidden && (
-        <aside className="inspector" aria-label="Panel pemeriksa">
-          <div className="seg seg-wide" role="group" aria-label="Isi panel">
-            {INSPECTORS.map((item) => {
-              const badge = badgeFor(item.id)
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`seg-btn ${inspector === item.id ? 'is-on' : ''}`}
-                  aria-pressed={inspector === item.id}
-                  onClick={() => setInspector(item.id)}
-                >
-                  <Icon name={item.icon} size={15} />
-                  <span className="hide-narrow">{item.label}</span>
-                  {badge > 0 && <span className="seg-badge">{badge}</span>}
-                </button>
-              )
-            })}
-          </div>
+      {/*
+        The tab strip is always here; only its contents fold away. Clicking the
+        tab that is already open closes the panel, and clicking any tab opens it
+        again -- the same gesture as a sidebar icon in VS Code or Figma. That
+        makes a separate "hide panel" button redundant, and one control that
+        does both is easier to find than two that each do half.
+      */}
+      <aside className={`inspector ${panelHidden ? 'is-collapsed' : ''}`} aria-label="Panel pemeriksa">
+        <div className="seg seg-wide" role="group" aria-label="Isi panel">
+          {INSPECTORS.map((item) => {
+            const badge = badgeFor(item.id)
+            const open = !panelHidden && inspector === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`seg-btn ${open ? 'is-on' : ''}`}
+                aria-pressed={open}
+                aria-expanded={open}
+                title={open ? `Tutup panel ${item.label}` : `Buka panel ${item.label}`}
+                onClick={() => {
+                  if (open) {
+                    togglePanel()
+                    return
+                  }
+                  setInspector(item.id)
+                  if (panelHidden) togglePanel()
+                }}
+              >
+                <Icon name={item.icon} size={15} />
+                <span className="seg-label">{item.label}</span>
+                {badge > 0 && <span className="seg-badge">{badge}</span>}
+              </button>
+            )
+          })}
+        </div>
+
+        {!panelHidden && (
+          <>
 
           {inspector === 'jejak' && (
             <>
@@ -252,11 +261,12 @@ export function WorkspacePage() {
               <EventLog limit={16} />
             </>
           )}
-          {inspector === 'perintah' && <DraftPanel />}
-          {inspector === 'peserta' && <PresencePanel />}
-          {inspector === 'komentar' && <CommentsPanel />}
-        </aside>
-      )}
+            {inspector === 'perintah' && <DraftPanel />}
+            {inspector === 'peserta' && <PresencePanel />}
+            {inspector === 'komentar' && <CommentsPanel />}
+          </>
+        )}
+      </aside>
     </div>
   )
 }

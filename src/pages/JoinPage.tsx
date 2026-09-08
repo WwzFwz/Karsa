@@ -27,7 +27,9 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
       return
     }
     onJoin(name.trim())
-    navigate(`/ruang/${code.trim() || SAMPLE_ROOM}`)
+    // A code goes straight to that room; without one, the dashboard is the
+    // better landing -- it is where the rooms are.
+    navigate(code.trim() ? `/ruang/${code.trim()}` : '/ruang')
   }
 
   return (
@@ -95,8 +97,8 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
               aria-describedby="join-code-help"
             />
             <p className="field-help" id="join-code-help">
-              Ruang contoh <strong>{SAMPLE_ROOM}</strong> sudah berisi rapat kurikulum dengan lima
-              peserta.
+              Kosongkan untuk melihat daftar ruang. Ruang contoh <strong>{SAMPLE_ROOM}</strong> sudah
+              berisi rapat kurikulum dengan lima peserta.
             </p>
           </div>
 
@@ -106,21 +108,10 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
             </p>
           )}
 
-          <div className="join-actions">
+          <div className="join-actions is-single">
             <button type="submit" className="btn btn-primary btn-wide">
               <Icon name="logIn" size={17} />
-              Gabung ke ruang
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                setCode(`RUANG-${Math.floor(100 + Math.random() * 900)}`)
-                setError(null)
-              }}
-            >
-              <Icon name="plus" size={17} />
-              Ruang baru
+              {code.trim() ? 'Gabung ke ruang' : 'Lihat daftar ruang'}
             </button>
           </div>
         </form>
