@@ -57,6 +57,8 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'move', keys: ['m'], label: 'Pindahkan ke induk lain', scope: 'tree', mutates: true },
   { id: 'up', keys: ['Alt', 'Panah atas'], label: 'Naikkan urutan', scope: 'tree', mutates: true },
   { id: 'down', keys: ['Alt', 'Panah bawah'], label: 'Turunkan urutan', scope: 'tree', mutates: true },
+  { id: 'vote', keys: ['v'], label: 'Pilih atau tarik pilihan pada simpul terfokus', scope: 'tree', mutates: true },
+  { id: 'tool', keys: ['l'], label: 'Jadikan simpul terfokus sebuah alat', scope: 'tree', mutates: true },
   { id: 'relate', keys: ['r'], label: 'Hubungkan ke simpul lain', scope: 'tree', mutates: true },
   { id: 'comment', keys: ['c'], label: 'Tulis komentar', scope: 'tree', mutates: true },
   { id: 'delete', keys: ['Delete'], label: 'Hapus simpul', scope: 'tree', mutates: true },

@@ -127,6 +127,20 @@ export function useTreeKeyboard() {
             dialogs.open({ kind: 'relate', nodeId: id })
           }
           return
+        case 'v':
+          // Vote on the focused node. It only means anything under a tool, and
+          // the command says so rather than the key being silently inert.
+          if (id) {
+            event.preventDefault()
+            room.run({ type: 'voteNode', id })
+          }
+          return
+        case 'l':
+          if (id) {
+            event.preventDefault()
+            dialogs.open({ kind: 'tool', nodeId: id })
+          }
+          return
         case 'c':
           if (id) {
             event.preventDefault()

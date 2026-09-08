@@ -17,6 +17,7 @@ import type {
   RelationId,
   RelationKind,
   RoomShape,
+  ToolKind,
 } from '../model/types'
 import type { DocEvent } from '../events/types'
 import type { RuleViolation } from '../rules/invariants'
@@ -26,6 +27,9 @@ export type Command =
   | { type: 'renameNode'; id: NodeId; title: string }
   | { type: 'setNodeKind'; id: NodeId; kind: NodeKind }
   | { type: 'setNodeState'; id: NodeId; state: NodeState }
+  | { type: 'setNodeTool'; id: NodeId; tool: ToolKind | null }
+  /** Toggles: voting twice takes the vote back, and both halves are events. */
+  | { type: 'voteNode'; id: NodeId }
   | { type: 'setNodeNote'; id: NodeId; note: string }
   | { type: 'moveNode'; id: NodeId; parentId: NodeId | null; afterId?: NodeId | null }
   | { type: 'reorderNode'; id: NodeId; direction: 'up' | 'down' }

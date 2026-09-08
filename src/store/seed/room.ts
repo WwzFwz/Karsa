@@ -17,7 +17,7 @@ import type {
   RoomDoc,
 } from '../../core/model/types'
 import type { DocEvent, EventType } from '../../core/events/types'
-import type { InputPath } from '../../core/model/types'
+import type { InputPath, ToolKind } from '../../core/model/types'
 
 const ORDER_KEYS = 'abcdefghijklmnopqrstuvwxyz'
 const MINUTE = 60_000
@@ -41,6 +41,7 @@ interface SeedRow {
   path: InputPath
   note?: string
   state?: NodeState
+  tool?: ToolKind
   minutesAgo: number
 }
 
@@ -66,6 +67,13 @@ const ROWS: SeedRow[] = [
   { id: 'n_belum', parent: 'n_akar', kind: 'group', title: 'Hal yang belum jelas', by: 'a_rina', path: 'keyboard', minutesAgo: 16 },
   { id: 'n_anggaran', parent: 'n_belum', kind: 'question', title: 'Anggaran laboratorium belum pasti', by: 'a_rina', path: 'keyboard', minutesAgo: 15 },
   { id: 'n_pengampu', parent: 'n_belum', kind: 'question', title: 'Siapa pengampu praktikum aksesibilitas', by: 'a_budi', path: 'voice', minutesAgo: 13 },
+
+  // A tool, seeded like anything else: it is an ordinary node with ordinary
+  // children, and only the `tool` field says to draw it as a vote.
+  { id: 'n_prioritas', parent: 'n_akar', kind: 'decision', title: 'Prioritas semester ini', by: 'a_teguh', path: 'voice', tool: 'suara', minutesAgo: 12 },
+  { id: 'n_opsi_praktikum', parent: 'n_prioritas', kind: 'idea', title: 'Praktikum aksesibilitas', by: 'a_teguh', path: 'voice', minutesAgo: 12 },
+  { id: 'n_opsi_gabung', parent: 'n_prioritas', kind: 'idea', title: 'Gabungkan dua mata kuliah', by: 'a_teguh', path: 'voice', minutesAgo: 12 },
+  { id: 'n_opsi_silabus', parent: 'n_prioritas', kind: 'idea', title: 'Rombak silabus dulu', by: 'a_teguh', path: 'voice', minutesAgo: 12 },
 
   { id: 'n_lanjut', parent: 'n_akar', kind: 'group', title: 'Tindak lanjut', by: 'a_teguh', path: 'keyboard', minutesAgo: 9 },
   { id: 'n_vendor', parent: 'n_lanjut', kind: 'action', title: 'Hubungi vendor perangkat braille', by: 'a_rina', path: 'voice', state: 'open', minutesAgo: 7 },
@@ -114,6 +122,14 @@ const EXTRA_EVENTS: { type: EventType; by: string; path: InputPath; minutesAgo: 
   { type: 'setNodeState', by: 'a_teguh', path: 'keyboard', minutesAgo: 3, payload: { nodeId: 'n_draf', title: 'Kirim draf ke ketua program studi', state: 'done' } },
   { type: 'setRoomShape', by: 'a_sari', path: 'keyboard', minutesAgo: 17, payload: { shape: 'mindmap', previousShape: 'hierarchy' } },
   { type: 'renameNode', by: 'a_rina', path: 'voice', minutesAgo: 11, payload: { nodeId: 'n_anggaran', title: 'Anggaran laboratorium belum pasti', previousTitle: 'Anggaran lab' } },
+  // Votes are events, never a field, so seeding one is seeding history. Budi
+  // changes his mind, which is the case a stored counter gets wrong.
+  { type: 'setNodeTool', by: 'a_teguh', path: 'voice', minutesAgo: 12, payload: { nodeId: 'n_prioritas', title: 'Prioritas semester ini', tool: 'suara' } },
+  { type: 'voteNode', by: 'a_rina', path: 'pointer', minutesAgo: 11, payload: { nodeId: 'n_opsi_praktikum', title: 'Praktikum aksesibilitas', voteCount: 1 } },
+  { type: 'voteNode', by: 'a_sari', path: 'voice', minutesAgo: 10, payload: { nodeId: 'n_opsi_praktikum', title: 'Praktikum aksesibilitas', voteCount: 2 } },
+  { type: 'voteNode', by: 'a_budi', path: 'keyboard', minutesAgo: 10, payload: { nodeId: 'n_opsi_silabus', title: 'Rombak silabus dulu', voteCount: 1 } },
+  { type: 'unvoteNode', by: 'a_budi', path: 'keyboard', minutesAgo: 8, payload: { nodeId: 'n_opsi_silabus', title: 'Rombak silabus dulu', voteCount: 0 } },
+  { type: 'voteNode', by: 'a_budi', path: 'voice', minutesAgo: 8, payload: { nodeId: 'n_opsi_gabung', title: 'Gabungkan dua mata kuliah', voteCount: 1 } },
 ]
 
 export function buildSeedDoc(now = Date.now()): RoomDoc {
@@ -133,6 +149,7 @@ export function buildSeedDoc(now = Date.now()): RoomDoc {
       title: row.title,
       note: row.note,
       state: row.state,
+      tool: row.tool,
       createdBy: row.by,
       createdAt: at,
       updatedBy: row.by,

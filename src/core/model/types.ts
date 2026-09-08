@@ -45,6 +45,18 @@ export type RelationKind =
 /** Layout algorithms over the same model, not different data types. */
 export type RoomShape = 'mindmap' | 'hierarchy' | 'flow' | 'timeline' | 'columns'
 
+/**
+ * A tool is the same idea as a shape, one level down: a layout and an
+ * interaction skin over a sub-tree that already exists. It is never a new kind
+ * of object and never a floating window, because a window has no place in the
+ * outline and no place in audio traversal -- and a thing persona B cannot reach
+ * is not a feature of this product.
+ *
+ * So a vote's options are child nodes, a checklist's items are child nodes, and
+ * the tool field only says how to draw and operate them. See docs/tools.md.
+ */
+export type ToolKind = 'suara'
+
 export interface Node {
   id: NodeId
   /** null means "attached to the room root". Single LWW field -- see D9. */
@@ -58,6 +70,11 @@ export interface Node {
   note?: string
   /** Only meaningful for kind 'action' and 'decision'. */
   state?: NodeState
+  /**
+   * Turns this node into a tool whose children are its contents. Absent for
+   * ordinary nodes, which is almost all of them.
+   */
+  tool?: ToolKind
   createdBy: ActorId
   createdAt: number
   updatedBy: ActorId

@@ -16,6 +16,7 @@ import { useEffect, useRef } from 'react'
 import { useRoom } from '../../app/RoomContext'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { KIND_HUE, KIND_LABEL, RELATION_LABEL, STATE_LABEL } from '../../ui/labels'
+import { toolOf } from '../../core/tools/registry'
 import { Icon, KIND_ICON } from '../../ui/icons'
 import { InlineTitle } from '../../ui/InlineTitle'
 import type { NodeId } from '../../core/model/types'
@@ -36,6 +37,8 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
     editingId,
     setEditingId,
     run,
+    votesOn,
+    votedByMe,
   } = room
   const refs = useRef(new Map<NodeId, HTMLLIElement>())
 
@@ -86,7 +89,20 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
         // and a sighted reader sees it twice.
         const showsNote = !compact && Boolean(node.note)
 
+        const spec = toolOf(node.tool)
+        // A tool's own row says what it is; each option's row carries its
+        // tally. Between them the outline holds everything the card holds,
+        // which is the only reason a tool is allowed to exist at all.
+        const parentSpec = toolOf(entry.parentId ? doc.nodes[entry.parentId]?.tool : undefined)
+        const votes = parentSpec ? votesOn(id) : 0
+        const mine = parentSpec ? votedByMe(id) : false
+
         const descriptionBits: string[] = []
+        if (spec) descriptionBits.push(`Alat ${spec.label.toLowerCase()}`)
+        if (parentSpec) {
+          descriptionBits.push(votes === 1 ? '1 suara' : `${votes} suara`)
+          if (mine) descriptionBits.push('kamu memilih ini')
+        }
         if (node.state) descriptionBits.push(`Status ${STATE_LABEL[node.state].toLowerCase()}`)
         for (const r of outgoing) {
           descriptionBits.push(`${RELATION_LABEL[r.kind]} ${doc.nodes[r.toId]?.title ?? 'simpul lain'}`)
@@ -147,7 +163,7 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
                 <Icon name={hasChildren && !isCollapsed ? 'chevronDown' : 'chevronRight'} size={14} />
               </span>
               <Icon name={KIND_ICON[node.kind]} size={15} className="icon outline-kindicon" />
-              <span className="outline-kind">{KIND_LABEL[node.kind]}</span>
+              <span className="outline-kind">{spec ? spec.label : KIND_LABEL[node.kind]}</span>
               {editingId === id ? (
                 <InlineTitle
                   value={node.title}
@@ -169,6 +185,21 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
                 >
                   {node.title}
                 </span>
+              )}
+              {parentSpec && (
+                <button
+                  type="button"
+                  className={`vote-tag ${mine ? 'is-mine' : ''}`}
+                  aria-pressed={mine}
+                  aria-label={`${mine ? 'Tarik pilihan dari' : 'Pilih'} ${node.title}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    run({ type: 'voteNode', id }, 'pointer')
+                  }}
+                >
+                  <Icon name={mine ? 'check' : 'plus'} size={11} />
+                  {votes}
+                </button>
               )}
               {node.state && (
                 <span className={`state-tag state-${node.state}`}>{STATE_LABEL[node.state]}</span>

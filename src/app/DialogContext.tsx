@@ -11,7 +11,8 @@ import { NodePicker } from '../ui/NodePicker'
 import { KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, SHAPE_HINT, STATE_LABEL } from '../ui/labels'
 import { NODE_KINDS, TITLE_MAX } from '../core/rules/invariants'
 import { descendantsOf } from '../core/tree/project'
-import type { NodeId, NodeKind, NodeState, RelationKind, RoomShape } from '../core/model/types'
+import type { NodeId, NodeKind, NodeState, RelationKind, RoomShape, ToolKind } from '../core/model/types'
+import { TOOL_LIST } from '../core/tools/registry'
 import { useRoom } from './RoomContext'
 import { findRoom } from '../features/rooms/rooms'
 import { SCOPE_LABEL, SHORTCUTS_BY_SCOPE, type ShortcutScope } from '../a11y/keys'
@@ -23,6 +24,7 @@ export type DialogRequest =
   | { kind: 'setState'; nodeId: NodeId }
   | { kind: 'note'; nodeId: NodeId }
   | { kind: 'move'; nodeId: NodeId; presetParent?: NodeId }
+  | { kind: 'tool'; nodeId: NodeId }
   | { kind: 'relate'; nodeId: NodeId; presetTarget?: NodeId }
   | { kind: 'comment'; nodeId: NodeId }
   | { kind: 'delete'; nodeId: NodeId }
@@ -84,6 +86,8 @@ function DialogHost({ request, onClose }: { request: DialogRequest; onClose: () 
       return <DeleteDialog nodeId={request.nodeId} onClose={onClose} />
     case 'share':
       return <ShareDialog onClose={onClose} />
+    case 'tool':
+      return <ToolDialog nodeId={request.nodeId} onClose={onClose} />
     case 'shape':
       return <ShapeDialog onClose={onClose} />
     case 'help':
@@ -559,6 +563,76 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
         {locked
           ? 'Ruang terkunci. Kode lebih berguna daripada tautan saat rapat berjalan: ia bisa diucapkan, dan yang menunggu tetap kelihatan di panel Peserta.'
           : 'Ruang terbuka. Kode lebih berguna daripada tautan saat rapat sedang berjalan: ia bisa diucapkan.'}
+      </p>
+    </Dialog>
+  )
+}
+
+/**
+ * Turning a node into a tool, and back.
+ *
+ * "Back" matters more than it looks: a tool is a way of drawing a sub-tree, so
+ * switching it off can never lose anything -- the children were always ordinary
+ * nodes and stay ordinary nodes. That is the property that makes tools safe to
+ * try, and it is only true because no tool ever owns its own data.
+ */
+function ToolDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void }) {
+  const { run, doc, tree } = useRoom()
+  const node = doc.nodes[nodeId]
+  const [tool, setTool] = useState<ToolKind | null>(node?.tool ?? null)
+  const childCount = tree.byId.get(nodeId)?.childIds.length ?? 0
+
+  return (
+    <Dialog
+      title="Alat"
+      description={`${node?.title ?? 'Simpul ini'} digambar sebagai alat. Anaknya tetap simpul biasa -- alat cuma cara menggambar dan mengoperasikannya, jadi mematikannya tidak menghilangkan apa pun.`}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            Batal
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => run({ type: 'setNodeTool', id: nodeId, tool }).ok && onClose()}
+          >
+            Terapkan
+          </button>
+        </>
+      }
+    >
+      <fieldset className="chips chips-stack">
+        <legend className="field-label">Gambar sebagai</legend>
+        <label className={`chip ${tool === null ? 'is-on' : ''}`}>
+          <input type="radio" name="tool" checked={tool === null} onChange={() => setTool(null)} />
+          <span>
+            <strong>Simpul biasa</strong>
+            <span className="chip-hint">Kartu judul seperti simpul lain.</span>
+          </span>
+        </label>
+        {TOOL_LIST.map((spec) => (
+          <label key={spec.id} className={`chip ${tool === spec.id ? 'is-on' : ''}`}>
+            <input
+              type="radio"
+              name="tool"
+              checked={tool === spec.id}
+              onChange={() => setTool(spec.id)}
+            />
+            <span>
+              <strong>
+                <Icon name={spec.icon} size={13} /> {spec.label}
+              </strong>
+              <span className="chip-hint">{spec.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <p className="panel-note" style={{ marginBottom: 0 }}>
+        {childCount === 0
+          ? 'Simpul ini belum punya anak. Tambah anak lebih dulu -- itulah isi alatnya.'
+          : `${childCount} anak akan jadi isinya.`}
       </p>
     </Dialog>
   )

@@ -19,6 +19,7 @@ import {
   NOTE_MAX,
   type RuleViolation,
 } from '../rules/invariants'
+import { countVotes, hasVoted } from '../tools/tally'
 import { descendantsOf, projectTree } from '../tree/project'
 import type { Command, CommandContext, CommandResult } from './types'
 
@@ -130,6 +131,42 @@ export function applyCommand(doc: RoomDoc, command: Command, ctx: CommandContext
       if (!node) return { doc, result: fail({ rule: 0, code: 'missing_node', message: 'Simpul tidak ditemukan.' }) }
       next.nodes[command.id] = { ...node, state: command.state, ...stamp }
       emitted.push({ type: 'setNodeState', payload: { nodeId: node.id, title: node.title, state: command.state } })
+      break
+    }
+
+    case 'setNodeTool': {
+      const node = doc.nodes[command.id]
+      if (!node) return { doc, result: fail({ rule: 0, code: 'missing_node', message: 'Simpul tidak ditemukan.' }) }
+      const nextNode = { ...node, ...stamp }
+      if (command.tool) nextNode.tool = command.tool
+      else delete nextNode.tool
+      next.nodes[command.id] = nextNode
+      emitted.push({
+        type: 'setNodeTool',
+        payload: {
+          nodeId: node.id,
+          title: node.title,
+          tool: command.tool ?? undefined,
+          previousTool: node.tool,
+        },
+      })
+      break
+    }
+
+    /*
+      A vote is not stored on the node. It is an event by an actor, and the
+      tally is read back off the log -- which means undo, attribution and the
+      contribution summary all work without a single line written for them.
+    */
+    case 'voteNode': {
+      const node = doc.nodes[command.id]
+      if (!node) return { doc, result: fail({ rule: 0, code: 'missing_node', message: 'Simpul tidak ditemukan.' }) }
+      const had = hasVoted(doc, command.id, ctx.actorId)
+      const voters = countVotes(doc, command.id) + (had ? -1 : 1)
+      emitted.push({
+        type: had ? 'unvoteNode' : 'voteNode',
+        payload: { nodeId: node.id, title: node.title, voteCount: voters },
+      })
       break
     }
 

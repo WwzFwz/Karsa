@@ -10,6 +10,7 @@
  */
 
 import { KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../../ui/labels'
+import { TOOLS } from '../tools/registry'
 import type { DocEvent } from './types'
 
 function actor(name: string): string {
@@ -37,6 +38,16 @@ export function narrate(event: DocEvent, actorName: string): string {
       return `${who} menandai ${quoted(p.title)} ${STATE_LABEL[p.state ?? 'open'].toLowerCase()}.`
     case 'setNodeNote':
       return `${who} menyunting catatan pada ${quoted(p.title)}.`
+    case 'setNodeTool':
+      return p.tool
+        ? `${who} menjadikan ${quoted(p.title)} alat ${TOOLS[p.tool].label.toLowerCase()}.`
+        : `${who} mengembalikan ${quoted(p.title)} menjadi simpul biasa.`
+    // The count is in the sentence because a tally nobody can see is a tally
+    // that only exists for people who can see it.
+    case 'voteNode':
+      return `${who} memilih ${quoted(p.title)}, sekarang ${p.voteCount ?? 1} suara.`
+    case 'unvoteNode':
+      return `${who} menarik pilihan dari ${quoted(p.title)}, sekarang ${p.voteCount ?? 0} suara.`
     case 'moveNode':
       return p.parentTitle
         ? `${who} memindahkan ${quoted(p.title)} ke bawah ${quoted(p.parentTitle)}.`
@@ -92,7 +103,12 @@ function narrateUndo(who: string, p: DocEvent['payload']): string {
     case 'setNodeKind':
     case 'setNodeState':
     case 'setNodeNote':
+    case 'setNodeTool':
       return `${who} mengembalikan ${what} seperti semula.`
+    case 'voteNode':
+      return `${who} membatalkan pilihan yang baru diberikan.`
+    case 'unvoteNode':
+      return `${who} mengembalikan pilihan yang tadi ditarik.`
     case 'addRelation':
       return `${who} membatalkan hubungan yang baru dibuat.`
     case 'removeRelation':

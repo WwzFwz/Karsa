@@ -60,6 +60,8 @@ bunyi pendek.
 | `Alt` `Panah atas` | Naikkan urutan |
 | `Alt` `Panah bawah` | Turunkan urutan |
 | `r` | Hubungkan ke simpul lain |
+| `l` | Jadikan simpul ini sebuah alat |
+| `v` | Pilih, atau tarik pilihan |
 | `c` | Tulis komentar |
 | `Delete` | Hapus simpul |
 

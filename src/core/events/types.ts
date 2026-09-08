@@ -14,7 +14,16 @@
  * look anything up. A node deleted an hour ago can still be described.
  */
 
-import type { ActorId, EventId, InputPath, NodeKind, NodeState, RelationKind, RoomShape } from '../model/types'
+import type {
+  ActorId,
+  EventId,
+  InputPath,
+  NodeKind,
+  NodeState,
+  RelationKind,
+  RoomShape,
+  ToolKind,
+} from '../model/types'
 
 export type EventType =
   | 'createNode'
@@ -22,6 +31,9 @@ export type EventType =
   | 'setNodeKind'
   | 'setNodeState'
   | 'setNodeNote'
+  | 'setNodeTool'
+  | 'voteNode'
+  | 'unvoteNode'
   | 'moveNode'
   | 'reorderNode'
   | 'deleteNode'
@@ -45,6 +57,10 @@ export interface EventPayload {
   kind?: NodeKind
   previousKind?: NodeKind
   state?: NodeState
+  tool?: ToolKind
+  previousTool?: ToolKind
+  /** The tally after this vote, so the sentence never has to recount. */
+  voteCount?: number
   relationKind?: RelationKind
   label?: string
   shape?: RoomShape
@@ -86,4 +102,9 @@ export const CONTRIBUTING_EVENTS: EventType[] = [
   'relabelRelation',
   'addComment',
   'resolveComment',
+  'setNodeTool',
+  // Voting counts. Choosing between the options somebody else wrote is
+  // participating, and a summary that says otherwise is telling the room that
+  // the quiet ones did nothing.
+  'voteNode',
 ]

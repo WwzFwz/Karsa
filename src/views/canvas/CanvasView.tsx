@@ -23,6 +23,10 @@ import { useAnnouncer } from '../../a11y/Announcer'
 import { useRoom } from '../../app/RoomContext'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { layoutFor, NODE_H, NODE_W } from '../../core/shape/layout'
+import { toolOf } from '../../core/tools/registry'
+
+/** A tool card carries a list, so it gets more width than a title needs. */
+const TOOL_W = 268
 import { KIND_HUE, KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../../ui/labels'
 import { Icon, KindGlyph } from '../../ui/icons'
 import { InlineTitle } from '../../ui/InlineTitle'
@@ -72,7 +76,9 @@ export function CanvasView() {
   const {
     doc,
     tree,
-    visibleIds,
+    canvasIds: visibleIds,
+    votedByMe,
+    votesOn,
     focusId,
     setFocus,
     participants,
@@ -835,6 +841,10 @@ export function CanvasView() {
             )
             const hasChildren = entry.childIds.length > 0
             const hue = KIND_HUE[node.kind]
+            const spec = toolOf(node.tool)
+            const topVotes = spec
+              ? entry.childIds.reduce((most, childId) => Math.max(most, votesOn(childId)), 0)
+              : 0
 
             return (
               <li
@@ -860,10 +870,12 @@ export function CanvasView() {
                   linkingFrom && linkingFrom !== id ? 'is-linktarget' : ''
                 } ${linkingFrom === id ? 'is-linksource' : ''} ${
                   draggingNode === id ? 'is-dragging' : ''
-                } ${dropParent === id ? 'is-droptarget' : ''} ${nodeOverrides[id] ? 'is-placed' : ''}`}
+                } ${dropParent === id ? 'is-droptarget' : ''} ${
+                  nodeOverrides[id] ? 'is-placed' : ''
+                } ${spec ? `node-tool tool-${spec.id}` : ''}`}
                 style={{
                   transform: `translate(${pos.x + ORIGIN}px, ${pos.y + ORIGIN}px)`,
-                  width: NODE_W,
+                  width: spec ? TOOL_W : NODE_W,
                   minHeight: NODE_H,
                   ['--kh' as string]: String(hue),
                 }}
@@ -899,8 +911,17 @@ export function CanvasView() {
                   aria-hidden="true"
                 />
                 <span className="node-head" aria-hidden="true">
-                  <KindGlyph kind={node.kind} />
-                  {KIND_LABEL[node.kind]}
+                  {spec ? (
+                    <>
+                      <Icon name={spec.icon} size={12} />
+                      {spec.label}
+                    </>
+                  ) : (
+                    <>
+                      <KindGlyph kind={node.kind} />
+                      {KIND_LABEL[node.kind]}
+                    </>
+                  )}
                 </span>
                 {editingId === id ? (
                   <InlineTitle
@@ -922,6 +943,46 @@ export function CanvasView() {
                   >
                     {node.title}
                   </span>
+                )}
+                {spec && (
+                  <ul className="tool-options">
+                    {entry.childIds.map((childId) => {
+                      const option = doc.nodes[childId]
+                      if (!option) return null
+                      const votes = votesOn(childId)
+                      const mine = votedByMe(childId)
+                      return (
+                        <li key={childId} className={`tool-option ${mine ? 'is-mine' : ''}`}>
+                          <button
+                            type="button"
+                            className="tool-vote"
+                            aria-pressed={mine}
+                            aria-label={`${mine ? 'Tarik pilihan dari' : 'Pilih'} ${option.title}, ${votes} suara`}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              run({ type: 'voteNode', id: childId }, 'pointer')
+                            }}
+                          >
+                            <Icon name={mine ? 'check' : 'plus'} size={12} />
+                          </button>
+                          <span className="tool-option-title">{option.title}</span>
+                          <span className="tool-count" aria-hidden="true">
+                            {votes}
+                          </span>
+                          {/* The bar is decoration; the number beside it is the
+                              fact, and the sentence in the log carries it too. */}
+                          <span
+                            className="tool-bar"
+                            aria-hidden="true"
+                            style={{ ['--fill' as string]: `${votes === 0 ? 0 : (votes / Math.max(1, topVotes)) * 100}%` }}
+                          />
+                        </li>
+                      )
+                    })}
+                    {entry.childIds.length === 0 && (
+                      <li className="tool-empty">Belum ada {spec.itemWord}. Tekan Tab untuk menambah.</li>
+                    )}
+                  </ul>
                 )}
                 {draftTargets.has(id) && (
                   <span className="node-proposed" aria-hidden="true">

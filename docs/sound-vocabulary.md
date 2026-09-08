@@ -32,6 +32,9 @@ Nada dasar 880 Hz, di atas pita bicara. Setiap bunyi di bawah 180 milidetik.
 | Pemindahan bertabrakan | sekon minor serentak, 130 ms | sengaja terdengar salah, karena memang salah |
 | Draf siap | oktaf, 0 lalu +12 | undangan untuk memutuskan, bukan pemberitahuan |
 | Ditolak aturan | sekon minor pendek | ditolak, bukan gagal |
+| Simpul jadi alat | trinada, 0 +3 +7 | mengubah apa itu benda, bukan cuma isinya |
+| Memilih | 0 lalu +7, sangat pendek | sering dan kolektif, jadi kecil dan naik |
+| Menarik pilihan | +7 lalu 0 | kebalikan yang sama persis |
 | Ada yang minta masuk | satu nada diulang, +7 lalu +7 | nada berulang itu bunyi mengetuk pintu |
 | Permintaan diterima | trinada naik, 0 +4 +7 | bentuk paling mirip "kedatangan" |
 | Permintaan ditolak | +2 lalu −5 | turun, dan tidak kembali ke nada awal |

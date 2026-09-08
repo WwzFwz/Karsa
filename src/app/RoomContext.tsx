@@ -28,6 +28,7 @@ import { narrate } from '../core/events/narrate'
 import type { Command, CommandResult } from '../core/commands/types'
 import type { InputPath, NodeId, RoomDoc, RoomShape } from '../core/model/types'
 import type { Point } from '../core/shape/layout'
+import { countVotes, hasVoted } from '../core/tools/tally'
 import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/project'
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
 import { MemoryDocStore } from '../store/MemoryDocStore'
@@ -80,6 +81,15 @@ interface RoomApi {
   collapsed: ReadonlySet<NodeId>
   toggleCollapse: (id: NodeId, next?: boolean) => void
   visibleIds: NodeId[]
+  /**
+   * What the canvas draws. A tool's children are folded into its card, so the
+   * canvas hides them while the outline keeps showing them -- the outline is
+   * where the detail lives, and a tool must never make content unreachable.
+   */
+  canvasIds: NodeId[]
+  /** True while the actor's standing vote on this node is a yes. */
+  votedByMe: (id: NodeId) => boolean
+  votesOn: (id: NodeId) => number
 
   view: ViewMode
   setView: (view: ViewMode) => void
@@ -192,6 +202,12 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const [canvasMounted, setCanvasMounted] = useState(false)
 
   const visibleIds = useMemo(() => visibleOrder(tree, collapsed), [tree, collapsed])
+
+  const canvasIds = useMemo(() => {
+    const folded = new Set(collapsed)
+    for (const node of Object.values(doc.nodes)) if (node.tool) folded.add(node.id)
+    return visibleOrder(tree, folded)
+  }, [tree, collapsed, doc.nodes])
 
   /**
    * Which nodes a pending draft would touch. The canvas marks them while the
@@ -642,6 +658,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     collapsed,
     toggleCollapse,
     visibleIds,
+    canvasIds,
+    votedByMe: (id: NodeId) => hasVoted(doc, id, SELF_ID),
+    votesOn: (id: NodeId) => countVotes(doc, id),
     view,
     setView,
     panelHidden,

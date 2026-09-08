@@ -68,6 +68,11 @@ export const EARCONS: Record<
   blocked: { steps: [0, -1], step: 90, gain: 0.16, chord: true, important: true },
   // Someone at the door. A repeated note, because that is what knocking is.
   joinRequest: { steps: [7, 7], step: 80, gain: 0.14, important: true },
+  // A tool is a change to what the canvas *is*, so it gets a shape of its own.
+  setNodeTool: { steps: [0, 3, 7], step: 48, gain: 0.13, important: true },
+  // Voting is frequent and collective: small, rising, and out of the way.
+  voteNode: { steps: [0, 7], step: 34, gain: 0.1, important: false },
+  unvoteNode: { steps: [7, 0], step: 34, gain: 0.09, important: false },
   // Opening: a plain major triad going up, the most arrival-shaped thing there is.
   joinAccepted: { steps: [0, 4, 7], step: 45, gain: 0.14, important: true },
   // Turning away: down, and it does not settle on the note it started from.
