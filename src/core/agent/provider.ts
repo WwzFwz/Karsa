@@ -37,7 +37,7 @@ export interface PlanProvider {
   plan: (input: PlanInput) => Promise<Plan>
 }
 
-const KEY = 'kanvas-setara:penyedia'
+const KEY = 'karsa:penyedia'
 
 export function readProvider(): ProviderId {
   try {

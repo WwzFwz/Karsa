@@ -1,4 +1,4 @@
-# Kanvas Setara
+# Karsa
 
 Ruang kerja kolaboratif yang bisa dioperasikan tanpa tangan dan diikuti tanpa
 mata. Konteks lengkap ada di [CLAUDE.md](CLAUDE.md).

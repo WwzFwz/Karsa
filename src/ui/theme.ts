@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
-const KEY = 'kanvas-setara:tema'
+const KEY = 'karsa:tema'
 
 function read(): ThemeChoice {
   try {

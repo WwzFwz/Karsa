@@ -1,4 +1,4 @@
-# Kanvas Setara
+# Karsa
 
 Ruang kerja kolaboratif berbasis web yang mengubah ucapan dan teks menjadi visual
 bersama, dikerjakan beberapa orang pada waktu yang sama. Pembedanya: kanvasnya
@@ -311,6 +311,13 @@ Empat yang menjelaskan **rancangan**:
   dinamika yang mati secara bawaan.
 - `docs/data-model.md` - elemen, atribut wajib, jenis relasi, dan pemisahan
   operasi yang mengubah data versus yang hanya navigasi.
+
+Dua untuk **laporan**:
+
+- `docs/laporan-lampiran-abc.md` - Lampiran A (use case dan ketiga aktor),
+  B (arsitektur AI), dan C (arsitektur aplikasi web), dalam bentuk paragraf.
+- `docs/laporan-lampiran-d.md` - Lampiran D: rancangan antarmuka per halaman,
+  gambar lalu paragraf. Gambarnya dihasilkan `npm run shots`.
 
 Satu yang menjelaskan **keadaan**:
 

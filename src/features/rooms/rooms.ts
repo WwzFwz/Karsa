@@ -37,7 +37,7 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-const STORE_KEY = 'kanvas-setara:ruang'
+const STORE_KEY = 'karsa:ruang'
 
 function seeded(now: number): RoomSummary[] {
   return [
@@ -175,7 +175,7 @@ export function forgetRoom(id: string): void {
   write(read().filter((room) => room.id !== id))
 }
 
-const LAST_KEY = 'kanvas-setara:ruang-terakhir'
+const LAST_KEY = 'karsa:ruang-terakhir'
 
 /** So the dashboard can offer a way back into the room you just left. */
 export function rememberLastRoom(id: string): void {

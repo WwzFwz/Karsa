@@ -102,9 +102,9 @@ export function NewRoomDialog({
   */
   const draftInvitation = () => {
     const link = `${window.location.origin}/ruang/${code}`
-    const subject = `Undangan ruang ${named || 'Kanvas Setara'}`
+    const subject = `Undangan ruang ${named || 'Karsa'}`
     const lines = [
-      `Kamu diundang ke ruang "${named || 'tanpa nama'}" di Kanvas Setara.`,
+      `Kamu diundang ke ruang "${named || 'tanpa nama'}" di Karsa.`,
       '',
       `Kode ruang: ${code}`,
       `Tautan: ${link}`,
@@ -265,7 +265,7 @@ export function NewRoomDialog({
       <p id="new-room-guest-help" className={`field-help ${badEmail ? 'is-error' : ''}`}>
         {badEmail
           ? 'Belum berbentuk alamat surel.'
-          : 'Kanvas Setara tidak punya akun dan tidak mengirim surel sendiri. Tombolnya menyiapkan draf di aplikasi surel kamu, berisi nama ruang dan kodenya; kamu yang mengirim.'}
+          : 'Karsa tidak punya akun dan tidak mengirim surel sendiri. Tombolnya menyiapkan draf di aplikasi surel kamu, berisi nama ruang dan kodenya; kamu yang mengirim.'}
       </p>
     </Dialog>
   )

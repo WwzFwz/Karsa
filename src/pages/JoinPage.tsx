@@ -40,7 +40,7 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
             <Icon name="target" size={19} />
           </span>
           <div>
-            <p className="brand-name">Kanvas Setara</p>
+            <p className="brand-name">Karsa</p>
             <p className="brand-sub">Ruang kerja kolaboratif</p>
           </div>
           <span className="topbar-spacer" />

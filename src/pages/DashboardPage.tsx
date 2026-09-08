@@ -72,7 +72,7 @@ export function DashboardPage({ name }: { name: string }) {
             <Icon name="target" size={18} />
           </span>
           <div>
-            <p className="brand-name">Kanvas Setara</p>
+            <p className="brand-name">Karsa</p>
             <p className="brand-sub">Ruang kerja kolaboratif</p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-# Model Data Kanvas Setara
+# Model Data Karsa
 
 Satu halaman. Belum diimplementasikan; ini yang harus disepakati sebelum UI
 dibangun, supaya tampilannya tidak lahir dengan asumsi yang cuma cocok untuk mata.

@@ -12,7 +12,7 @@ import { mkdir, rm } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 
-const out = resolve('node_modules/.cache/kanvas-eval.mjs')
+const out = resolve('node_modules/.cache/karsa-eval.mjs')
 
 await mkdir(resolve('node_modules/.cache'), { recursive: true })
 await build({

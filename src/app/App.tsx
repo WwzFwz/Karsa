@@ -10,7 +10,7 @@ import { WorkspacePage } from '../pages/WorkspacePage'
 import { SummaryPage } from '../pages/SummaryPage'
 import { SettingsPage } from '../pages/SettingsPage'
 
-const NAME_KEY = 'kanvas-setara:nama'
+const NAME_KEY = 'karsa:nama'
 
 export function App() {
   const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) ?? '')

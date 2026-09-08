@@ -344,7 +344,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
             <Icon name="target" size={18} />
           </span>
           <div className="brand-text">
-            <p className="brand-name">Kanvas Setara</p>
+            <p className="brand-name">Karsa</p>
             <p className="brand-sub">{doc.room.title}</p>
           </div>
         </div>
