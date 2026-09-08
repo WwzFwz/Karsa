@@ -2853,3 +2853,62 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 @media (max-width: 900px) {
   .tool-rail { left: var(--gap); }
 }
+
+/* ---- orchestrator routing, shown rather than hidden ---- */
+
+.routing {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.routing strong { color: var(--ink); }
+/* A proposal the system made on its own reads differently from one asked for. */
+.routing-alat-diusulkan { background: var(--accent-soft); color: var(--ink-2); }
+
+.op-agent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+  font-size: 10.5px;
+  font-weight: 680;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.op-source {
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+.agent-context { margin: 12px 0; }
+.agent-context > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 620;
+  color: var(--ink-2);
+  padding: 6px 0;
+}
+.agent-context pre {
+  margin: 0;
+  padding: 10px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  color: var(--ink-2);
+}

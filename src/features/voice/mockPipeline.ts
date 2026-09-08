@@ -12,6 +12,9 @@
  */
 
 import { newDraftId } from '../../core/model/ids'
+import { plan } from '../../core/agent/orchestrator'
+import { buildContext, renderContext } from '../../core/agent/context'
+import type { TreeProjection } from '../../core/tree/project'
 import type { Command } from '../../core/commands/types'
 import type { NodeId, RoomDoc } from '../../core/model/types'
 import type { Draft, DraftAmbiguity, DraftOperation } from './types'
@@ -138,6 +141,26 @@ export const UTTERANCES: Utterance[] = [
  * speak again. Nothing in it requires a finger, which is the whole reason
  * voice is the primary path for someone who cannot press keys comfortably.
  */
+/**
+ * Lines that exist to exercise the orchestrator's three routes rather than its
+ * happy path: one that names a tool, one that only implies a tool, and one that
+ * names two and therefore must ask instead of choosing.
+ */
+export const AGENT_UTTERANCES: Utterance[] = [
+  {
+    transcript: 'bikin voting buat memilih prioritas semester ini',
+    build: () => ({ operations: [] }),
+  },
+  {
+    transcript: 'kenapa bisa tingkat putus mata kuliah setinggi itu',
+    build: () => ({ operations: [] }),
+  },
+  {
+    transcript: 'kita bikin retro sekalian voting ya',
+    build: () => ({ operations: [] }),
+  },
+]
+
 export const CONFIRM_UTTERANCE: Utterance = {
   transcript: 'ya terapkan saja',
   build: () => ({ operations: [] }),
@@ -155,15 +178,77 @@ export function emptyDraft(): Draft {
   }
 }
 
-export function buildDraft(utterance: Utterance, doc: RoomDoc, focusId: NodeId | null): Draft {
+/**
+ * One utterance, through the orchestrator first and the structure stage second.
+ *
+ * The order matters and is the whole point of having an orchestrator: a request
+ * that names a tool must never be minced into loose nodes by a parser that was
+ * only ever looking for nouns. Only when nothing about the sentence asks for a
+ * tool does it fall through to the stage that reads it as ordinary content.
+ */
+export function buildDraft(
+  utterance: Utterance,
+  doc: RoomDoc,
+  tree: TreeProjection,
+  focusId: NodeId | null,
+): Draft {
+  const routed = plan({ transcript: utterance.transcript, doc, focusId })
+  const context = renderContext(buildContext(doc, tree, focusId))
+
+  if (routed.steps.length > 0 || routed.question) {
+    return {
+      id: newDraftId(),
+      status: 'ready',
+      transcript: utterance.transcript,
+      // A template is several commands but one decision, so it is one row with
+      // one checkbox. Nobody means to apply half a retro board.
+      operations: routed.steps.map((step, i) => ({
+        id: `op_${i}`,
+        command: step.commands[0],
+        extraCommands: step.commands.slice(1),
+        preview: step.preview,
+        confidence: step.confidence,
+        accepted: true,
+        agent: step.agent,
+        source: step.source,
+      })),
+      ambiguities: routed.question
+        ? [
+            {
+              id: 'amb_0',
+              question: routed.question.question,
+              choices: routed.question.choices.map((choice) => ({
+                id: choice.id,
+                label: choice.label,
+                command: choice.commands[0],
+              })),
+            },
+          ]
+        : [],
+      rawText: routed.rawText ?? null,
+      startedAt: Date.now(),
+      intent: routed.intent,
+      reason: routed.reason,
+      context,
+    }
+  }
+
   const parsed = utterance.build(doc, focusId)
   return {
     id: newDraftId(),
     status: 'ready',
     transcript: utterance.transcript,
-    operations: parsed.operations.map((op, i) => ({ ...op, id: `op_${i}`, accepted: true })),
+    operations: parsed.operations.map((op, i) => ({
+      ...op,
+      id: `op_${i}`,
+      accepted: true,
+      agent: 'penyusun' as const,
+    })),
     ambiguities: (parsed.ambiguities ?? []).map((a, i) => ({ ...a, id: `amb_${i}` })),
     rawText: parsed.rawText ?? null,
     startedAt: Date.now(),
+    intent: parsed.rawText ? 'tak-dikenali' : 'susun',
+    reason: routed.reason,
+    context,
   }
 }

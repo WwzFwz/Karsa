@@ -8,6 +8,7 @@
  */
 
 import type { Command } from '../../core/commands/types'
+import type { AgentId, Intent } from '../../core/agent/types'
 
 export type DraftStatus =
   | 'idle'
@@ -28,6 +29,15 @@ export interface DraftOperation {
   confidence: number
   /** Unchecked operations are skipped on Terapkan. */
   accepted: boolean
+  /** Which stage of the pipeline produced this. Named so it can be argued with. */
+  agent?: AgentId
+  /** Set when the step came from the tool or template registry. */
+  source?: { kind: 'templat' | 'alat'; id: string; label: string }
+  /**
+   * A template arrives as several commands but one decision, so it is one row
+   * with one checkbox -- ticking half a retro board is not a thing anyone means.
+   */
+  extraCommands?: Command[]
 }
 
 export interface DraftAmbiguity {
@@ -46,4 +56,12 @@ export interface Draft {
   /** Speech the parser could not turn into an operation. Editable, never applied silently. */
   rawText: string | null
   startedAt: number
+  /** How the orchestrator routed this utterance, and why. */
+  intent?: Intent
+  reason?: string
+  /**
+   * Exactly what the assistant was told before it answered, as text. Shown
+   * rather than described: "trust me" is not an accessibility feature.
+   */
+  context?: string
 }

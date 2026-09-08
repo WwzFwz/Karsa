@@ -13,6 +13,15 @@
 
 import { useRoom } from '../../app/RoomContext'
 import { Icon } from '../../ui/icons'
+import { AGENTS, type Intent } from '../../core/agent/types'
+
+const INTENT_LABEL: Record<Intent, string> = {
+  'alat-diminta': 'Alat diminta langsung',
+  'alat-diusulkan': 'Alat diusulkan',
+  susun: 'Isi biasa',
+  ambigu: 'Perlu dipilih',
+  'tak-dikenali': 'Tidak dikenali',
+}
 
 export function DraftPanel() {
   const { draft, setDraft, applyDraft, discardDraft, run, talking, startTalking, stopTalking } =
@@ -50,6 +59,20 @@ export function DraftPanel() {
         </p>
       )}
 
+      {/*
+        Why it answered the way it did, before what it wants to do. An
+        assistant that shows only its conclusion can only be obeyed or ignored;
+        one that shows its routing can be corrected on the part that is wrong.
+      */}
+      {draft.status === 'ready' && draft.reason && (
+        <p className={`routing routing-${draft.intent ?? 'susun'}`}>
+          <Icon name={draft.intent === 'alat-diusulkan' ? 'sparkles' : 'target'} size={14} />
+          <span>
+            <strong>{INTENT_LABEL[draft.intent ?? 'susun']}.</strong> {draft.reason}
+          </span>
+        </p>
+      )}
+
       {draft.operations.length > 0 && (
         <div className="draft-ops">
           <span className="field-label">Usulan operasi</span>
@@ -70,6 +93,20 @@ export function DraftPanel() {
                     }
                   />
                   <span>
+                    {/* Which stage produced this. Named so a person can
+                        disagree with one part instead of the whole answer. */}
+                    {op.agent && (
+                      <span className="op-agent">
+                        <Icon name="sparkles" size={11} />
+                        {AGENTS[op.agent].label}
+                        {op.source && <span className="op-source">{op.source.label}</span>}
+                        {op.extraCommands && op.extraCommands.length > 0 && (
+                          <span className="op-source">
+                            {op.extraCommands.length + 1} simpul, satu keputusan
+                          </span>
+                        )}
+                      </span>
+                    )}
                     <span className="op-preview">{op.preview}</span>
                     <span className={`confidence ${op.confidence < 0.6 ? 'is-low' : ''}`}>
                       <Icon name={op.confidence < 0.6 ? 'alert' : 'check'} size={12} />
@@ -81,6 +118,18 @@ export function DraftPanel() {
             ))}
           </ul>
         </div>
+      )}
+
+      {/* What the assistant was told, verbatim. Section 8 promises structure
+          rather than a screenshot; this is that promise made checkable. */}
+      {draft.status === 'ready' && draft.context && (
+        <details className="agent-context">
+          <summary>Yang dikirim ke model</summary>
+          <p className="panel-note">
+            Struktur, bukan tangkapan layar — dan tidak ada audio. Semuanya tetap di perangkat ini.
+          </p>
+          <pre>{draft.context}</pre>
+        </details>
       )}
 
       {draft.ambiguities.map((amb) => (

@@ -43,7 +43,21 @@ import {
   SELF_ID,
 } from '../store/seed/room'
 import { findRoom } from '../features/rooms/rooms'
-import { buildDraft, CONFIRM_UTTERANCE, emptyDraft, UTTERANCES } from '../features/voice/mockPipeline'
+import {
+  AGENT_UTTERANCES,
+  buildDraft,
+  CONFIRM_UTTERANCE,
+  emptyDraft,
+  UTTERANCES as STRUCTURE_UTTERANCES,
+} from '../features/voice/mockPipeline'
+
+/*
+  The canned lines, interleaved so a demo meets both halves early: sentences the
+  structure stage handles, and sentences that only the orchestrator can route.
+*/
+const UTTERANCES = STRUCTURE_UTTERANCES.flatMap((line, i) =>
+  AGENT_UTTERANCES[i] ? [line, AGENT_UTTERANCES[i]] : [line],
+)
 import type { Draft, DraftOperation } from '../features/voice/types'
 
 export type ViewMode = 'canvas' | 'outline'
@@ -501,18 +515,24 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     setDraft((d) => ({ ...d, status: 'thinking', transcript: utterance.transcript }))
 
     window.setTimeout(() => {
-      const next = buildDraft(utterance, store.getDoc(), focusId)
+      const next = buildDraft(utterance, store.getDoc(), tree, focusId)
       setDraft(next)
       audioBus.emit({ earcon: 'draftReady', force: true })
       if (next.operations.length > 0) {
-        announcer.announce(`Draf siap. ${next.operations.length} usulan menunggu persetujuan.`, 'assertive')
+        // The routing is said out loud, not only drawn. A proposal you cannot
+        // hear the reason for is a proposal you can only accept on faith.
+        const why = next.intent === 'alat-diusulkan' ? ` ${next.reason}` : ''
+        announcer.announce(
+          `Draf siap. ${next.operations.length} usulan menunggu persetujuan.${why}`,
+          'assertive',
+        )
       } else if (next.ambiguities.length > 0) {
         announcer.announce(next.ambiguities[0].question, 'assertive')
       } else {
         announcer.announce('Ucapan tidak dikenali. Teksnya bisa disunting sebelum diterapkan.', 'assertive')
       }
     }, 850)
-  }, [store, announcer, focusId])
+  }, [store, announcer, focusId, tree])
 
   /*
     Apply as a performance, not a dump.
@@ -564,13 +584,31 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     // to hear, fast enough not to feel like waiting.
     const timer = window.setTimeout(
       () => {
-        run(ops[index].command, 'voice')
+        const op = ops[index]
+        // A template step is several commands but one decision, so it lands as
+        // one gesture and takes one undo -- the same rule as the tool palette.
+        if (op.extraCommands && op.extraCommands.length > 0) {
+          const result = store.dispatchBatch([op.command, ...op.extraCommands], {
+            actorId: SELF_ID,
+            inputPath: 'voice',
+          })
+          if (result.ok) {
+            announcer.announce(`${op.preview} Diterapkan.`)
+            audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(SELF_ID) })
+          } else {
+            setLastError(result.violation.message)
+            announcer.announce(result.violation.message, 'assertive')
+            audioBus.emit({ earcon: 'blocked', force: true })
+          }
+        } else {
+          run(op.command, 'voice')
+        }
         setPerforming({ index: index + 1, ops })
       },
       index === 0 ? 280 : 520,
     )
     return () => window.clearTimeout(timer)
-  }, [performing, run])
+  }, [performing, run, store, announcer, hueOf])
 
   stopTalkingRef.current = stopTalking
   applyDraftRef.current = applyDraft
