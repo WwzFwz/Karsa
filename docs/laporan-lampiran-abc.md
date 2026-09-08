@@ -55,6 +55,65 @@ Keduanya bermuara ke tempat yang sama karena tidak ada jalan lain menuju data:
 papan ketik, tetikus, dan suara semuanya berakhir pada satu jenis perintah yang
 divalidasi di satu tempat.
 
+### Orkestrasi: dari kalimat menjadi alat yang tepat
+
+Bagian ini yang membedakan Karsa dari "papan kerja dengan perintah suara".
+
+Asisten suara biasa memetakan kalimat ke satu perintah. Karsa memakai
+**orchestrator** yang lebih dulu menjawab pertanyaan berbeda: **kalimat ini
+sebenarnya meminta apa?** Jawabannya menentukan bukan cuma isi perubahan
+melainkan **bentuk kerja apa yang cocok untuk rapat ini** - dan itulah lompatan
+dari mencatat menjadi membantu.
+
+Tiga rute, diputuskan berurutan karena yang murah dan pasti harus menang atas
+yang pintar dan ragu.
+
+**Alat disebut langsung.** "Bikin voting untuk memilih prioritas semester ini."
+Tidak ada yang perlu ditebak; orchestrator menyusun sub-pohon voting lengkap
+dengan pilihannya.
+
+**Alat tersirat tanpa disebut.** "Kenapa bisa tingkat putus mata kuliah setinggi
+itu?" Tidak ada nama alat di kalimat itu, tetapi bentuk kalimatnya menelusuri
+sebab, dan yang cocok adalah templat lima kenapa. Sistem **menawarkan**, dengan
+keyakinan yang sengaja diturunkan dan kalimat yang berbeda: "ini usulan, bukan
+keputusan". Inilah kemampuan yang paling sulit dan paling berharga - mengenali
+bahwa sebuah rapat sedang membutuhkan alat tertentu sebelum pesertanya sendiri
+menyebutkannya.
+
+**Isi biasa.** "Tambahkan gagasan pelatihan dosen di bawah rancangan mata
+kuliah." Bukan permintaan alat; diserahkan ke tahap penyusun struktur.
+
+Di luar ketiganya ada satu rem: **dua alat disebut dalam satu kalimat berarti
+bertanya, bukan memilih.** "Kita bikin retro sekalian voting ya" tidak pernah
+dijawab dengan tebakan.
+
+**Tahapnya diberi nama, dan namanya ikut ke layar.** Di bawah orchestrator ada
+penyusun struktur, pemilih alat, dan perapi judul. Tiap usulan membawa nama tahap
+yang menghasilkannya, sehingga pengguna bisa **membantah bagian yang salah saja**
+alih-alih menerima atau menolak seluruh jawaban. Jawaban yang tidak menyebut
+asalnya cuma punya dua nasib: dipercaya seluruhnya atau diabaikan seluruhnya.
+
+**Model punya pendapat; kode memegang aturan.** Model memilih rute dan menyusun
+satu judul pendek. Ia tidak pernah mengeluarkan id simpul, tidak pernah
+mengeluarkan koordinat, dan tidak pernah menghasilkan perintah secara langsung -
+perintahnya dibangun dari daftar alat dan templat yang sudah tertulis, lalu
+divalidasi dengan validator yang sama persis dengan yang dipakai papan ketik.
+Akibatnya satu field yang dihalusinasikan tidak bisa menjadi dokumen yang rusak.
+
+**Seluruh rantainya berjalan di perangkat**: deteksi bicara, pengenalan ucapan,
+dan model bahasa. Audio tidak pernah keluar dari mesin, dan yang dikirim ke model
+adalah **struktur - bukan tangkapan layar** - yang isinya dapat dibaca pengguna
+di layar sebelum ia menjawab. Ini janji privasi yang bisa diperiksa, bukan
+sekadar diucapkan.
+
+**Dan kualitasnya diukur.** Perutean diuji terhadap 22 kasus yang sengaja
+didominasi kalimat rapat biasa yang **tidak** boleh memicu alat - karena perute
+yang menyambar templat setiap melihat kata "prioritas" lebih buruk daripada yang
+tidak pernah menyambar sama sekali. Menyela adalah ongkos yang dibayar semua
+orang di ruangan.
+
+Uraian teknisnya di Lampiran B, terutama B.5.
+
 ### Satu model, tiga tampilan setara
 
 Isi ruang disimpan sekali dan digambar tiga cara: **kanvas visual**, **outline
@@ -89,22 +148,6 @@ kata**: "Dampak besar, usaha kecil, Tambah praktikum aksesibilitas". Di papan
 kerja lain, memindahkan kartu ke kuadran lain tidak menghasilkan apa pun yang
 bisa didengar; di sini ia menghasilkan satu kalimat.
 
-### Lapisan agen di perangkat
-
-Ucapan dirutekan **orchestrator** yang memutuskan apakah kalimat itu meminta
-alat, mengisyaratkan alat tanpa menyebutnya, atau sekadar isi biasa - lalu
-menyerahkannya ke tahap yang tepat: penyusun struktur, pemilih alat, atau perapi
-judul. Tiap usulan membawa nama tahap yang menghasilkannya, sehingga pengguna
-bisa membantah bagian yang salah saja alih-alih menerima atau menolak seluruh
-jawaban.
-
-Semuanya berjalan di perangkat: pengenalan suara, deteksi bicara, dan model
-bahasa. **Audio tidak pernah keluar dari perangkat**, dan yang dikirim ke model
-adalah struktur - bukan tangkapan layar - yang isinya bisa dibaca pengguna
-sebelum menjawab.
-
-Uraian lengkapnya di Lampiran B, termasuk B.5 tentang arsitektur multi-agentnya.
-
 ### Kolaborasi dan akses
 
 Beberapa orang menyunting bagian berbeda pada saat bersamaan tanpa saling
@@ -135,19 +178,24 @@ dengan kontribusi lewat papan ketik, dan bagi seseorang yang selama ini
 gagasannya baru sampai ke kanvas lewat tangan orang lain, itu bukan statistik
 melainkan bukti.
 
-### Enam hal yang membedakan
+### Tujuh hal yang membedakan
 
-1. **Tiga tampilan setara**, bukan satu kanvas yang ditambahi keterangan
+1. **Orkestrasi yang memilih alat, bukan sekadar mencatat kalimat.** Sistem
+   mengenali bahwa sebuah rapat sedang membutuhkan voting, retro, atau matriks
+   prioritas - bahkan ketika pesertanya tidak menyebutkannya - lalu menawarkannya
+   sebagai usulan yang bisa ditolak.
+2. **Tiga tampilan setara**, bukan satu kanvas yang ditambahi keterangan
    aksesibilitas.
-2. **Tidak ada makna yang disimpan lewat koordinat** - itulah yang membuat letak
+3. **Tidak ada makna yang disimpan lewat koordinat** - itulah yang membuat letak
    bisa dibacakan dengan kata dan pergantian bentuk visual selalu aman.
-3. **Setiap perubahan punya kalimat dan bisa dibatalkan**, termasuk perubahan
+4. **Setiap perubahan punya kalimat dan bisa dibatalkan**, termasuk perubahan
    yang dilakukan asisten.
-4. **Asisten mengusulkan, manusia memutuskan** - tidak ada yang mendarat di
-   kanvas bersama tanpa persetujuan.
-5. **Seluruh pemrosesan di perangkat**, tanpa biaya per pemakaian dan tanpa isi
+5. **Asisten mengusulkan, manusia memutuskan** - tidak ada yang mendarat di
+   kanvas bersama tanpa persetujuan, dan tiap usulan menyebut tahap mana yang
+   membuatnya.
+6. **Seluruh pemrosesan di perangkat**, tanpa biaya per pemakaian dan tanpa isi
    rapat keluar dari mesin.
-6. **Berjalan tanpa internet sama sekali** dalam mode kelas.
+7. **Berjalan tanpa internet sama sekali** dalam mode kelas.
 
 ---
 
