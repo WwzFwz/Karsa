@@ -10,8 +10,8 @@
  *   npm run dev          (di terminal lain)
  *   npm run shots
  *
- * Hasilnya di docs/img/ui/. Nama berkasnya dipakai apa adanya oleh
- * docs/laporan-lampiran-d.md, jadi menambah adegan berarti menambah satu baris
+ * Hasilnya di docs/laporan/img/. Nama berkasnya dipakai apa adanya oleh
+ * docs/laporan/lampiran-d.md, jadi menambah adegan berarti menambah satu baris
  * di SCENES dan satu paragraf di dokumen itu.
  */
 
@@ -22,7 +22,7 @@ import { resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 
 const BASE = 'http://localhost:5173'
-const OUT = resolve('docs/img/ui')
+const OUT = resolve('docs/laporan/img')
 const WIDTH = 1440
 const HEIGHT = 900
 const PORT = 9333
@@ -393,7 +393,7 @@ for (const scene of SCENES) {
   }
 }
 
-console.log(failed ? `Selesai, ${failed} adegan gagal.` : 'Selesai. Berkas ada di docs/img/ui/')
+console.log(failed ? `Selesai, ${failed} adegan gagal.` : 'Selesai. Berkas ada di docs/laporan/img/')
 ws.close()
 chrome.kill()
 process.exit(0)

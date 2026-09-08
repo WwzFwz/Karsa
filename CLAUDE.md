@@ -312,12 +312,13 @@ Empat yang menjelaskan **rancangan**:
 - `docs/data-model.md` - elemen, atribut wajib, jenis relasi, dan pemisahan
   operasi yang mengubah data versus yang hanya navigasi.
 
-Dua untuk **laporan**:
+Satu folder untuk **laporan**, `docs/laporan/`:
 
-- `docs/laporan-lampiran-abc.md` - Lampiran A (use case dan ketiga aktor),
-  B (arsitektur AI), dan C (arsitektur aplikasi web), dalam bentuk paragraf.
-- `docs/laporan-lampiran-d.md` - Lampiran D: rancangan antarmuka per halaman,
-  gambar lalu paragraf. Gambarnya dihasilkan `npm run shots`.
+- `README.md` - daftar isinya, supaya tidak perlu dicari.
+- `lampiran-abc.md` - ringkasan produk, Lampiran A (use case dan ketiga aktor),
+  B (arsitektur AI termasuk multi-agent), dan C (arsitektur aplikasi web).
+- `lampiran-d.md` - Lampiran D: rancangan antarmuka per halaman, gambar lalu
+  paragraf. Gambarnya di `docs/laporan/img/`, dihasilkan `npm run shots`.
 
 Satu yang menjelaskan **keadaan**:
 

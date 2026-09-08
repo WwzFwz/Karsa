@@ -12,7 +12,7 @@ diperlihatkan adalah keadaannya, bukan halamannya.
 
 ## D.1 Halaman masuk
 
-![Halaman masuk](img/ui/01-masuk.png)
+![Halaman masuk](img/01-masuk.png)
 
 Pintu masuknya satu kartu dengan dua isian: nama panggilan dan kode ruang. Tidak
 ada kata sandi, tidak ada surel, tidak ada pendaftaran — nama itu sekadar label
@@ -29,7 +29,7 @@ adalah janji yang tidak dipakai untuk memutuskan.
 
 ## D.2 Daftar ruang
 
-![Daftar ruang](img/ui/02-dasbor.png)
+![Daftar ruang](img/02-dasbor.png)
 
 Tiap ruang jadi satu kartu bergambar isinya, sehingga daftar bisa dipindai
 sebelum dibaca. Gambarnya dihasilkan dari bentuk dan ukuran ruang, dan ia
@@ -50,7 +50,7 @@ membacanya "mode gelap, aktif" alih-alih menyisakan tebakan.
 
 ## D.3 Membuat ruang
 
-![Dialog ruang baru](img/ui/03-ruang-baru.png)
+![Dialog ruang baru](img/03-ruang-baru.png)
 
 Membuat ruang menanyakan tiga hal yang cuma bisa dijawab di awal. **Nama ruang**,
 supaya daftar tidak penuh kartu bernama sama. **Siapa yang boleh masuk**, dua
@@ -69,7 +69,7 @@ alamat yang diketik tidak pernah meninggalkan perangkat.
 
 ## D.4 Ruang kanvas
 
-![Kanvas](img/ui/04-kanvas.png)
+![Kanvas](img/04-kanvas.png)
 
 Kanvas adalah latar seluruh jendela; semua perabot mengambang di atasnya.
 Susunan ini disengaja: benda yang orang datangi tidak boleh cuma kebagian sisa
@@ -93,7 +93,7 @@ kecil berarti menyatakan salah satunya kurang penting.
 
 ## D.5 Daftar perintah
 
-![Daftar perintah](img/ui/05-palet-perintah.png)
+![Daftar perintah](img/05-palet-perintah.png)
 
 `Ctrl+K` membuka setiap perintah, alat, templat, bentuk kanvas, perpindahan
 halaman, dan sakelar tampilan dalam satu daftar yang bisa dicari. Tidak ada
@@ -113,7 +113,7 @@ simpul dulu" menolong, entri yang lenyap tanpa penjelasan tidak.
 
 ## D.6 Alat dan templat
 
-![Panel alat dan templat](img/ui/06-alat-templat.png)
+![Panel alat dan templat](img/06-alat-templat.png)
 
 Tombol titik tiga membuka enam templat rapat yang benar-benar dipakai tim:
 voting, retro, matriks dampak–usaha, rencana sprint, lima kenapa, dan tempat
@@ -130,7 +130,7 @@ tidak pernah dimaksudkan siapa pun.
 
 ## D.7 Alat di atas kanvas
 
-![Tiga alat di kanvas](img/ui/07-alat-di-kanvas.png)
+![Tiga alat di kanvas](img/07-alat-di-kanvas.png)
 
 Tiga alat tergambar bersama: voting sebagai daftar berhitungan suara, retro
 sebagai tiga kolom, dan matriks dampak–usaha sebagai kisi 2×2.
@@ -155,7 +155,7 @@ Kalimat yang sama itulah yang dibacakan pembaca layar dan diwakili bunyi pendek.
 
 ## D.8 Outline
 
-![Outline](img/ui/08-outline.png)
+![Outline](img/08-outline.png)
 
 Outline bukan ringkasan kanvas dan bukan salinannya — ia tampilan lain atas data
 yang sama, memakai pola ARIA tree yang sungguhan dengan roving tabindex. Mengubah
@@ -172,7 +172,7 @@ bergantung pada rekan yang bersedia membacakan.
 
 ## D.9 Merekam ucapan
 
-![Sedang mendengarkan](img/ui/09-mendengarkan.png)
+![Sedang mendengarkan](img/09-mendengarkan.png)
 
 Mikrofon hidup **hanya selama sakelar bicara aktif**. Sakelarnya mengunci bila
 diketuk dan berperilaku tekan-tahan bila ditahan — dua perilaku dalam satu
@@ -188,7 +188,7 @@ sempat menjadi operasi.
 
 ## D.10 Usulan menunggu persetujuan
 
-![Draf siap](img/ui/10-draf-siap.png)
+![Draf siap](img/10-draf-siap.png)
 
 Inilah gerbang yang memisahkan asisten dari kanvas bersama. Perintah suara selalu
 berhenti di sini dulu; kanvas tidak berubah sampai seseorang menekan Terapkan.
@@ -211,7 +211,7 @@ tinjau → terapkan tidak menuntut satu jari pun.
 
 ## D.11 Yang dikirim ke model
 
-![Konteks model](img/ui/11-konteks-model.png)
+![Konteks model](img/11-konteks-model.png)
 
 Blok "Yang dikirim ke model" bisa dibuka dan berisi persis apa yang diterima
 model bahasa sebelum menjawab: outline ringkas ruang, simpul yang sedang
@@ -226,7 +226,7 @@ dan pengguna tidak perlu percaya pada kalimat itu, karena isinya ada di layar.
 
 ## D.12 Peserta dan ruang tunggu
 
-![Peserta](img/ui/12-peserta.png)
+![Peserta](img/12-peserta.png)
 
 Panel peserta menunjukkan siapa hadir, siapa sedang berbicara, dan simpul mana
 yang sedang ditunjuk masing-masing. Menunjuk disimpan sebagai id simpul, bukan
@@ -245,7 +245,7 @@ pengguna tunanetra.
 
 ## D.13 Komentar
 
-![Komentar](img/ui/13-komentar.png)
+![Komentar](img/13-komentar.png)
 
 Komentar menempel pada simpul, bukan berdiri sebagai kanal percakapan terpisah.
 Alasannya sederhana: komentar yang menempel pada gagasan masih bisa dipahami
@@ -256,7 +256,7 @@ tidak.
 
 ## D.14 Tiga alat, satu per satu
 
-![Voting](img/ui/19-alat-voting.png)
+![Voting](img/19-alat-voting.png)
 
 **Voting.** Pilihan-pilihannya adalah simpul anak, dan hitungan suaranya tidak
 disimpan di mana pun: ia diturunkan dari catatan peristiwa dengan aturan
@@ -266,14 +266,14 @@ mundur di mode telaah — semuanya tanpa satu baris pun ditulis khusus untuk itu
 Batang di belakang tiap baris cuma hiasan; angkanya yang menjadi fakta, dan
 angka itu juga yang masuk ke kalimat narasi.
 
-![Retro](img/ui/20-alat-retro.png)
+![Retro](img/20-alat-retro.png)
 
 **Papan retro.** Tiga kolom, masing-masing sebuah simpul kelompok. Alat ini
 sengaja dibuat tanpa perintah khusus sama sekali — ia murni cara menggambar tiga
 kelompok yang sudah bisa dibuat dengan cara biasa. Kalau alat semurah ini bisa
 berdiri, polanya terbukti bukan kebetulan.
 
-![Matriks dampak-usaha](img/ui/21-alat-matriks.png)
+![Matriks dampak-usaha](img/21-alat-matriks.png)
 
 **Matriks dampak–usaha**, dan inilah alat yang paling menjelaskan pilihan
 rancangan Karsa. Empat kuadrannya adalah simpul kelompok, **bukan wilayah di
@@ -296,19 +296,19 @@ sebuah induk.
 
 ## D.15 Isi yang sama, lima bentuk visual
 
-![Hierarki](img/ui/22-bentuk-hierarki.png)
+![Hierarki](img/22-bentuk-hierarki.png)
 
 **Hierarki**, menurun dari atas ke bawah.
 
-![Diagram alur](img/ui/23-bentuk-alur.png)
+![Diagram alur](img/23-bentuk-alur.png)
 
 **Diagram alur**, mengalir mengikuti langkah.
 
-![Garis waktu](img/ui/24-bentuk-garis-waktu.png)
+![Garis waktu](img/24-bentuk-garis-waktu.png)
 
 **Garis waktu**, melebar mengikuti urutan waktu pembuatan.
 
-![Bagan kolom](img/ui/25-bentuk-kolom.png)
+![Bagan kolom](img/25-bentuk-kolom.png)
 
 **Bagan kolom**, tiap cabang jadi satu kolom.
 
@@ -330,7 +330,7 @@ menderita adalah pengguna low vision.
 
 ## D.16 Menutup panel kanan lewat tabnya sendiri
 
-![Panel ditutup lewat tab](img/ui/26-panel-ditutup-lewat-tab.png)
+![Panel ditutup lewat tab](img/26-panel-ditutup-lewat-tab.png)
 
 Panel kanan ditutup dengan **mengklik tab yang sedang terbuka** — gerakan yang
 sama dengan ikon sidebar di VS Code atau Figma. Mengklik tab mana pun membukanya
@@ -346,7 +346,7 @@ Ruang yang ditinggalkan **langsung kembali ke kanvas**. Offset perabot ditulis
 sebagai variabel tata letak, jadi menyembunyikan panel bukan menutupinya
 melainkan benar-benar mengembalikan tempatnya.
 
-![Outline tanpa panel](img/ui/27-outline-tanpa-panel.png)
+![Outline tanpa panel](img/27-outline-tanpa-panel.png)
 
 Gerakan yang sama berlaku di halaman outline: tab diklik, panel menutup, dan
 outline melebar memakai ruangnya. Perilaku yang sama di tempat yang berbeda,
@@ -356,7 +356,7 @@ sehingga tidak ada yang perlu dipelajari dua kali.
 
 ## D.17 Menyembunyikan navigasi kiri
 
-![Tanpa navigasi kiri](img/ui/28-tanpa-navigasi-kiri.png)
+![Tanpa navigasi kiri](img/28-tanpa-navigasi-kiri.png)
 
 Navigasi kiri disembunyikan lewat tombol hamburger atau `[`. Di sini panel
 peserta tetap terbuka sementara navigasi menyingkir — dua sisi yang bisa
@@ -367,7 +367,7 @@ masuk tidak sedang butuh daftar halaman.
 
 ## D.18 Kanvas layar penuh
 
-![Layar penuh](img/ui/29-layar-penuh.png)
+![Layar penuh](img/29-layar-penuh.png)
 
 `f` menyembunyikan seluruh perabot sekaligus dan menyisakan kanvas, bilah alat
 kecil, dan dok suara. `Escape` mengembalikannya.
@@ -381,7 +381,7 @@ ruang rapat ke layar besar, dan berguna untuk layar kecil.
 
 ## D.19 Membagikan ruang
 
-![Bagikan](img/ui/15-bagikan.png)
+![Bagikan](img/15-bagikan.png)
 
 Berbagi menampilkan kode lebih dulu, tautan kedua. Urutannya disengaja: **kode
 bisa diucapkan di tengah rapat dan tautan tidak.** Untuk ruang terkunci,
@@ -395,7 +395,7 @@ penerimanya.
 
 ## D.20 Daftar pintasan
 
-![Pintasan](img/ui/16-pintasan.png)
+![Pintasan](img/16-pintasan.png)
 
 `?` membuka seluruh peta pintasan, dikelompokkan menurut tempat berlakunya, dan
 menandai mana yang mengubah kanvas bersama. Daftar ini bukan dokumentasi
@@ -406,7 +406,7 @@ bagi orang yang menavigasi dengan papan ketik, daftar inilah peta satu-satunya.
 
 ## D.21 Ringkasan sesi
 
-![Ringkasan](img/ui/17-ringkasan.png)
+![Ringkasan](img/17-ringkasan.png)
 
 Akhir sesi menampilkan porsi kontribusi tiap peserta, dihitung dari jejak
 peristiwa dan **dipecah menurut jalur masukan**: papan ketik, suara, tetikus.
@@ -421,7 +421,7 @@ bukan statistik melainkan bukti.
 
 ## D.22 Pengaturan
 
-![Pengaturan](img/ui/18-pengaturan.png)
+![Pengaturan](img/18-pengaturan.png)
 
 Pengaturan memuat profil bunyi, mode sesi, tema, dan penyedia model.
 
