@@ -115,6 +115,66 @@ const FIT = `{
   await new Promise(r => setTimeout(r, 900));
 }`
 
+
+/*
+  Seret satu simpul ke dalam sebuah sel alat, lalu setujui pemindahannya.
+  Dipakai supaya matriks tidak difoto dalam keadaan kosong: kuadran yang berisi
+  itu yang menunjukkan gunanya.
+*/
+const dragInto = (sourceId, cellSelector) => `{
+  const src = document.querySelector('[data-node-id="${sourceId}"]');
+  const cell = document.querySelector(${JSON.stringify(cellSelector)});
+  if (src && cell) {
+    const a = src.getBoundingClientRect(), b = cell.getBoundingClientRect();
+    const sx = a.left + 30, sy = a.top + 14;
+    const tx = b.left + b.width / 2, ty = b.top + b.height / 2;
+    const vp = document.querySelector('.canvas-viewport');
+    const ev = (el, t, x, y) => el.dispatchEvent(new PointerEvent(t, {
+      bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y,
+      button: 0, buttons: t === 'pointerup' ? 0 : 1, pointerId: 1, pointerType: 'mouse', isPrimary: true,
+    }));
+    ev(src, 'pointerdown', sx, sy);
+    for (let i = 1; i <= 10; i += 1) {
+      ev(vp, 'pointermove', sx + (tx - sx) * i / 10, sy + (ty - sy) * i / 10);
+      await new Promise(r => setTimeout(r, 16));
+    }
+    ev(vp, 'pointerup', tx, ty);
+    await new Promise(r => setTimeout(r, 500));
+    const ok = [...document.querySelectorAll('[role="dialog"] button')].find(x => x.textContent.trim() === 'Pindahkan');
+    if (ok) ok.click();
+    await new Promise(r => setTimeout(r, 800));
+  }
+}`
+
+const hide = (key) => `{
+  document.dispatchEvent(new KeyboardEvent('keydown', {key: ${JSON.stringify(key)}, bubbles: true}));
+  await new Promise(r => setTimeout(r, 700));
+}`
+
+/*
+  Untuk memotret satu kartu alat, memaskan seluruh papan justru salah: papannya
+  mengecil sampai tidak ada yang terbaca. Yang benar mengembalikan perbesaran ke
+  100 persen lalu menggeser kartunya ke tengah.
+*/
+const focusOn = (selector) => `{
+  document.dispatchEvent(new KeyboardEvent('keydown', {key: '0', ctrlKey: true, bubbles: true}));
+  await new Promise(r => setTimeout(r, 600));
+  const card = document.querySelector(${JSON.stringify(selector)});
+  if (card) card.scrollIntoView({block: 'center', inline: 'center'});
+  await new Promise(r => setTimeout(r, 700));
+}`
+
+/*
+  Panel kanan ditutup lewat tabnya sendiri: mengklik tab yang sedang terbuka
+  menutup panelnya. Gerakan inilah yang perlu terlihat di laporan, bukan
+  pintasan papan ketiknya, karena inilah yang ditemukan orang tanpa diberi tahu.
+*/
+const closePanelByTab = `{
+  const active = document.querySelector('.inspector .seg-btn.is-on');
+  if (active) active.click();
+  await new Promise(r => setTimeout(r, 800));
+}`
+
 const SCENES = [
   { name: '01-masuk', url: '/', clearName: true, wait: 1200 },
   { name: '02-dasbor', url: '/ruang', wait: 1400 },
@@ -212,6 +272,37 @@ const SCENES = [
   },
   { name: '17-ringkasan', url: '/ruang/KUR-482/ringkasan', wait: 1600 },
   { name: '18-pengaturan', url: '/ruang/KUR-482/pengaturan', wait: 1600 },
+  // --- berbagai keluaran alat, satu per satu ---
+  {
+    name: '19-alat-voting',
+    url: '/ruang/KUR-482',
+    after: runPalette('sisipkan voting') + focusOn('.tool-suara'),
+    wait: 1800,
+  },
+  {
+    name: '20-alat-retro',
+    url: '/ruang/KUR-482',
+    after: runPalette('sisipkan retro') + focusOn('.tool-retro'),
+    wait: 1800,
+  },
+  {
+    name: '21-alat-matriks',
+    url: '/ruang/KUR-482',
+    after: runPalette('sisipkan matriks') + focusOn('.tool-matriks') + dragInto('n_praktikum', '.tool-cell') + focusOn('.tool-matriks'),
+    wait: 1800,
+  },
+
+  // --- isi yang sama, lima bentuk visual ---
+  { name: '22-bentuk-hierarki', url: '/ruang/KUR-482', after: runPalette('bentuk hierarki') + FIT, wait: 1800 },
+  { name: '23-bentuk-alur', url: '/ruang/KUR-482', after: runPalette('bentuk diagram alur') + FIT, wait: 1800 },
+  { name: '24-bentuk-garis-waktu', url: '/ruang/KUR-482', after: runPalette('bentuk garis waktu') + FIT, wait: 1800 },
+  { name: '25-bentuk-kolom', url: '/ruang/KUR-482', after: runPalette('bentuk bagan kolom') + FIT, wait: 1800 },
+
+  // --- keadaan tersembunyi, di beberapa halaman ---
+  { name: '26-panel-ditutup-lewat-tab', url: '/ruang/KUR-482', after: closePanelByTab + FIT, wait: 1800 },
+  { name: '27-outline-tanpa-panel', url: '/ruang/KUR-482/outline', after: closePanelByTab, wait: 1600 },
+  { name: '28-tanpa-navigasi-kiri', url: '/ruang/KUR-482/peserta', after: hide('['), wait: 1600 },
+  { name: '29-layar-penuh', url: '/ruang/KUR-482', after: hide('f') + FIT, wait: 1800 },
 ]
 
 // --- Jalan -------------------------------------------------------------------

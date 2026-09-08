@@ -254,23 +254,132 @@ tidak.
 
 ---
 
-## D.14 Menyembunyikan panel
+## D.14 Tiga alat, satu per satu
 
-![Panel disembunyikan](img/ui/14-panel-disembunyikan.png)
+![Voting](img/ui/19-alat-voting.png)
 
-Navigasi kiri dan panel kanan sama-sama bisa disembunyikan, dan ruangnya
-**langsung kembali ke kanvas** — offset perabot ditulis sebagai variabel, jadi
-menyembunyikan panel bukan sekadar menutupinya melainkan mengembalikan tempatnya.
-Panel yang tertutup menyisakan rel tab sempit di tepi kanan, karena panel yang
-bisa ditutup butuh jalan pulang yang kelihatan.
+**Voting.** Pilihan-pilihannya adalah simpul anak, dan hitungan suaranya tidak
+disimpan di mana pun: ia diturunkan dari catatan peristiwa dengan aturan
+"peristiwa terakhir per orang yang menang". Karena itu suara ikut terbatalkan
+oleh `Ctrl+Z`, ikut terhitung di ringkasan kontribusi, dan bisa ditelusuri
+mundur di mode telaah — semuanya tanpa satu baris pun ditulis khusus untuk itu.
+Batang di belakang tiap baris cuma hiasan; angkanya yang menjadi fakta, dan
+angka itu juga yang masuk ke kalimat narasi.
 
-Ini bagian dari pilihan yang sama dengan menjadikan kanvas sebagai latar seluruh
-jendela: fokus ada pada papan, dan segala sesuatu yang tidak sedang dipakai bisa
-menyingkir.
+![Retro](img/ui/20-alat-retro.png)
+
+**Papan retro.** Tiga kolom, masing-masing sebuah simpul kelompok. Alat ini
+sengaja dibuat tanpa perintah khusus sama sekali — ia murni cara menggambar tiga
+kelompok yang sudah bisa dibuat dengan cara biasa. Kalau alat semurah ini bisa
+berdiri, polanya terbukti bukan kebetulan.
+
+![Matriks dampak-usaha](img/ui/21-alat-matriks.png)
+
+**Matriks dampak–usaha**, dan inilah alat yang paling menjelaskan pilihan
+rancangan Karsa. Empat kuadrannya adalah simpul kelompok, **bukan wilayah di
+layar**. Akibatnya letak sebuah item adalah posisinya di dalam pohon, sehingga
+outline dapat membacakannya dengan kata, dan memindahkan item antar kuadran cuma
+mengganti induknya.
+
+Perhatikan jejak perubahan di panel kanan: "Anda memindahkan Tambah praktikum
+aksesibilitas ke bawah Dampak besar · usaha kecil." Di papan kerja lain,
+menyeret kartu ke kuadran lain tidak menghasilkan apa pun yang bisa didengar. Di
+sini ia menghasilkan satu kalimat — dan kalimat itulah yang membuat seorang
+peserta tunanetra tahu prioritas baru saja berubah.
+
+Item itu dipindahkan dengan **menyeretnya ke dalam kuadran**, gerakan yang sama
+persis dengan menyeret satu simpul ke simpul lain di kanvas. Gerakannya bekerja
+di dalam kartu tanpa kode tambahan, justru karena kuadran memang benar-benar
+sebuah induk.
 
 ---
 
-## D.15 Membagikan ruang
+## D.15 Isi yang sama, lima bentuk visual
+
+![Hierarki](img/ui/22-bentuk-hierarki.png)
+
+**Hierarki**, menurun dari atas ke bawah.
+
+![Diagram alur](img/ui/23-bentuk-alur.png)
+
+**Diagram alur**, mengalir mengikuti langkah.
+
+![Garis waktu](img/ui/24-bentuk-garis-waktu.png)
+
+**Garis waktu**, melebar mengikuti urutan waktu pembuatan.
+
+![Bagan kolom](img/ui/25-bentuk-kolom.png)
+
+**Bagan kolom**, tiap cabang jadi satu kolom.
+
+Empat gambar di atas — beserta peta gagasan di D.4 — adalah **ruang yang sama
+dan isi yang sama**. Tidak ada satu pun data yang berubah di antaranya. Kelima
+bentuk itu algoritma tata letak yang berbeda atas model yang sama, bukan lima
+tipe dokumen.
+
+Ini hanya mungkin karena tidak ada makna yang disimpan lewat koordinat. Kalau
+letak menyimpan arti — "yang berisiko saya taruh di kanan" — maka mengganti
+bentuk akan menghancurkan arti itu, dan produk harus memilih antara bisa
+berpindah bentuk atau bisa dibaca tanpa melihat. Karsa tidak perlu memilih.
+
+Perpindahannya juga menahan posisi simpul yang sudah ada semampunya, karena
+kanvas yang melompat setiap kali membuat produk terasa rusak, dan yang paling
+menderita adalah pengguna low vision.
+
+---
+
+## D.16 Menutup panel kanan lewat tabnya sendiri
+
+![Panel ditutup lewat tab](img/ui/26-panel-ditutup-lewat-tab.png)
+
+Panel kanan ditutup dengan **mengklik tab yang sedang terbuka** — gerakan yang
+sama dengan ikon sidebar di VS Code atau Figma. Mengklik tab mana pun membukanya
+kembali. Satu kontrol yang melakukan keduanya lebih mudah ditemukan daripada dua
+kontrol yang masing-masing melakukan separuh, dan karena itu tidak ada tombol
+"sembunyikan panel" yang terpisah.
+
+Saat tertutup, tabnya tetap terlihat sebagai rel sempit di tepi kanan, lengkap
+dengan lencana jumlah — panel yang bisa ditutup butuh jalan pulang yang
+kelihatan, dan orang yang menunggu di ruang tunggu tetap harus terlihat.
+
+Ruang yang ditinggalkan **langsung kembali ke kanvas**. Offset perabot ditulis
+sebagai variabel tata letak, jadi menyembunyikan panel bukan menutupinya
+melainkan benar-benar mengembalikan tempatnya.
+
+![Outline tanpa panel](img/ui/27-outline-tanpa-panel.png)
+
+Gerakan yang sama berlaku di halaman outline: tab diklik, panel menutup, dan
+outline melebar memakai ruangnya. Perilaku yang sama di tempat yang berbeda,
+sehingga tidak ada yang perlu dipelajari dua kali.
+
+---
+
+## D.17 Menyembunyikan navigasi kiri
+
+![Tanpa navigasi kiri](img/ui/28-tanpa-navigasi-kiri.png)
+
+Navigasi kiri disembunyikan lewat tombol hamburger atau `[`. Di sini panel
+peserta tetap terbuka sementara navigasi menyingkir — dua sisi yang bisa
+disembunyikan sendiri-sendiri, karena orang yang sedang mengurus siapa boleh
+masuk tidak sedang butuh daftar halaman.
+
+---
+
+## D.18 Kanvas layar penuh
+
+![Layar penuh](img/ui/29-layar-penuh.png)
+
+`f` menyembunyikan seluruh perabot sekaligus dan menyisakan kanvas, bilah alat
+kecil, dan dok suara. `Escape` mengembalikannya.
+
+Inilah bentuk paling murni dari pilihan menjadikan kanvas sebagai latar seluruh
+jendela: benda yang orang datangi mendapat seluruh layar, dan segala sesuatu
+yang tidak sedang dipakai bisa menyingkir sepenuhnya. Berguna untuk memproyeksi
+ruang rapat ke layar besar, dan berguna untuk layar kecil.
+
+---
+
+## D.19 Membagikan ruang
 
 ![Bagikan](img/ui/15-bagikan.png)
 
@@ -284,7 +393,7 @@ penerimanya.
 
 ---
 
-## D.16 Daftar pintasan
+## D.20 Daftar pintasan
 
 ![Pintasan](img/ui/16-pintasan.png)
 
@@ -295,7 +404,7 @@ bagi orang yang menavigasi dengan papan ketik, daftar inilah peta satu-satunya.
 
 ---
 
-## D.17 Ringkasan sesi
+## D.21 Ringkasan sesi
 
 ![Ringkasan](img/ui/17-ringkasan.png)
 
@@ -310,7 +419,7 @@ bukan statistik melainkan bukti.
 
 ---
 
-## D.18 Pengaturan
+## D.22 Pengaturan
 
 ![Pengaturan](img/ui/18-pengaturan.png)
 
@@ -336,6 +445,6 @@ terminal lain). Menambah adegan berarti menambah satu baris di `SCENES` pada
 `scripts/shots.mjs` dan satu paragraf di dokumen ini.
 
 Tema gelap tidak disertakan sebagai gambar untuk menjaga laporan tetap ringkas;
-sakelar temanya terlihat pada D.2 dan D.18. Jendela sempit juga tidak
+sakelar temanya terlihat pada D.2 dan D.22. Jendela sempit juga tidak
 disertakan — tata letaknya menyesuaikan, dengan panel kanan berubah menjadi
 lembar bawah dan navigasi kiri menyusut jadi rel ikon.
