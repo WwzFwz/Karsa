@@ -24,6 +24,7 @@ import { planWithOllama } from './ollama'
 import type { NodeId } from '../model/types'
 import type { PlanInput, ProviderId } from './provider'
 import type { Plan, PlanStep } from './types'
+import { tr } from '../../i18n/lang'
 
 /**
  * Words that name a template.
@@ -35,11 +36,11 @@ import type { Plan, PlanStep } from './types'
  * quiet. The eval set caught it; nobody would have caught it by trying things.
  */
 const NAMED: Record<string, string[]> = {
-  voting: ['voting', 'vote', 'pemungutan suara', 'ambil suara'],
-  retro: ['retro', 'retrospektif', 'mulai hentikan lanjutkan'],
-  matriks: ['matriks', 'kuadran', 'dampak usaha', 'impact effort'],
-  sprint: ['rencana sprint', 'sprint planning', 'perencanaan sprint'],
-  lima_kenapa: ['lima kenapa', '5 kenapa', 'five whys', 'akar masalah'],
+  voting: ['voting', 'vote', 'pemungutan suara', 'ambil suara', 'poll'],
+  retro: ['retro', 'retrospektif', 'mulai hentikan lanjutkan', 'start stop continue'],
+  matriks: ['matriks', 'kuadran', 'dampak usaha', 'impact effort', 'matrix', 'quadrant'],
+  sprint: ['rencana sprint', 'sprint planning', 'perencanaan sprint', 'sprint plan'],
+  lima_kenapa: ['lima kenapa', '5 kenapa', 'five whys', '5 whys', 'akar masalah', 'root cause'],
   parkir: ['tempat parkir', 'parking lot', 'parkir dulu'],
 }
 
@@ -53,35 +54,48 @@ const NAMED: Record<string, string[]> = {
 const ASKS = [
   'bikin', 'buat', 'buka', 'pakai', 'gunakan', 'siapkan', 'tolong',
   'mulai', 'pasang', 'coba', 'kasih', 'tambahkan alat', 'jalankan',
+  // English, chosen to survive substring matching: "use" alone hides in "because".
+  'create', 'set up', 'open a', 'open the', 'start a', 'let s', 'let us', 'can we',
+  'make a', 'run a', 'use a', 'use the', 'give me', 'i want', 'we need a', 'add a',
 ]
 
 /**
  * Sentences that ask for a tool without naming one. Kept small and honest: a
  * long list of guesses is a long list of ways to be confidently wrong.
  */
-const IMPLIED: { templateId: string; phrases: string[]; because: string }[] = [
+const IMPLIED: { templateId: string; phrases: string[]; because: string; becauseEn: string }[] = [
   {
     templateId: 'voting',
-    phrases: ['mana yang duluan', 'kita pilih', 'harus diputuskan', 'suara terbanyak', 'sepakat yang mana'],
+    phrases: [
+      'mana yang duluan', 'kita pilih', 'harus diputuskan', 'suara terbanyak', 'sepakat yang mana',
+      'which one first', 'we need to decide', 'let s decide', 'most votes', 'which do we pick',
+    ],
     because: 'kalimatnya meminta keputusan bersama',
+    becauseEn: 'the sentence asks for a shared decision',
   },
   {
     // "prioritas" alone was here and fired on "prioritas kita semester ini
     // adalah aksesibilitas", which is a statement, not a request to sort
     // anything. What a matrix is actually for is the comparison.
     templateId: 'matriks',
-    phrases: ['mana yang penting', 'dampaknya besar', 'usaha kecil', 'urutkan prioritas', 'dampak dan usaha'],
+    phrases: [
+      'mana yang penting', 'dampaknya besar', 'usaha kecil', 'urutkan prioritas', 'dampak dan usaha',
+      'which is more important', 'high impact', 'low effort', 'prioritize these', 'prioritise these',
+    ],
     because: 'kalimatnya membandingkan dampak dan usaha',
+    becauseEn: 'the sentence weighs impact against effort',
   },
   {
     templateId: 'lima_kenapa',
-    phrases: ['kenapa bisa', 'akar masalahnya', 'penyebabnya apa'],
+    phrases: ['kenapa bisa', 'akar masalahnya', 'penyebabnya apa', 'why did this happen', 'what caused'],
     because: 'kalimatnya menelusuri sebab',
+    becauseEn: 'the sentence traces a cause',
   },
   {
     templateId: 'retro',
-    phrases: ['apa yang jalan', 'apa yang tidak jalan', 'evaluasi sprint'],
+    phrases: ['apa yang jalan', 'apa yang tidak jalan', 'evaluasi sprint', 'what went well', 'what went wrong'],
     because: 'kalimatnya mengevaluasi cara kerja',
+    becauseEn: 'the sentence evaluates how the team worked',
   },
 ]
 
@@ -111,7 +125,10 @@ function stepFor(templateId: string, parentId: NodeId | null, confidence: number
   const built = spec.build()
   return {
     agent: 'pemilih',
-    preview: `Siapkan ${spec.label.toLowerCase()}: ${templateSize(built)} simpul di bawah induk terpilih.`,
+    preview: tr(
+      `Siapkan ${spec.label.toLowerCase()}: ${templateSize(built)} simpul di bawah induk terpilih.`,
+      `Set up ${spec.label.toLowerCase()}: ${templateSize(built)} nodes under the chosen parent.`,
+    ),
     confidence,
     commands: expandTemplate(built, parentId),
     source: { kind: spec.id === 'voting' ? 'alat' : 'templat', id: spec.id, label: spec.label },
@@ -133,9 +150,10 @@ export async function planWith(provider: ProviderId, input: PlanInput): Promise<
     const fallback = plan(input)
     return {
       ...fallback,
-      reason: `Model lokal tidak menjawab (${
-        error instanceof Error ? error.message : 'gagal'
-      }), jadi ini hasil pencocokan aturan. ${fallback.reason}`,
+      reason: tr(
+        `Model lokal tidak menjawab (${error instanceof Error ? error.message : 'gagal'}), jadi ini hasil pencocokan aturan. ${fallback.reason}`,
+        `The local model did not answer (${error instanceof Error ? error.message : 'failed'}), so this comes from the rule matcher. ${fallback.reason}`,
+      ),
     }
   }
 }
@@ -163,12 +181,10 @@ export function plan(input: PlanInput): Plan {
   if (named.length > 1) {
     return {
       intent: 'ambigu',
-      reason: 'Dua alat disebut dalam satu kalimat.',
+      reason: tr('Dua alat disebut dalam satu kalimat.', 'Two tools were named in one sentence.'),
       steps: [],
       question: {
-        question: `Yang mana dulu: ${named
-          .map(([id]) => templateById(id)?.label ?? id)
-          .join(' atau ')}?`,
+        question: tr(`Yang mana dulu: ${named.map(([id]) => templateById(id)?.label ?? id).join(' atau ')}?`, `Which one first: ${named.map(([id]) => templateById(id)?.label ?? id).join(' or ')}?`),
         choices: named.flatMap(([id]) => {
           const spec = templateById(id)
           if (!spec) return []
@@ -188,7 +204,10 @@ export function plan(input: PlanInput): Plan {
     if (step) {
       return {
         intent: 'alat-diminta',
-        reason: `Kamu menyebut ${step.source?.label} langsung, jadi tidak ada yang perlu ditebak.`,
+        reason: tr(
+          `Kamu menyebut ${step.source?.label} langsung, jadi tidak ada yang perlu ditebak.`,
+          `You named ${step.source?.label} directly, so there is nothing to guess.`,
+        ),
         steps: [step],
       }
     }
@@ -204,7 +223,10 @@ export function plan(input: PlanInput): Plan {
     if (step) {
       return {
         intent: 'alat-diusulkan',
-        reason: `Kamu tidak menyebut alatnya, tapi ${implied.because}. Ini usulan, bukan keputusan.`,
+        reason: tr(
+          `Kamu tidak menyebut alatnya, tapi ${implied.because}. Ini usulan, bukan keputusan.`,
+          `You did not name a tool, but ${implied.becauseEn}. This is a suggestion, not a decision.`,
+        ),
         steps: [step],
       }
     }
@@ -213,7 +235,7 @@ export function plan(input: PlanInput): Plan {
   // 3. Not a tool request. The caller falls back to the structure stage.
   return {
     intent: 'susun',
-    reason: 'Tidak ada alat yang diminta; ini isi biasa.',
+    reason: tr('Tidak ada alat yang diminta; ini isi biasa.', 'No tool was asked for; this is ordinary content.'),
     steps: [],
   }
 }

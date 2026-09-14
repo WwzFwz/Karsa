@@ -11,6 +11,7 @@
  * touching the model, and it must never mean touching rule 1 or rule 2.
  */
 
+import { localise } from '../../i18n/lang'
 import type { IconName } from '../../ui/icons'
 import type { NodeKind, ToolKind } from '../model/types'
 
@@ -83,3 +84,7 @@ export const TOOL_LIST: ToolSpec[] = Object.values(TOOLS)
 export function toolOf(tool: ToolKind | undefined): ToolSpec | null {
   return tool ? TOOLS[tool] : null
 }
+
+localise(TOOLS.suara, 'label', 'Vote')
+localise(TOOLS.retro, 'label', 'Retro')
+localise(TOOLS.matriks, 'label', 'Impact-effort matrix')

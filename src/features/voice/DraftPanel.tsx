@@ -11,21 +11,22 @@
  * first-class state and not an error toast.
  */
 
+import { useState } from 'react'
 import { useRoom } from '../../app/RoomContext'
+import { bilingual, tr, useLang } from '../../i18n/lang'
 import { Icon } from '../../ui/icons'
 import { AGENTS, type Intent } from '../../core/agent/types'
 
-const INTENT_LABEL: Record<Intent, string> = {
-  'alat-diminta': 'Alat diminta langsung',
-  'alat-diusulkan': 'Alat diusulkan',
-  susun: 'Isi biasa',
-  ambigu: 'Perlu dipilih',
-  'tak-dikenali': 'Tidak dikenali',
-}
+const INTENT_LABEL: Record<Intent, string> = bilingual(
+  { 'alat-diminta': 'Alat diminta langsung', 'alat-diusulkan': 'Alat diusulkan', susun: 'Isi biasa', ambigu: 'Perlu dipilih', 'tak-dikenali': 'Tidak dikenali' },
+  { 'alat-diminta': 'Tool asked for', 'alat-diusulkan': 'Tool suggested', susun: 'Ordinary content', ambigu: 'Needs a choice', 'tak-dikenali': 'Not recognised' },
+)
 
 export function DraftPanel() {
-  const { draft, setDraft, applyDraft, discardDraft, run, talking, startTalking, stopTalking } =
+  const { draft, setDraft, applyDraft, discardDraft, run, talking, startTalking, stopTalking, submitText } =
     useRoom()
+  const [typed, setTyped] = useState('')
+  useLang()
 
   const accepted = draft.operations.filter((op) => op.accepted).length
 
@@ -34,28 +35,59 @@ export function DraftPanel() {
       <header className="panel-head">
         <h2 id="draft-heading">
           <Icon name="sparkles" size={15} />
-          Pemeriksaan perintah
+          {tr('Pemeriksaan perintah', 'Command review')}
         </h2>
         <span className={`status-pill status-${draft.status}`}>{statusLabel(draft.status)}</span>
       </header>
 
       <p className="panel-note">
-        Perintah suara selalu berhenti di sini dulu. Kanvas bersama tidak berubah sampai Anda
-        menekan Terapkan.
+        {tr('Perintah suara selalu berhenti di sini dulu. Kanvas bersama tidak berubah sampai Anda menekan Terapkan.', 'Voice commands always stop here first. The shared canvas does not change until you press Apply.')}
       </p>
 
       <div className="transcript">
-        <span className="field-label">Yang didengar</span>
+        <span className="field-label">{tr('Yang didengar', 'What was heard')}</span>
         <p className="transcript-text">
-          {draft.transcript || <em>Belum ada ucapan. Tahan tombol Bicara atau tekan spasi.</em>}
+          {draft.transcript || <em>{tr('Belum ada ucapan. Tahan tombol Bicara atau tekan spasi.', 'Nothing said yet. Hold Talk or press space.')}</em>}
           {draft.status === 'listening' && <span className="caret" aria-hidden="true" />}
         </p>
       </div>
 
+      {/*
+        The same sentence, typed. Goes through exactly the understanding a
+        spoken one does, so nobody needs a microphone to reach the assistant
+        and a mishearing can be fixed by writing what was meant (rule 6).
+      */}
+      <form
+        className="typed-command"
+        onSubmit={(e) => {
+          e.preventDefault()
+          submitText(typed)
+          setTyped('')
+        }}
+      >
+        <label className="field-label" htmlFor="typed-command">
+          {tr('Atau ketik perintahnya', 'Or type the command')}
+        </label>
+        <div className="typed-row">
+          <input
+            id="typed-command"
+            className="text-input"
+            value={typed}
+            placeholder={draft.status === 'ready' ? tr('ya / batal, atau perintah baru', 'yes / cancel, or a new command') : tr('tambahkan gagasan ... di bawah ...', 'add an idea ... under ...')}
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            disabled={talking || draft.status === 'thinking' || draft.status === 'applying'}
+          />
+          <button type="submit" className="btn" disabled={!typed.trim() || talking}>
+            {tr('Kirim', 'Send')}
+          </button>
+        </div>
+      </form>
+
       {draft.status === 'thinking' && (
         <p className="thinking">
           <Icon name="sparkles" size={14} />
-          Menyusun operasi di perangkat ini. Tidak ada audio yang dikirim keluar.
+          {tr('Menyusun operasi di perangkat ini. Tidak ada audio yang dikirim keluar.', 'Building operations on this device. No audio is sent anywhere.')}
         </p>
       )}
 
@@ -75,7 +107,7 @@ export function DraftPanel() {
 
       {draft.operations.length > 0 && (
         <div className="draft-ops">
-          <span className="field-label">Usulan operasi</span>
+          <span className="field-label">{tr('Usulan operasi', 'Proposed operations')}</span>
           <ul className="op-list">
             {draft.operations.map((op) => (
               <li key={op.id} className="op-item">
@@ -102,7 +134,7 @@ export function DraftPanel() {
                         {op.source && <span className="op-source">{op.source.label}</span>}
                         {op.extraCommands && op.extraCommands.length > 0 && (
                           <span className="op-source">
-                            {op.extraCommands.length + 1} simpul, satu keputusan
+                            {op.extraCommands.length + 1} {tr('simpul, satu keputusan', 'nodes, one decision')}
                           </span>
                         )}
                       </span>
@@ -110,7 +142,7 @@ export function DraftPanel() {
                     <span className="op-preview">{op.preview}</span>
                     <span className={`confidence ${op.confidence < 0.6 ? 'is-low' : ''}`}>
                       <Icon name={op.confidence < 0.6 ? 'alert' : 'check'} size={12} />
-                      keyakinan {Math.round(op.confidence * 100)} persen
+                      {tr('keyakinan', 'confidence')} {Math.round(op.confidence * 100)} {tr('persen', 'percent')}
                     </span>
                   </span>
                 </label>
@@ -124,9 +156,9 @@ export function DraftPanel() {
           rather than a screenshot; this is that promise made checkable. */}
       {draft.status === 'ready' && draft.context && (
         <details className="agent-context">
-          <summary>Yang dikirim ke model</summary>
+          <summary>{tr('Yang dikirim ke model', 'What was sent to the model')}</summary>
           <p className="panel-note">
-            Struktur, bukan tangkapan layar — dan tidak ada audio. Semuanya tetap di perangkat ini.
+            {tr('Struktur, bukan tangkapan layar — dan tidak ada audio. Semuanya tetap di perangkat ini.', 'Structure, not a screenshot, and no audio. Everything stays on this device.')}
           </p>
           <pre>{draft.context}</pre>
         </details>
@@ -139,7 +171,7 @@ export function DraftPanel() {
             {amb.question}
           </p>
           <p className="panel-note">
-            Sistem tidak menebak pada kanvas milik bersama. Pilih satu, atau batalkan.
+            {tr('Sistem tidak menebak pada kanvas milik bersama. Pilih satu, atau batalkan.', 'The system does not guess on a shared canvas. Pick one, or cancel.')}
           </p>
           <div className="ambiguity-choices">
             {amb.choices.map((choice) => (
@@ -163,7 +195,7 @@ export function DraftPanel() {
       {draft.rawText && (
         <div className="raw-text">
           <label className="field-label" htmlFor="raw-text">
-            Tidak dikenali sebagai perintah
+            {tr('Tidak dikenali sebagai perintah', 'Not recognised as a command')}
           </label>
           <textarea
             id="raw-text"
@@ -173,8 +205,7 @@ export function DraftPanel() {
             onChange={(e) => setDraft({ ...draft, rawText: e.target.value })}
           />
           <p className="field-help">
-            Ucapan disimpan apa adanya dan bisa disunting. Kalau ini memang sebuah gagasan, simpan
-            sebagai simpul baru. Kalau bukan, biarkan.
+            {tr('Ucapan disimpan apa adanya dan bisa disunting. Kalau ini memang sebuah gagasan, simpan sebagai simpul baru. Kalau bukan, biarkan.', 'The words are kept as they are and can be edited. If this is an idea, save it as a new node. If not, leave it.')}
           </p>
         </div>
       )}
@@ -188,22 +219,23 @@ export function DraftPanel() {
           onPointerLeave={() => talking && stopTalking()}
         >
           <Icon name={talking ? 'mic' : 'micOff'} size={16} />
-          {talking ? 'Mendengarkan' : 'Tahan untuk bicara'}
+          {talking ? tr('Mendengarkan', 'Listening') : tr('Tahan untuk bicara', 'Hold to talk')}
         </button>
         <span className="topbar-spacer" />
         <button type="button" className="btn" onClick={discardDraft} disabled={draft.status === 'idle'}>
           <Icon name="x" size={16} />
-          Batalkan
+          {tr('Batalkan', 'Cancel')}
         </button>
         <button type="button" className="btn btn-primary" onClick={applyDraft} disabled={accepted === 0}>
           <Icon name="check" size={16} />
-          Terapkan {accepted > 0 ? accepted : ''}
+          {tr('Terapkan', 'Apply')} {accepted > 0 ? accepted : ''}
         </button>
       </div>
 
       <p className="privacy-note">
         <Icon name="shield" size={13} />
-        Diproses di perangkat ini. Jalur masukan yang tercatat: suara.
+        {tr('Diproses di perangkat ini. Jalur masukan yang tercatat:', 'Processed on this device. Input path recorded:')}{' '}
+        {draft.via === 'keyboard' ? tr('papan ketik', 'keyboard') : tr('suara', 'voice')}.
       </p>
     </section>
   )
@@ -212,16 +244,16 @@ export function DraftPanel() {
 function statusLabel(status: string): string {
   switch (status) {
     case 'listening':
-      return 'Mendengarkan'
+      return tr('Mendengarkan', 'Listening')
     case 'thinking':
-      return 'Memahami'
+      return tr('Memahami', 'Understanding')
     case 'ready':
-      return 'Menunggu persetujuan'
+      return tr('Menunggu persetujuan', 'Waiting for approval')
     case 'applied':
-      return 'Sudah diterapkan'
+      return tr('Sudah diterapkan', 'Applied')
     case 'discarded':
-      return 'Dibatalkan'
+      return tr('Dibatalkan', 'Discarded')
     default:
-      return 'Siap'
+      return tr('Siap', 'Ready')
   }
 }

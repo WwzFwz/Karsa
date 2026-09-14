@@ -124,7 +124,7 @@ npm run eval              # pencocokan aturan
 npm run eval -- --ollama  # model lokal
 ```
 
-22 kasus di `core/agent/cases.ts`, dan yang dikumpulkan bukan kasus yang mudah
+27 kasus di `core/agent/cases.ts` (lima di antaranya berbahasa Inggris, D69), dan yang dikumpulkan bukan kasus yang mudah
 lulus melainkan yang mudah salah:
 
 - **Negatif.** Sebagian besar isi rapat itu isi biasa. Perute yang menyambar
@@ -158,6 +158,9 @@ Perbaikannya dua, dan keduanya jadi aturan:
 | ambigu | 2/2 | 2/2 |
 | isi biasa | 11/11 | 11/11 |
 | **total** | **22/22** | **17/22** |
+
+Angka di atas diambil pada 22 kasus pertama. Sesudah lima kasus berbahasa
+Inggris ditambahkan, pencocokan aturan lulus 27/27; Ollama belum diukur ulang.
 
 Angka ini sengaja ditulis apa adanya. Model lokal **sempurna pada negatif** —
 tidak pernah menyela ketika tidak diminta — dan **lemah pada positif**: dia

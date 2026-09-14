@@ -10,6 +10,7 @@
  */
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { tr } from '../i18n/lang'
 
 export type AnnouncePriority = 'polite' | 'assertive'
 
@@ -63,7 +64,7 @@ export function AnnouncerProvider({ children }: { children: ReactNode }) {
         setPoliteText(polite[0].text)
       } else if (polite.length > 1) {
         // Rule 9: a burst becomes one sentence rather than five.
-        setPoliteText(`${polite.length} perubahan. ${polite[polite.length - 1].text}`)
+        setPoliteText(`${tr(`${polite.length} perubahan.`, `${polite.length} changes.`)} ${polite[polite.length - 1].text}`)
       }
     }
 

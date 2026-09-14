@@ -23,6 +23,7 @@
 
 import { useState } from 'react'
 import { useRoom } from '../../app/RoomContext'
+import { tr } from '../../i18n/lang'
 import { Icon } from '../../ui/icons'
 
 function pace(seconds: number): { label: string; tone: string } {
@@ -56,6 +57,7 @@ export function VoiceDock() {
     endTalkHold,
     linkingFrom,
   } = useRoom()
+  const room = useRoom()
 
   // Folded away by choice, not by state: somebody who trusts the capture
   // should not have to keep reading it.
@@ -68,27 +70,32 @@ export function VoiceDock() {
 
   const status = linkingFrom
     ? {
-        text: 'Pilih simpul tujuan',
-        detail: 'Klik simpul lain, atau Escape untuk membatalkan',
+        text: tr('Pilih simpul tujuan', 'Pick the target node'),
+        detail: tr('Klik simpul lain, atau Escape untuk membatalkan', 'Click another node, or Escape to cancel'),
         tone: 'is-wait',
       }
     : talking
     ? {
-        text: 'Mendengarkan',
-        detail: talkLatched ? 'Terkunci. Ketuk sekali lagi untuk berhenti.' : 'Lepas tombol untuk berhenti',
+        text: tr('Mendengarkan', 'Listening'),
+        detail:
+          room.asrStatus.phase === 'loading' && room.asrMode !== 'contoh'
+            ? `${tr('Merekam.', 'Recording.')} ${room.asrStatus.detail}`
+            : talkLatched
+              ? tr('Terkunci. Ketuk sekali lagi untuk berhenti.', 'Locked on. Tap again to stop.')
+              : tr('Lepas tombol untuk berhenti', 'Release to stop'),
         tone: 'is-live',
       }
     : draft.status === 'thinking'
-      ? { text: 'Menyusun usulan', detail: 'Di perangkat ini, tanpa mengirim audio', tone: 'is-live' }
+      ? { text: tr('Menyusun usulan', 'Building a proposal'), detail: tr('Di perangkat ini, tanpa mengirim audio', 'On this device, no audio sent'), tone: 'is-live' }
       : waiting
         ? {
-            text: 'Usulan sudah disiapkan',
-            detail: 'Ketuk Terapkan, atau ucapkan "terapkan"',
+            text: tr('Usulan sudah disiapkan', 'Proposal ready'),
+            detail: tr('Ketuk Terapkan, atau ucapkan "ya"', 'Tap Apply, or say "yes"'),
             tone: 'is-wait',
           }
         : traversing
-          ? { text: 'Telusur audio', detail: `${traversalIndex + 1} dari ${visibleIds.length} simpul`, tone: 'is-live' }
-          : { text: 'Semua siap', detail: 'Mode siaga, tidak ada yang direkam', tone: '' }
+          ? { text: tr('Telusur audio', 'Audio browse'), detail: tr(`${traversalIndex + 1} dari ${visibleIds.length} simpul`, `${traversalIndex + 1} of ${visibleIds.length} nodes`), tone: 'is-live' }
+          : { text: tr('Semua siap', 'All set'), detail: tr('Mode siaga, tidak ada yang direkam', 'Standing by, nothing is recorded'), tone: '' }
 
   return (
     <div className="dock-layer">

@@ -15,6 +15,7 @@
  */
 
 import type { Command } from '../commands/types'
+import { localise } from '../../i18n/lang'
 
 export type AgentId = 'penyusun' | 'pemilih' | 'perapi'
 
@@ -82,3 +83,8 @@ export interface Plan {
   /** Speech that produced nothing. Editable, never applied silently. */
   rawText?: string
 }
+
+// English names for the named stages, read through the same `label` field.
+localise(AGENTS.penyusun, 'label', 'Structure builder')
+localise(AGENTS.pemilih, 'label', 'Tool picker')
+localise(AGENTS.perapi, 'label', 'Title tidier')

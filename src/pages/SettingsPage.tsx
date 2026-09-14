@@ -11,6 +11,9 @@
 import { useRoom } from '../app/RoomContext'
 import { useTheme, type ThemeChoice } from '../ui/theme'
 import { PROVIDERS, SELECTABLE } from '../features/ai/providers'
+import { ASR_MODES, readSpeechLang, writeSpeechLang, type SpeechLang } from '../features/voice/speech'
+import { setLang, tr, useLang } from '../i18n/lang'
+import { useState } from 'react'
 import { MODE_HINT, MODE_LABEL } from '../ui/labels'
 import { Icon } from '../ui/icons'
 import type { SoundProfile } from '../audio/earcons'
@@ -31,10 +34,81 @@ export function SettingsPage() {
   const room = useRoom()
   const { mode, setMode, soundProfile, setSoundProfile } = room
   const theme = useTheme()
+  const language = useLang()
+  const [speechLang, setSpeechLang] = useState<SpeechLang>(readSpeechLang)
 
   return (
     <div className="page page-settings">
       <section className="settings-main">
+        {/*
+          Two separate choices on purpose. What the app says and what the
+          person speaks are not always the same language: an Indonesian lecturer
+          may present in English, and the narration should still be in the
+          language they follow best.
+        */}
+        <section className="panel" aria-labelledby="lang-heading">
+          <header className="panel-head">
+            <h2 id="lang-heading">
+              <Icon name="message" size={15} />
+              {tr('Bahasa', 'Language')}
+            </h2>
+          </header>
+          <p className="panel-note">
+            {tr(
+              'Bahasa keluaran mengatur narasi, usulan asisten, dan pengumuman. Judul simpul tetap dalam bahasa saat ditulis atau diucapkan.',
+              'Output language sets narration, assistant proposals and announcements. Node titles stay in the language they were written or spoken in.',
+            )}
+          </p>
+          <div className="option-row" role="radiogroup" aria-label={tr('Bahasa keluaran', 'Output language')}>
+            {(['id', 'en'] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                role="radio"
+                aria-checked={language === l}
+                className={`option ${language === l ? 'is-on' : ''}`}
+                onClick={() => setLang(l)}
+              >
+                <span>
+                  <strong>{l === 'id' ? 'Bahasa Indonesia' : 'English'}</strong>
+                  <span className="option-hint">{tr('Bahasa keluaran', 'Output language')}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <div
+            className="option-row"
+            role="radiogroup"
+            aria-label={tr('Bahasa ucapan', 'Speech language')}
+            style={{ marginTop: 10 }}
+          >
+            {(['auto', 'id', 'en'] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                role="radio"
+                aria-checked={speechLang === l}
+                className={`option ${speechLang === l ? 'is-on' : ''}`}
+                onClick={() => {
+                  writeSpeechLang(l)
+                  setSpeechLang(l)
+                }}
+              >
+                <span>
+                  <strong>
+                    {l === 'auto' ? tr('Otomatis', 'Automatic') : l === 'id' ? 'Bahasa Indonesia' : 'English'}
+                  </strong>
+                  <span className="option-hint">
+                    {l === 'auto'
+                      ? tr('Whisper mendeteksi bahasa tiap kalimat', 'Whisper detects the language per sentence')
+                      : tr('Bahasa ucapan', 'Speech language')}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="panel" aria-labelledby="provider-heading">
           <header className="panel-head">
             <h2 id="provider-heading">
@@ -118,6 +192,65 @@ export function SettingsPage() {
             Audio tidak pernah dikirim ke penyedia mana pun, termasuk yang di awan. Yang berpindah
             paling jauh hanyalah teks dan struktur outline.
           </p>
+        </section>
+
+        <section className="panel" aria-labelledby="asr-heading">
+          <header className="panel-head">
+            <h2 id="asr-heading">
+              <Icon name="mic" size={15} />
+              Pengenalan suara
+            </h2>
+            <span className="pill pill-ok">
+              <Icon name="shield" size={12} />
+              Di perangkat
+            </span>
+          </header>
+          <p className="panel-note">
+            Mikrofon hanya hidup selama tombol Bicara menyala. Suara diubah menjadi teks di peramban
+            ini; yang diteruskan ke penyedia model hanya teksnya.
+          </p>
+          <ul className="provider-list" role="radiogroup" aria-labelledby="asr-heading">
+            {ASR_MODES.map((m) => {
+              const active = m.id === room.asrMode
+              return (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`provider ${active ? 'is-on' : 'is-off'}`}
+                    onClick={() => room.setAsrMode(m.id)}
+                  >
+                    <span className="provider-mark" aria-hidden="true" />
+                    <span className="provider-body">
+                      <span className="provider-name">
+                        {m.label}
+                        {active && m.model && (
+                          <span
+                            className={`pill ${room.asrStatus.phase === 'ready' ? 'pill-ok' : 'pill-warn'}`}
+                          >
+                            {room.asrStatus.phase === 'ready'
+                              ? 'siap'
+                              : room.asrStatus.phase === 'loading'
+                                ? `mengunduh ${room.asrStatus.percent}%`
+                                : room.asrStatus.phase === 'error'
+                                  ? 'gagal'
+                                  : 'dimuat saat pertama bicara'}
+                          </span>
+                        )}
+                      </span>
+                      <span className="provider-detail">{m.detail}</span>
+                      {active && m.model && room.asrStatus.phase !== 'idle' && (
+                        <span className="provider-detail" aria-live="polite">
+                          <strong>{room.asrStatus.detail}</strong>
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
         </section>
 
         <section className="panel" aria-labelledby="mode-heading">

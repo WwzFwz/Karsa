@@ -157,4 +157,33 @@ export const CASES: EvalCase[] = [
     intent: 'susun',
     why: 'Menghapus. Harus lewat penyusun, bukan pemilih alat.',
   },
+
+  // --- English: the same routes, the same brakes ---
+  {
+    transcript: "let's create a poll for this semester's priority",
+    intent: 'alat-diminta',
+    template: 'voting',
+    why: 'English request naming the tool.',
+  },
+  {
+    transcript: 'which is more important here, high impact or low effort',
+    intent: 'alat-diusulkan',
+    template: 'matriks',
+    why: 'English sentence weighing impact against effort without naming the matrix.',
+  },
+  {
+    transcript: 'we could do a retro and a vote',
+    intent: 'ambigu',
+    why: 'Two tools named in English. Must ask.',
+  },
+  {
+    transcript: 'the retro last week already covered this, write that down',
+    intent: 'susun',
+    why: 'Mentions retro as a past event with no request word before it.',
+  },
+  {
+    transcript: 'add three steps prepare the room then install software then test the network',
+    intent: 'susun',
+    why: 'Ordinary English content for the structure stage.',
+  },
 ]

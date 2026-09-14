@@ -3102,3 +3102,8 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
+
+/* Typed command, under what was heard. */
+.typed-command { display: grid; gap: 6px; margin-block: 10px; }
+.typed-row { display: flex; gap: 8px; min-width: 0; }
+.typed-row .text-input { flex: 1; min-width: 0; }

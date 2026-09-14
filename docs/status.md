@@ -20,8 +20,8 @@ Yang sudah jadi adalah **produknya, dijalankan dengan data palsu**: model data
 dan penegak aturannya nyata, lima bentuk tata letak nyata, tiga alat nyata,
 orchestrator dengan model lokal sungguhan nyata. Yang belum ada adalah
 **semua yang menghubungkan satu orang dengan orang lain** — sinkronisasi,
-kehadiran, penyimpanan — dan **semua yang menghubungkan suara sungguhan dengan
-sistem** — VAD, ASR. Ditambah satu lubang yang tidak enak: **belum ada satu pun
+kehadiran, penyimpanan. Suara sungguhan kini ada — Whisper di perangkat sampai
+draf yang bisa dijawab dengan suara — kecuali VAD. Ditambah satu lubang yang tidak enak: **belum ada satu pun
 uji otomatis untuk `core/`**, padahal bagian 9 menyebut pemulihan siklus sebagai
 risiko yang harus benar sejak awal.
 
@@ -37,7 +37,12 @@ risiko yang harus benar sejak awal.
 | Tiga alat | Voting, retro, matriks (D40, D59) |
 | Enam templat | Sebagai kumpulan `createNode`, satu langkah undo (D44) |
 | Orchestrator, dua penyedia | Pencocokan aturan + Ollama `qwen2.5:7b` (D48) |
-| Set uji orchestrator | 22 kasus, dua penyedia (D62) |
+| Set uji orchestrator | 27 kasus termasuk lima berbahasa Inggris, dua penyedia (D62, D69) |
+| Pengenalan suara | Whisper base/small, transformers.js di Worker, WebGPU atau WASM (D65) |
+| Tahap penyusun struktur | Tambah, daftar, ubah judul, pindah, hapus, hubungkan; aturan + Ollama (D66) |
+| Perapi judul | Dijalankan, judul panjang jadi judul pendek + catatan (D67) |
+| Perintah diketik | Lewat pemahaman yang sama dengan ucapan (D68) |
+| Dua bahasa | Keluaran dan ucapan, Indonesia atau Inggris (D69) |
 | Undo snapshot + narasi + earcon | Log tetap tambah-saja (D21) |
 | Outline ARIA tree sungguhan | Bukan daftar div |
 | Telusur audio | Satu nada per simpul, tinggi = kedalaman |
@@ -79,15 +84,15 @@ pertama menuju kerja luring.
 
 | Bagian | Status |
 | ------ | ------ |
-| AudioWorklet | Belum |
+| AudioWorklet | Ada, hanya selama sakelar bicara menyala |
 | Silero VAD (ONNX Runtime Web) | Belum |
-| ASR lokal (transformers.js WebGPU) | Belum |
-| Kalimat kalengan | Dipakai sekarang |
+| ASR lokal (transformers.js WebGPU) | Ada (D65) |
+| Kalimat kalengan | Masih tersedia sebagai pilihan "Ucapan contoh" |
+| Model disajikan lokal | Belum — unduhan pertama butuh internet, mode kelas belum bisa |
 
-Ini yang paling terlihat sebagai "belum jadi", tapi sengaja ditunda: bagian 14
-menyatakan tenggat terdekat adalah antarmuka yang bisa dilihat dan diklik.
-Sambungannya sudah benar, jadi ASR sungguhan masuk sebagai satu penyedia, bukan
-tulis ulang.
+Yang tersisa: VAD, dan menyajikan berkas model dari server sendiri supaya mode
+kelas tanpa internet benar-benar jalan. Akurasi Bahasa Indonesia `whisper-base`
+belum diukur dengan ucapan manusia; bila kurang, `whisper-small` tinggal dipilih.
 
 ### 2.4 Kolaborasi sungguhan
 
@@ -138,8 +143,6 @@ semuanya bisa berperilaku lain di 200.
 
 ### 2.7 Hal-hal kecil yang berbohong
 
-- **"Perapi judul"** terdaftar di `AGENTS`, tidak pernah dipanggil. Jalankan
-  atau cabut namanya.
 - **Kursor agen tidak punya tempat berdiri untuk langkah templat** — belum ada
   simpulnya sebelum mendarat. Lubang D18 yang tersisa.
 - **Tawaran alat belum diredam** — ditolak sekali harusnya berarti tidak
@@ -166,8 +169,11 @@ paling menarik. Rencana lengkapnya di `docs/rencana-implementasi.md`.
 3. **Error boundary** — layar putih di depan penilai lebih mahal daripada fitur
    apa pun yang bisa ditambahkan di waktu yang sama.
 4. **Satu putaran NVDA** — bahkan satu putaran akan menemukan sesuatu.
-5. **Cabut dua kebohongan kecil** — "Perapi judul" yang tidak pernah jalan, dan
-   tawaran alat yang belum diredam.
+5. **Redam tawaran alat** — ditolak sekali berarti tidak ditawarkan lagi di sesi
+   itu. ("Perapi judul" sudah dijalankan, D67.)
+
+Pemilik proyek menaruh fitur di atas uji (14 September 2026), jadi urutan ini
+dibaca sebagai daftar risiko, bukan antrean kerja.
 
 ## 4. Supaya daftar "belum" tidak salah dibaca
 

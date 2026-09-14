@@ -19,6 +19,10 @@ import type { TreeProjection } from '../../core/tree/project'
 import type { Command } from '../../core/commands/types'
 import type { NodeId, RoomDoc } from '../../core/model/types'
 import type { Draft, DraftAmbiguity, DraftOperation } from './types'
+import { structure, type StructureInput } from '../../core/agent/structure'
+import { tr } from '../../i18n/lang'
+import { structureWithOllama } from '../../core/agent/ollama'
+import type { PlanStep } from '../../core/agent/types'
 
 export interface Utterance {
   transcript: string
@@ -188,14 +192,15 @@ export function emptyDraft(): Draft {
  * tool does it fall through to the stage that reads it as ordinary content.
  */
 export async function buildDraft(
-  utterance: Utterance,
+  utterance: Utterance | string,
   doc: RoomDoc,
   tree: TreeProjection,
   focusId: NodeId | null,
   provider: ProviderId,
 ): Promise<Draft> {
+  const transcript = typeof utterance === 'string' ? utterance : utterance.transcript
   const routed = await planWith(provider, {
-    transcript: utterance.transcript,
+    transcript,
     doc,
     tree,
     focusId,
@@ -206,7 +211,7 @@ export async function buildDraft(
     return {
       id: newDraftId(),
       status: 'ready',
-      transcript: utterance.transcript,
+      transcript,
       // A template is several commands but one decision, so it is one row with
       // one checkbox. Nobody means to apply half a retro board.
       operations: routed.steps.map((step, i) => ({
@@ -240,22 +245,77 @@ export async function buildDraft(
     }
   }
 
-  const parsed = utterance.build(doc, focusId)
+  const parsed =
+    typeof utterance === 'string'
+      ? await structureWith(provider, { transcript, doc, focusId })
+      : utterance.build(doc, focusId)
   return {
     id: newDraftId(),
     status: 'ready',
-    transcript: utterance.transcript,
+    transcript,
     operations: parsed.operations.map((op, i) => ({
       ...op,
       id: `op_${i}`,
       accepted: true,
-      agent: 'penyusun' as const,
+      agent: op.agent ?? ('penyusun' as const),
     })),
-    ambiguities: (parsed.ambiguities ?? []).map((a, i) => ({ ...a, id: `amb_${i}` })),
+    ambiguities: ('ambiguities' in parsed && parsed.ambiguities ? parsed.ambiguities : []).map((a, i) => ({ ...a, id: `amb_${i}` })),
     rawText: parsed.rawText ?? null,
     startedAt: Date.now(),
     intent: parsed.rawText ? 'tak-dikenali' : 'susun',
-    reason: routed.reason,
+    reason: 'reason' in parsed && parsed.reason ? parsed.reason : routed.reason,
     context,
+  }
+}
+
+/**
+ * The structure stage with the chosen provider. Rules are the floor: a model
+ * that fails, or reads nothing, hands over to the rule reader and the reason
+ * says so, because a demo that looks like the model worked when it did not is
+ * the easiest lie to tell (D48).
+ */
+async function structureWith(
+  provider: ProviderId,
+  input: StructureInput,
+): Promise<{ operations: Omit<DraftOperation, 'id' | 'accepted'>[]; rawText?: string; reason?: string }> {
+  const toOps = (steps: PlanStep[]) =>
+    steps.map((step) => ({
+      command: step.commands[0],
+      extraCommands: step.commands.slice(1),
+      preview: step.preview,
+      confidence: step.confidence,
+      agent: step.agent,
+    }))
+  if (provider === 'ollama') {
+    try {
+      const fromModel = await structureWithOllama(input)
+      if (fromModel.steps.length > 0) {
+        return { operations: toOps(fromModel.steps), reason: tr('Isi biasa, disusun oleh model lokal.', 'Ordinary content, structured by the local model.') }
+      }
+      const fromRules = structure(input)
+      return {
+        operations: toOps(fromRules.steps),
+        rawText: fromRules.rawText,
+        reason: fromRules.steps.length > 0
+          ? tr('Model tidak menemukan operasi; pembaca aturan menemukannya.', 'The model found no operation; the rule reader did.')
+          : tr('Model maupun pembaca aturan tidak menemukan perintah di ucapan ini.', 'Neither the model nor the rule reader found a command here.'),
+      }
+    } catch (error) {
+      const fromRules = structure(input)
+      return {
+        operations: toOps(fromRules.steps),
+        rawText: fromRules.rawText,
+        reason: tr(
+          `Model lokal tidak menjawab (${error instanceof Error ? error.message : 'gagal'}), jadi ini hasil pembaca aturan.`,
+          `The local model did not answer (${error instanceof Error ? error.message : 'failed'}), so this comes from the rule reader.`,
+        ),
+      }
+    }
+  }
+  const fromRules = structure(input)
+  return {
+    operations: toOps(fromRules.steps),
+    rawText: fromRules.rawText,
+    reason: fromRules.steps.length > 0 ? tr('Isi biasa, dibaca oleh pencocokan aturan.', 'Ordinary content, read by the rule matcher.') : undefined,
   }
 }

@@ -18,6 +18,7 @@
  * task manager, and it does not belong here.
  */
 
+import { localise } from '../../i18n/lang'
 import type { NodeKind, ToolKind } from '../model/types'
 import type { IconName } from '../../ui/icons'
 
@@ -152,4 +153,17 @@ export const TEMPLATES: TemplateSpec[] = [
 
 export function templateById(id: string): TemplateSpec | null {
   return TEMPLATES.find((template) => template.id === id) ?? null
+}
+
+// English names, read through the same `label` field everywhere.
+const TEMPLATE_EN: Record<string, string> = {
+  voting: 'Vote',
+  retro: 'Retro',
+  matriks: 'Impact–effort matrix',
+  sprint: 'Sprint plan',
+  lima_kenapa: 'Five whys',
+  parkir: 'Parking lot',
+}
+for (const spec of TEMPLATES) {
+  if (TEMPLATE_EN[spec.id]) localise(spec, 'label', TEMPLATE_EN[spec.id])
 }

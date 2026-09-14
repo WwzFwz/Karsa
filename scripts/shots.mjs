@@ -252,13 +252,6 @@ const SCENES = [
   { name: '12-peserta', url: '/ruang/KUR-482/peserta', wait: 1600 },
   { name: '13-komentar', url: '/ruang/KUR-482/komentar', wait: 1600 },
   {
-    name: '14-panel-disembunyikan',
-    url: '/ruang/KUR-482',
-    after: `document.dispatchEvent(new KeyboardEvent('keydown',{key:']',bubbles:true})); ${pause(600)}
-            document.dispatchEvent(new KeyboardEvent('keydown',{key:'[',bubbles:true})); ${pause(800)}`,
-    wait: 1600,
-  },
-  {
     name: '15-bagikan',
     url: '/ruang/KUR-482',
     after: `[...document.querySelectorAll('button')].find(b => /Bagikan/.test(b.textContent)).click(); ${pause(500)}`,
@@ -371,6 +364,9 @@ async function reset(clearName) {
     : "localStorage.setItem('karsa:nama', 'Rina Halimah');"
   await evaluate(`
     localStorage.setItem('karsa:tema', 'light');
+    // Headless Chrome has no microphone: the report shows the canned lines.
+    localStorage.setItem('karsa:pengenalan-suara', 'contoh');
+    localStorage.setItem('karsa:bahasa', 'id');
     localStorage.removeItem('karsa:ruang');
     ${nama}
   `)

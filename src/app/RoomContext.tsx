@@ -45,6 +45,7 @@ import {
   SELF_ID,
 } from '../store/seed/room'
 import { findRoom } from '../features/rooms/rooms'
+import { tr, useLang } from '../i18n/lang'
 import {
   AGENT_UTTERANCES,
   buildDraft,
@@ -52,6 +53,15 @@ import {
   emptyDraft,
   UTTERANCES as STRUCTURE_UTTERANCES,
 } from '../features/voice/mockPipeline'
+import {
+  ASR_MODES,
+  readAnswer,
+  readAsrMode,
+  recogniser,
+  writeAsrMode,
+  type AsrMode,
+  type AsrStatus,
+} from '../features/voice/speech'
 
 /*
   The canned lines, interleaved so a demo meets both halves early: sentences the
@@ -115,6 +125,13 @@ interface RoomApi {
   provider: ProviderId
   setProvider: (id: ProviderId) => void
   providerState: { ready: boolean; detail: string }
+
+  /** Who turns sound into words. Whisper on this device, or canned lines for a demo. */
+  asrMode: AsrMode
+  setAsrMode: (mode: AsrMode) => void
+  asrStatus: AsrStatus
+  /** A typed sentence, through exactly the same understanding as a spoken one. */
+  submitText: (text: string) => void
 
   view: ViewMode
   setView: (view: ViewMode) => void
@@ -224,6 +241,8 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     interface can say what is actually there rather than what is configured --
     "Ollama selected" and "Ollama running" are different facts.
   */
+  // Re-render everything that speaks when the output language changes.
+  const language = useLang()
   const [provider, setProviderState] = useState<ProviderId>(readProvider)
   const [providerState, setProbe] = useState({ ready: false, detail: 'Belum diperiksa.' })
   const providerRef = useRef<ProviderId>(provider)
@@ -248,6 +267,20 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     writeProvider(id)
     setProviderState(id)
   }, [])
+
+  const [asrMode, setAsrModeState] = useState<AsrMode>(readAsrMode)
+  const asrModeRef = useRef(asrMode)
+  asrModeRef.current = asrMode
+  const [asrStatus, setAsrStatus] = useState<AsrStatus>(() => recogniser.getStatus())
+  useEffect(() => recogniser.subscribe(setAsrStatus), [])
+  const setAsrMode = useCallback((mode: AsrMode) => {
+    writeAsrMode(mode)
+    setAsrModeState(mode)
+    const model = ASR_MODES.find((m) => m.id === mode)?.model
+    if (model) recogniser.load(model)
+  }, [])
+  // Leaving the room mid-sentence must close the microphone (D4).
+  useEffect(() => () => recogniser.cancel(), [])
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [talking, setTalking] = useState(false)
   const [traversing, setTraversing] = useState(false)
@@ -309,8 +342,13 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   }, [draft.status])
 
   const nameOf = useCallback(
-    (actorId: string) => doc.actors[actorId]?.displayName ?? 'Seseorang',
-    [doc.actors],
+    (actorId: string) => {
+      // "Anda" is a pronoun, not a name, so it is the one name that is translated.
+      const name = doc.actors[actorId]?.displayName
+      if (!name) return tr('Seseorang', 'Someone')
+      return actorId === SELF_ID ? tr(name, 'You') : name
+    },
+    [doc.actors, language],
   )
   const hueOf = useCallback((actorId: string) => doc.actors[actorId]?.hue ?? 0, [doc.actors])
 
@@ -489,6 +527,15 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const answeringRef = useRef(false)
   const stopTalkingRef = useRef<() => void>(() => {})
   const applyDraftRef = useRef<() => void>(() => {})
+  const discardDraftRef = useRef<() => void>(() => {})
+  const understandRef = useRef<
+    (text: string, answering: boolean, via?: 'voice' | 'keyboard') => Promise<void>
+  >(async () => {})
+  // The voice turn finishes after an await; it must read the room as it is then.
+  const treeRef = useRef(tree)
+  treeRef.current = tree
+  const focusRef = useRef(focusId)
+  focusRef.current = focusId
 
   const startTalking = useCallback(() => {
     if (talkingRef.current) {
@@ -509,6 +556,31 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     // in speak -> review -> apply needs a finger.
     const answering = draftRef.current.status === 'ready'
     answeringRef.current = answering
+
+    const model = ASR_MODES.find((m) => m.id === asrModeRef.current)?.model
+    if (model) {
+      if (answering) setDraft((d) => ({ ...d, transcript: '' }))
+      else setDraft({ ...emptyDraft(), status: 'listening', transcript: '' })
+      if (recogniser.getStatus().phase !== 'ready') {
+        recogniser.load(model)
+        announcer.announce(tr('Menyiapkan pengenalan suara di perangkat. Silakan mulai bicara.', 'Preparing on-device speech recognition. Go ahead and speak.'))
+      }
+      recogniser
+        .start((partial) => setDraft((d) => ({ ...d, transcript: partial })))
+        .catch((error: Error) => {
+          talkingRef.current = false
+          latchedRef.current = false
+          setTalkLatched(false)
+          setTalking(false)
+          store.updateSelf({ talking: false })
+          announcer.setSpeechActive(false)
+          if (!answering) setDraft(emptyDraft())
+          setLastError(error.message)
+          announcer.announce(error.message, 'assertive')
+        })
+      return
+    }
+
     const utterance = answering
       ? CONFIRM_UTTERANCE
       : UTTERANCES[utteranceIndex.current % UTTERANCES.length]
@@ -539,6 +611,23 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     announcer.setSpeechActive(false)
     if (streamTimer.current !== null) window.clearTimeout(streamTimer.current)
 
+    if (recogniser.listening) {
+      const answering = answeringRef.current
+      answeringRef.current = false
+      if (!answering) setDraft((d) => ({ ...d, status: 'thinking' }))
+      void (async () => {
+        const heard = await recogniser.stop()
+        if (!heard.text) {
+          if (!answering) setDraft(emptyDraft())
+          const message = heard.error ?? tr('Tidak ada kata yang terdengar.', 'No words were heard.')
+          announcer.announce(message, 'assertive')
+          return
+        }
+        await understandRef.current(heard.text, answering)
+      })()
+      return
+    }
+
     if (answeringRef.current) {
       answeringRef.current = false
       setDraft((d) => ({ ...d, transcript: CONFIRM_UTTERANCE.transcript }))
@@ -556,6 +645,43 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     // wait feel like nothing (section 10).
     void (async () => {
       const next = await buildDraft(utterance, store.getDoc(), tree, focusId, providerRef.current)
+      announceDraft(next)
+    })()
+  }, [store, announcer, focusId, tree])
+
+  /*
+    Words, from the microphone or the keyboard, into a proposal. One function
+    for both, so typing a sentence and saying it can never be understood
+    differently (rule 6).
+  */
+  const understand = async (text: string, answering: boolean, via: 'voice' | 'keyboard' = 'voice') => {
+    if (answering) {
+      const answer = readAnswer(text)
+      if (answer === 'yes') {
+        setDraft((d) => ({ ...d, transcript: text }))
+        announcer.announce(tr('Diterapkan.', 'Applied.'), 'assertive')
+        applyDraftRef.current()
+        return
+      }
+      if (answer === 'no') {
+        discardDraftRef.current()
+        return
+      }
+      // Neither yes nor no: a new instruction replaces the proposal.
+    }
+    setDraft({ ...emptyDraft(), status: 'thinking', transcript: text })
+    const next = await buildDraft(text, store.getDoc(), treeRef.current, focusRef.current, providerRef.current)
+    announceDraft({ ...next, via })
+  }
+  understandRef.current = understand
+  const submitText = useCallback((text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed || talkingRef.current) return
+    void understandRef.current(trimmed, draftRef.current.status === 'ready', 'keyboard')
+  }, [])
+
+  function announceDraft(next: Draft) {
+    {
       setDraft(next)
       audioBus.emit({ earcon: 'draftReady', force: true })
       if (next.operations.length > 0) {
@@ -563,16 +689,19 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
         // hear the reason for is a proposal you can only accept on faith.
         const why = next.intent === 'alat-diusulkan' ? ` ${next.reason}` : ''
         announcer.announce(
-          `Draf siap. ${next.operations.length} usulan menunggu persetujuan.${why}`,
+          tr(
+            `Draf siap. ${next.operations.length} usulan menunggu persetujuan.${why}`,
+            `Draft ready. ${next.operations.length} proposals waiting for approval.${why}`,
+          ),
           'assertive',
         )
       } else if (next.ambiguities.length > 0) {
         announcer.announce(next.ambiguities[0].question, 'assertive')
       } else {
-        announcer.announce('Ucapan tidak dikenali. Teksnya bisa disunting sebelum diterapkan.', 'assertive')
+        announcer.announce(tr('Ucapan tidak dikenali. Teksnya bisa disunting sebelum diterapkan.', 'Not recognised as a command. The text can be edited before applying.'), 'assertive')
       }
-    })()
-  }, [store, announcer, focusId, tree])
+    }
+  }
 
   /*
     Apply as a performance, not a dump.
@@ -630,7 +759,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
         if (op.extraCommands && op.extraCommands.length > 0) {
           const result = store.dispatchBatch([op.command, ...op.extraCommands], {
             actorId: SELF_ID,
-            inputPath: 'voice',
+            inputPath: draftRef.current.via ?? 'voice',
           })
           if (result.ok) {
             announcer.announce(`${op.preview} Diterapkan.`)
@@ -641,7 +770,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
             audioBus.emit({ earcon: 'blocked', force: true })
           }
         } else {
-          run(op.command, 'voice')
+          run(op.command, draftRef.current.via ?? 'voice')
         }
         setPerforming({ index: index + 1, ops })
       },
@@ -673,8 +802,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
 
   const discardDraft = useCallback(() => {
     setDraft((d) => ({ ...d, status: 'discarded' }))
-    announcer.announce('Draf dibatalkan. Kanvas tidak berubah.')
+    announcer.announce(tr('Draf dibatalkan. Kanvas tidak berubah.', 'Draft discarded. The canvas did not change.'))
   }, [announcer])
+  discardDraftRef.current = discardDraft
 
   // --- audio traversal ----------------------------------------------------
 
@@ -785,6 +915,10 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     provider,
     setProvider,
     providerState,
+    asrMode,
+    setAsrMode,
+    asrStatus,
+    submitText,
     view,
     setView,
     panelHidden,

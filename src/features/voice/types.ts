@@ -64,4 +64,6 @@ export interface Draft {
    * rather than described: "trust me" is not an accessibility feature.
    */
   context?: string
+  /** Which door the words came through, so attribution does not lie (D8). */
+  via?: 'voice' | 'keyboard'
 }
