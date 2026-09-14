@@ -22,6 +22,7 @@
  */
 
 import { useState } from 'react'
+import { QuestionCard } from './QuestionCard'
 import { useRoom } from '../../app/RoomContext'
 import { tr } from '../../i18n/lang'
 import { Icon } from '../../ui/icons'
@@ -41,7 +42,6 @@ export function VoiceDock() {
     applyDraft,
     discardDraft,
     setDraft,
-    run,
     traversing,
     toggleTraversal,
     traversalIndex,
@@ -180,32 +180,7 @@ export function VoiceDock() {
           )}
 
           {draft.ambiguities.map((amb) => (
-            <div className="proposal-ask" key={amb.id}>
-              <p className="proposal-q">
-                <Icon name="help" size={14} />
-                {amb.question}
-              </p>
-              <p className="proposal-sub">Sistem tidak menebak pada kanvas bersama.</p>
-              <div className="proposal-choices">
-                {amb.choices.map((choice) => (
-                  <button
-                    key={choice.id}
-                    type="button"
-                    className="btn btn-small"
-                    onClick={() => {
-                      run(choice.command, 'voice')
-                      setDraft({
-                        ...draft,
-                        ambiguities: draft.ambiguities.filter((a) => a.id !== amb.id),
-                      })
-                    }}
-                  >
-                    <Icon name="pointer" size={14} />
-                    {choice.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <QuestionCard key={amb.id} amb={amb} compact />
           ))}
 
           {draft.rawText && (

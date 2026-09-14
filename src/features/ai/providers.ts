@@ -31,14 +31,14 @@ export const PROVIDERS: ModelProvider[] = [
     id: 'rules',
     name: 'Pencocokan aturan',
     detail:
-      'Tanpa model sama sekali. Cepat, deterministik, dan jalan di kelas yang tidak punya jaringan maupun Ollama.',
+      'Cadangan tanpa model. Cepat dan jalan tanpa apa pun terpasang, tapi hanya mengerti kalimat berpola tetap.',
     dataPath: 'Tidak ada yang keluar dari perangkat.',
     status: 'active',
   },
   {
     id: 'ollama',
     name: 'Ollama di perangkat',
-    detail: 'Model kecil berjalan di mesin ini, dengan constrained decoding berskema JSON.',
+    detail: 'Bawaan. Model memahami maksud ucapan dan bertanya balik bila tidak jelas, dengan constrained decoding berskema JSON.',
     dataPath: 'Tidak ada yang keluar dari perangkat.',
     status: 'active',
   },

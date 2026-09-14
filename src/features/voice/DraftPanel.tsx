@@ -12,18 +12,19 @@
  */
 
 import { useState } from 'react'
+import { QuestionCard } from './QuestionCard'
 import { useRoom } from '../../app/RoomContext'
 import { bilingual, tr, useLang } from '../../i18n/lang'
 import { Icon } from '../../ui/icons'
 import { AGENTS, type Intent } from '../../core/agent/types'
 
 const INTENT_LABEL: Record<Intent, string> = bilingual(
-  { 'alat-diminta': 'Alat diminta langsung', 'alat-diusulkan': 'Alat diusulkan', susun: 'Isi biasa', ambigu: 'Perlu dipilih', 'tak-dikenali': 'Tidak dikenali' },
-  { 'alat-diminta': 'Tool asked for', 'alat-diusulkan': 'Tool suggested', susun: 'Ordinary content', ambigu: 'Needs a choice', 'tak-dikenali': 'Not recognised' },
+  { 'alat-diminta': 'Alat diminta langsung', 'alat-diusulkan': 'Alat diusulkan', susun: 'Isi biasa', ambigu: 'Perlu dipilih', 'tak-dikenali': 'Tidak dikenali', tanya: 'Perlu dijelaskan' },
+  { 'alat-diminta': 'Tool asked for', 'alat-diusulkan': 'Tool suggested', susun: 'Ordinary content', ambigu: 'Needs a choice', 'tak-dikenali': 'Not recognised', tanya: 'Needs clarifying' },
 )
 
 export function DraftPanel() {
-  const { draft, setDraft, applyDraft, discardDraft, run, talking, startTalking, stopTalking, submitText } =
+  const { draft, setDraft, applyDraft, discardDraft, talking, startTalking, stopTalking, submitText } =
     useRoom()
   const [typed, setTyped] = useState('')
   useLang()
@@ -165,31 +166,7 @@ export function DraftPanel() {
       )}
 
       {draft.ambiguities.map((amb) => (
-        <div className="ambiguity" key={amb.id}>
-          <p className="ambiguity-q">
-            <Icon name="help" size={16} />
-            {amb.question}
-          </p>
-          <p className="panel-note">
-            {tr('Sistem tidak menebak pada kanvas milik bersama. Pilih satu, atau batalkan.', 'The system does not guess on a shared canvas. Pick one, or cancel.')}
-          </p>
-          <div className="ambiguity-choices">
-            {amb.choices.map((choice) => (
-              <button
-                key={choice.id}
-                type="button"
-                className="btn"
-                onClick={() => {
-                  run(choice.command, 'voice')
-                  setDraft({ ...draft, ambiguities: draft.ambiguities.filter((a) => a.id !== amb.id) })
-                }}
-              >
-                <Icon name="pointer" size={15} />
-                {choice.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <QuestionCard key={amb.id} amb={amb} />
       ))}
 
       {draft.rawText && (

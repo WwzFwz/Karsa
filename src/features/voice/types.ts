@@ -43,7 +43,7 @@ export interface DraftOperation {
 export interface DraftAmbiguity {
   id: string
   question: string
-  choices: { id: string; label: string; command: Command }[]
+  choices: { id: string; label: string; commands: Command[]; targetId?: string }[]
 }
 
 export interface Draft {

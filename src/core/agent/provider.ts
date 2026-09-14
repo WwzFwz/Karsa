@@ -25,6 +25,11 @@ export interface PlanInput {
   doc: RoomDoc
   tree: TreeProjection
   focusId: NodeId | null
+  /**
+   * Set when this sentence answers a question the assistant just asked, so
+   * the model decides again with the question and the first sentence in view.
+   */
+  pending?: { question: string; transcript: string }
 }
 
 export interface PlanProvider {
@@ -44,9 +49,11 @@ export function readProvider(): ProviderId {
     const value = localStorage.getItem(KEY)
     if (value === 'ollama' || value === 'rules') return value
   } catch {
-    // Blocked storage. The rule matcher is the safe default anyway.
+    // Blocked storage; use the default.
   }
-  return 'rules'
+  // The model is the orchestrator (D70). Rules are the fallback when it is not
+  // running, and the reason says so.
+  return 'ollama'
 }
 
 export function writeProvider(id: ProviderId): void {

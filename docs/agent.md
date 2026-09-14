@@ -159,6 +159,11 @@ Perbaikannya dua, dan keduanya jadi aturan:
 | isi biasa | 11/11 | 11/11 |
 | **total** | **22/22** | **17/22** |
 
+Sesudah model jadi orchestrator satu panggilan (D70), Ollama pada 27 kasus: 24–25 lulus
+antar jalan (suhu 0 menstabilkan). Yang masih gagal: satu kalimat "mana yang
+duluan" dibaca sebagai isi biasa, dan satu kalimat retro kadang dijawab dengan
+pertanyaan tanpa menawarkan retro. Waktu 6–12 detik per kalimat.
+
 Angka di atas diambil pada 22 kasus pertama. Sesudah lima kasus berbahasa
 Inggris ditambahkan, pencocokan aturan lulus 27/27; Ollama belum diukur ulang.
 

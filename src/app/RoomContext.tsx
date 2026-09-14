@@ -55,6 +55,7 @@ import {
 } from '../features/voice/mockPipeline'
 import {
   ASR_MODES,
+  pickChoice,
   readAnswer,
   readAsrMode,
   recogniser,
@@ -132,6 +133,8 @@ interface RoomApi {
   asrStatus: AsrStatus
   /** A typed sentence, through exactly the same understanding as a spoken one. */
   submitText: (text: string) => void
+  /** Picks an option of a standing question. Picking is the confirmation. */
+  chooseOption: (ambiguityId: string, choiceId: string) => void
 
   view: ViewMode
   setView: (view: ViewMode) => void
@@ -323,7 +326,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       }
     }
     for (const amb of draft.ambiguities) {
-      for (const choice of amb.choices) ids.add(choice.id)
+      for (const choice of amb.choices) if (choice.targetId) ids.add(choice.targetId)
     }
     return ids
   }, [draft])
@@ -528,6 +531,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const stopTalkingRef = useRef<() => void>(() => {})
   const applyDraftRef = useRef<() => void>(() => {})
   const discardDraftRef = useRef<() => void>(() => {})
+  const chooseOptionRef = useRef<(ambiguityId: string, choiceId: string, via?: 'voice' | 'keyboard' | 'pointer') => void>(() => {})
   const understandRef = useRef<
     (text: string, answering: boolean, via?: 'voice' | 'keyboard') => Promise<void>
   >(async () => {})
@@ -655,7 +659,24 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     differently (rule 6).
   */
   const understand = async (text: string, answering: boolean, via: 'voice' | 'keyboard' = 'voice') => {
-    if (answering) {
+    const standing = draftRef.current
+    const question = answering ? standing.ambiguities[0] : undefined
+    let pending: { question: string; transcript: string } | undefined
+    if (question) {
+      // An answer to a question: a number or an option's words picks it; a
+      // no cancels; anything else is an explanation that goes back to the
+      // model together with the question (D71).
+      const picked = pickChoice(text, question.choices)
+      if (picked) {
+        chooseOptionRef.current(question.id, picked, via)
+        return
+      }
+      if (readAnswer(text) === 'no') {
+        discardDraftRef.current()
+        return
+      }
+      pending = { question: question.question, transcript: standing.transcript }
+    } else if (answering) {
       const answer = readAnswer(text)
       if (answer === 'yes') {
         setDraft((d) => ({ ...d, transcript: text }))
@@ -669,8 +690,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       }
       // Neither yes nor no: a new instruction replaces the proposal.
     }
-    setDraft({ ...emptyDraft(), status: 'thinking', transcript: text })
-    const next = await buildDraft(text, store.getDoc(), treeRef.current, focusRef.current, providerRef.current)
+    setDraft({ ...emptyDraft(), status: 'thinking', transcript: pending ? `${pending.transcript} → ${text}` : text })
+    const next = await buildDraft(text, store.getDoc(), treeRef.current, focusRef.current, providerRef.current, pending)
+    if (pending) next.transcript = `${pending.transcript} → ${text}`
     announceDraft({ ...next, via })
   }
   understandRef.current = understand
@@ -679,6 +701,25 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     if (!trimmed || talkingRef.current) return
     void understandRef.current(trimmed, draftRef.current.status === 'ready', 'keyboard')
   }, [])
+
+  const chooseOption = (ambiguityId: string, choiceId: string, via: 'voice' | 'keyboard' | 'pointer' = 'pointer') => {
+    const amb = draftRef.current.ambiguities.find((a) => a.id === ambiguityId)
+    const choice = amb?.choices.find((c) => c.id === choiceId)
+    if (!amb || !choice) return
+    const result = store.dispatchBatch(choice.commands, { actorId: SELF_ID, inputPath: via })
+    if (!result.ok) {
+      setLastError(result.violation.message)
+      announcer.announce(result.violation.message, 'assertive')
+      return
+    }
+    audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(SELF_ID) })
+    announcer.announce(tr(`Dipilih: ${choice.label}. Diterapkan.`, `Chosen: ${choice.label}. Applied.`), 'assertive')
+    setDraft((d) => {
+      const rest = d.ambiguities.filter((a) => a.id !== ambiguityId)
+      return { ...d, ambiguities: rest, status: rest.length === 0 && d.operations.length === 0 ? 'applied' : d.status }
+    })
+  }
+  chooseOptionRef.current = chooseOption
 
   function announceDraft(next: Draft) {
     {
@@ -696,7 +737,16 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
           'assertive',
         )
       } else if (next.ambiguities.length > 0) {
-        announcer.announce(next.ambiguities[0].question, 'assertive')
+        // The options are read out with their numbers, so they can be answered
+        // without seeing where the buttons are.
+        const amb = next.ambiguities[0]
+        const options = amb.choices.map((c, i) => `${i + 1}, ${c.label}.`).join(' ')
+        announcer.announce(
+          amb.choices.length > 0
+            ? tr(`${amb.question} ${options} Sebut nomornya, atau jelaskan.`, `${amb.question} ${options} Say the number, or explain.`)
+            : tr(`${amb.question} Jelaskan dengan suara atau ketik.`, `${amb.question} Explain by voice or typing.`),
+          'assertive',
+        )
       } else {
         announcer.announce(tr('Ucapan tidak dikenali. Teksnya bisa disunting sebelum diterapkan.', 'Not recognised as a command. The text can be edited before applying.'), 'assertive')
       }
@@ -790,7 +840,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       const first = draft.operations.find((op) => op.accepted)
       if (first) return commandTarget(first.command)
       const amb = draft.ambiguities[0]
-      if (amb) return amb.choices[0]?.id ?? null
+      if (amb) return amb.choices[0]?.targetId ?? focusId
     }
     return focusId
   }, [performing, draft, focusId])
@@ -919,6 +969,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     setAsrMode,
     asrStatus,
     submitText,
+    chooseOption,
     view,
     setView,
     panelHidden,

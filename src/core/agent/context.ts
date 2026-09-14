@@ -27,6 +27,8 @@ export interface AgentContext {
   /** Indented outline, one line per node. */
   outline: string[]
   focus: { id: NodeId; title: string; kind: string } | null
+  /** Titles touched most recently, newest first: what "yang tadi" points at. */
+  recent: string[]
   /** Names the model may answer with, and the fields each one needs. */
   tools: { id: string; label: string; fields: string[] }[]
   templates: { id: string; label: string }[]
@@ -48,6 +50,14 @@ export function buildContext(
 
   const focusNode = focusId ? doc.nodes[focusId] : null
 
+  const recent: string[] = []
+  for (let i = doc.events.length - 1; i >= 0 && recent.length < 3; i -= 1) {
+    const e = doc.events[i]
+    if (e.type === 'undo') continue
+    const title = e.payload.title
+    if (title && !recent.includes(title)) recent.push(title)
+  }
+
   return {
     roomTitle: doc.room.title,
     shape: doc.room.shape,
@@ -55,6 +65,7 @@ export function buildContext(
     focus: focusNode
       ? { id: focusNode.id, title: focusNode.title, kind: KIND_LABEL[focusNode.kind] }
       : null,
+    recent,
     // Per tool, its own fields -- not one shared schema (D41). A small exact
     // schema is what makes constrained decoding land.
     tools: TOOL_LIST.map((tool) => ({
@@ -72,6 +83,7 @@ export function renderContext(context: AgentContext): string {
     `ruang: ${context.roomTitle}`,
     `bentuk: ${context.shape}`,
     context.focus ? `fokus: ${context.focus.kind} "${context.focus.title}"` : 'fokus: (tidak ada)',
+    `baru saja: ${context.recent.length ? context.recent.map((t) => `"${t}"`).join(', ') : '(belum ada)'}`,
     '',
     'outline:',
     ...context.outline,

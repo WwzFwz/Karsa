@@ -43,6 +43,8 @@ risiko yang harus benar sejak awal.
 | Perapi judul | Dijalankan, judul panjang jadi judul pendek + catatan (D67) |
 | Perintah diketik | Lewat pemahaman yang sama dengan ucapan (D68) |
 | Dua bahasa | Keluaran dan ucapan, Indonesia atau Inggris (D69) |
+| Model sebagai orchestrator | Satu panggilan Ollama untuk alat, susun, tanya; aturan jadi rem dan cadangan (D70) |
+| Pertanyaan balik | Pilihan bernomor + jawaban bebas lewat suara/ketik, di kursor, dock, dan panel (D71) |
 | Undo snapshot + narasi + earcon | Log tetap tambah-saja (D21) |
 | Outline ARIA tree sungguhan | Bukan daftar div |
 | Telusur audio | Satu nada per simpul, tinggi = kedalaman |

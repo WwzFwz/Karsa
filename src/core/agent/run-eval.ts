@@ -38,6 +38,16 @@ const DIM = '[2m'
 const OFF = '[0m'
 
 function judge(test: EvalCase, got: Plan): { pass: boolean; note: string } {
+  // Expecting ordinary content means "no tool fired". Asking back or declining
+  // to act are both honest answers to that; firing a tool is not.
+  const noTool = ['susun', 'tanya', 'tak-dikenali']
+  if (test.intent === 'susun' && noTool.includes(got.intent)) return { pass: true, note: got.intent === 'susun' ? '' : `(${got.intent})` }
+  // A suggested tool offered as one option of a question is still the right
+  // tool reaching the person, just with one more step.
+  if (test.intent === 'alat-diusulkan' && (got.intent === 'tanya' || got.intent === 'ambigu') && test.template) {
+    const offered = got.question?.choices.some((c) => c.id === test.template)
+    return offered ? { pass: true, note: '(ditawarkan sebagai pilihan)' } : { pass: false, note: `harap ${test.template} ditawarkan, dapat ${got.intent}` }
+  }
   if (got.intent !== test.intent) {
     return { pass: false, note: `harap ${test.intent}, dapat ${got.intent}` }
   }

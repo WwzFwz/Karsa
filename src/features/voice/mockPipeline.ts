@@ -21,7 +21,6 @@ import type { NodeId, RoomDoc } from '../../core/model/types'
 import type { Draft, DraftAmbiguity, DraftOperation } from './types'
 import { structure, type StructureInput } from '../../core/agent/structure'
 import { tr } from '../../i18n/lang'
-import { structureWithOllama } from '../../core/agent/ollama'
 import type { PlanStep } from '../../core/agent/types'
 
 export interface Utterance {
@@ -123,7 +122,8 @@ export const UTTERANCES: Utterance[] = [
             choices: choices.map((id) => ({
               id,
               label: `${titleOf(doc, id)} — sedang ditunjuk`,
-              command: { type: 'moveNode', id, parentId: target ?? focusId } as Command,
+              commands: [{ type: 'moveNode', id, parentId: target ?? focusId } as Command],
+              targetId: id,
             })),
           },
         ],
@@ -197,9 +197,11 @@ export async function buildDraft(
   tree: TreeProjection,
   focusId: NodeId | null,
   provider: ProviderId,
+  pending?: { question: string; transcript: string },
 ): Promise<Draft> {
   const transcript = typeof utterance === 'string' ? utterance : utterance.transcript
   const routed = await planWith(provider, {
+    pending,
     transcript,
     doc,
     tree,
@@ -207,7 +209,7 @@ export async function buildDraft(
   })
   const context = renderContext(buildContext(doc, tree, focusId))
 
-  if (routed.steps.length > 0 || routed.question) {
+  if (routed.steps.length > 0 || routed.question || (routed.intent === 'tak-dikenali' && routed.rawText)) {
     return {
       id: newDraftId(),
       status: 'ready',
@@ -232,7 +234,8 @@ export async function buildDraft(
               choices: routed.question.choices.map((choice) => ({
                 id: choice.id,
                 label: choice.label,
-                command: choice.commands[0],
+                commands: choice.commands,
+                targetId: choice.targetId,
               })),
             },
           ]
@@ -269,53 +272,27 @@ export async function buildDraft(
 }
 
 /**
- * The structure stage with the chosen provider. Rules are the floor: a model
- * that fails, or reads nothing, hands over to the rule reader and the reason
- * says so, because a demo that looks like the model worked when it did not is
- * the easiest lie to tell (D48).
+ * The rule reader, for when the rules are the provider or the model did not
+ * answer. With the model running, understanding already happened in one call
+ * (D70) and this is not reached for ordinary content.
  */
 async function structureWith(
   provider: ProviderId,
   input: StructureInput,
 ): Promise<{ operations: Omit<DraftOperation, 'id' | 'accepted'>[]; rawText?: string; reason?: string }> {
-  const toOps = (steps: PlanStep[]) =>
-    steps.map((step) => ({
+  const fromRules = structure(input)
+  return {
+    operations: fromRules.steps.map((step: PlanStep) => ({
       command: step.commands[0],
       extraCommands: step.commands.slice(1),
       preview: step.preview,
       confidence: step.confidence,
       agent: step.agent,
-    }))
-  if (provider === 'ollama') {
-    try {
-      const fromModel = await structureWithOllama(input)
-      if (fromModel.steps.length > 0) {
-        return { operations: toOps(fromModel.steps), reason: tr('Isi biasa, disusun oleh model lokal.', 'Ordinary content, structured by the local model.') }
-      }
-      const fromRules = structure(input)
-      return {
-        operations: toOps(fromRules.steps),
-        rawText: fromRules.rawText,
-        reason: fromRules.steps.length > 0
-          ? tr('Model tidak menemukan operasi; pembaca aturan menemukannya.', 'The model found no operation; the rule reader did.')
-          : tr('Model maupun pembaca aturan tidak menemukan perintah di ucapan ini.', 'Neither the model nor the rule reader found a command here.'),
-      }
-    } catch (error) {
-      const fromRules = structure(input)
-      return {
-        operations: toOps(fromRules.steps),
-        rawText: fromRules.rawText,
-        reason: tr(
-          `Model lokal tidak menjawab (${error instanceof Error ? error.message : 'gagal'}), jadi ini hasil pembaca aturan.`,
-          `The local model did not answer (${error instanceof Error ? error.message : 'failed'}), so this comes from the rule reader.`,
-        ),
-      }
-    }
-  }
-  const fromRules = structure(input)
-  return {
-    operations: toOps(fromRules.steps),
+    })),
     rawText: fromRules.rawText,
-    reason: fromRules.steps.length > 0 ? tr('Isi biasa, dibaca oleh pencocokan aturan.', 'Ordinary content, read by the rule matcher.') : undefined,
+    reason:
+      provider === 'rules' && fromRules.steps.length > 0
+        ? tr('Isi biasa, dibaca oleh pencocokan aturan.', 'Ordinary content, read by the rule matcher.')
+        : undefined,
   }
 }

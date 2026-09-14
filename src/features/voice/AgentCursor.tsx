@@ -19,6 +19,7 @@
  */
 
 import { useRoom } from '../../app/RoomContext'
+import { QuestionCard } from './QuestionCard'
 import { Icon } from '../../ui/icons'
 import type { Point } from '../../core/shape/layout'
 
@@ -40,7 +41,7 @@ export function AgentCursor({
   flipX?: boolean
   flipY?: boolean
 }) {
-  const { draft, thinkingSeconds, applyDraft, discardDraft, setDraft, run, agentAction } = useRoom()
+  const { draft, thinkingSeconds, applyDraft, discardDraft, setDraft, agentAction } = useRoom()
 
   const thinking = draft.status === 'thinking' || draft.status === 'listening'
   const ready = draft.status === 'ready'
@@ -129,30 +130,7 @@ export function AgentCursor({
           )}
 
           {draft.ambiguities.map((amb) => (
-            <div className="agent-ask" key={amb.id}>
-              <p className="agent-ask-q">
-                <Icon name="help" size={13} />
-                {amb.question}
-              </p>
-              <div className="agent-ask-choices">
-                {amb.choices.map((choice) => (
-                  <button
-                    key={choice.id}
-                    type="button"
-                    className="btn btn-small"
-                    onClick={() => {
-                      run(choice.command, 'voice')
-                      setDraft({
-                        ...draft,
-                        ambiguities: draft.ambiguities.filter((a) => a.id !== amb.id),
-                      })
-                    }}
-                  >
-                    {choice.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <QuestionCard key={amb.id} amb={amb} compact />
           ))}
 
           {draft.rawText && (

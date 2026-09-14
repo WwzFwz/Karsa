@@ -15,6 +15,7 @@
  */
 
 import type { Command } from '../commands/types'
+import type { NodeId } from '../model/types'
 import { localise } from '../../i18n/lang'
 
 export type AgentId = 'penyusun' | 'pemilih' | 'perapi'
@@ -56,6 +57,8 @@ export type Intent =
   | 'ambigu'
   /** Nothing usable. Show the words, do not invent an operation. */
   | 'tak-dikenali'
+  /** Unclear. The assistant asks, with options, and waits for an answer. */
+  | 'tanya'
 
 export interface PlanStep {
   agent: AgentId
@@ -71,7 +74,8 @@ export interface PlanStep {
 
 export interface PlanQuestion {
   question: string
-  choices: { id: string; label: string; commands: Command[] }[]
+  /** Each option carries its own commands; picking one is the confirmation. Empty means answer in words. */
+  choices: { id: string; label: string; commands: Command[]; targetId?: NodeId }[]
 }
 
 export interface Plan {

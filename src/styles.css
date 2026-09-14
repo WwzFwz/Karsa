@@ -3107,3 +3107,14 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .typed-command { display: grid; gap: 6px; margin-block: 10px; }
 .typed-row { display: flex; gap: 8px; min-width: 0; }
 .typed-row .text-input { flex: 1; min-width: 0; }
+
+/* The assistant asking back: numbered options, then room to answer in words. */
+.question-card { display: grid; gap: 8px; padding: 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent, #6b5cff) 7%, transparent); border: 1px solid color-mix(in srgb, var(--accent, #6b5cff) 22%, transparent); min-width: 0; }
+.question-card.is-compact { padding: 8px; gap: 6px; }
+.question-q { display: flex; gap: 6px; align-items: flex-start; margin: 0; font-weight: 600; }
+.question-choices { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.question-choice { width: 100%; justify-content: flex-start; text-align: left; white-space: normal; gap: 8px; }
+.question-num { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border-radius: 999px; font-size: 11px; font-weight: 700; background: color-mix(in srgb, currentColor 12%, transparent); flex: none; }
+.question-free { display: flex; gap: 6px; min-width: 0; }
+.question-free .text-input { flex: 1; min-width: 0; }
+.question-hint { margin: 0; font-size: 12px; opacity: 0.75; }
