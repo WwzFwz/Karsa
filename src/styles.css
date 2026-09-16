@@ -3118,3 +3118,13 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .question-free { display: flex; gap: 6px; min-width: 0; }
 .question-free .text-input { flex: 1; min-width: 0; }
 .question-hint { margin: 0; font-size: 12px; opacity: 0.75; }
+
+/* Which language the microphone listens for, next to the talk switch. */
+.dock-lang { display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer; }
+.dock-lang:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+
+/* Where the local model answers. Editable without a rebuild. */
+.endpoint-form { display: grid; gap: 6px; margin-top: 12px; }
+.endpoint-row { display: flex; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.endpoint-row .text-input { flex: 1 1 200px; min-width: 0; }
+.endpoint-row .endpoint-model { flex: 0 1 140px; }

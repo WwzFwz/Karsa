@@ -34,9 +34,16 @@ import type { Command } from '../commands/types'
 import type { NodeId, NodeKind, RelationKind } from '../model/types'
 import { KIND_LABEL, RELATION_LABEL } from '../../ui/labels'
 import { lang, tr } from '../../i18n/lang'
+import { isMixedContent, ollamaModel, ollamaUrl } from '../../config'
 
-const ENDPOINT = 'http://localhost:11434'
-const MODEL = 'qwen2.5:7b'
+/*
+  Address and model name are configuration, not constants. A deployed copy is
+  served from a server while the model stays on each listener's own machine, so
+  both must be changeable without a rebuild: .env at build time, Settings per
+  device (src/config.ts).
+*/
+const ENDPOINT = () => ollamaUrl()
+const MODEL = () => ollamaModel()
 
 const KIND_BY_WORD: Record<string, NodeKind> = {
   gagasan: 'idea',
@@ -161,20 +168,55 @@ function systemPrompt(): string {
 }
 
 export async function probeOllama(): Promise<{ ready: boolean; detail: string }> {
+  const url = ollamaUrl()
+  const model = ollamaModel()
+  if (isMixedContent(url)) {
+    return {
+      ready: false,
+      detail: tr(
+        `Halaman ini https, tapi ${url} http. Peramban memblokirnya kecuali alamatnya localhost.`,
+        `This page is https but ${url} is http. Browsers block that unless the address is localhost.`,
+      ),
+    }
+  }
   try {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 1500)
-    const response = await fetch(`${ENDPOINT}/api/tags`, { signal: controller.signal })
+    const timer = setTimeout(() => controller.abort(), 2000)
+    const response = await fetch(`${url}/api/tags`, { signal: controller.signal })
     clearTimeout(timer)
-    if (!response.ok) return { ready: false, detail: `Ollama menjawab ${response.status}.` }
-    const body = (await response.json()) as { models?: { name: string }[] }
-    const names = (body.models ?? []).map((model) => model.name)
-    if (!names.includes(MODEL)) {
-      return { ready: false, detail: tr(`Ollama jalan, tapi ${MODEL} belum diunduh.`, `Ollama is running, but ${MODEL} is not pulled.`) }
+    if (response.status === 403) {
+      return {
+        ready: false,
+        detail: tr(
+          `Ollama menolak asal halaman ini. Jalankan ulang dengan OLLAMA_ORIGINS=${globalThis.location?.origin ?? '*'}`,
+          `Ollama refused this page's origin. Restart it with OLLAMA_ORIGINS=${globalThis.location?.origin ?? '*'}`,
+        ),
+      }
     }
-    return { ready: true, detail: tr(`${MODEL}, di perangkat ini.`, `${MODEL}, on this device.`) }
-  } catch {
-    return { ready: false, detail: tr('Ollama tidak terjangkau di localhost:11434.', 'Ollama is not reachable at localhost:11434.') }
+    if (!response.ok) return { ready: false, detail: `Ollama ${response.status}.` }
+    const body = (await response.json()) as { models?: { name: string }[] }
+    const names = (body.models ?? []).map((m) => m.name)
+    if (!names.includes(model)) {
+      return {
+        ready: false,
+        detail: tr(
+          `Ollama jalan, tapi ${model} belum diunduh. Jalankan: ollama pull ${model}`,
+          `Ollama is running, but ${model} is not pulled. Run: ollama pull ${model}`,
+        ),
+      }
+    }
+    return { ready: true, detail: tr(`${model}, lewat ${url}.`, `${model}, via ${url}.`) }
+  } catch (error) {
+    const aborted = error instanceof DOMException && error.name === 'AbortError'
+    return {
+      ready: false,
+      detail: aborted
+        ? tr(`${url} tidak menjawab dalam 2 detik.`, `${url} did not answer within 2 seconds.`)
+        : tr(
+            `${url} tidak terjangkau. Pastikan Ollama jalan, dan bila halaman ini dari server, izinkan asalnya lewat OLLAMA_ORIGINS.`,
+            `${url} is unreachable. Make sure Ollama is running, and if this page came from a server, allow its origin with OLLAMA_ORIGINS.`,
+          ),
+    }
   }
 }
 
@@ -348,11 +390,11 @@ export async function planWithOllama(input: PlanInput): Promise<Plan> {
     ? `Ucapan awal: "${input.pending.transcript}"\nKamu bertanya: "${input.pending.question}"\nJawaban pengguna: "${input.transcript}"\nPutuskan lagi berdasarkan jawaban itu.`
     : `Ucapan: "${input.transcript}"`
 
-  const response = await fetch(`${ENDPOINT}/api/chat`, {
+  const response = await fetch(`${ENDPOINT()}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL,
+      model: MODEL(),
       stream: false,
       // Keep the model loaded between sentences in a meeting; reloading it is
       // most of the wait on a cold call.

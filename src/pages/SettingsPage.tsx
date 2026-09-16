@@ -11,9 +11,10 @@
 import { useRoom } from '../app/RoomContext'
 import { useTheme, type ThemeChoice } from '../ui/theme'
 import { PROVIDERS, SELECTABLE } from '../features/ai/providers'
-import { ASR_MODES, readSpeechLang, writeSpeechLang, type SpeechLang } from '../features/voice/speech'
-import { setLang, tr, useLang } from '../i18n/lang'
+import { ASR_MODES } from '../features/voice/speech'
+import { ollamaModel, ollamaUrl, setOllamaModel, setOllamaUrl } from '../config'
 import { useState } from 'react'
+import { setLang, tr, useLang } from '../i18n/lang'
 import { MODE_HINT, MODE_LABEL } from '../ui/labels'
 import { Icon } from '../ui/icons'
 import type { SoundProfile } from '../audio/earcons'
@@ -35,7 +36,9 @@ export function SettingsPage() {
   const { mode, setMode, soundProfile, setSoundProfile } = room
   const theme = useTheme()
   const language = useLang()
-  const [speechLang, setSpeechLang] = useState<SpeechLang>(readSpeechLang)
+  const { speechLang, setSpeechLang } = room
+  const [endpoint, setEndpoint] = useState(ollamaUrl)
+  const [modelName, setModelName] = useState(ollamaModel)
 
   return (
     <div className="page page-settings">
@@ -89,10 +92,7 @@ export function SettingsPage() {
                 role="radio"
                 aria-checked={speechLang === l}
                 className={`option ${speechLang === l ? 'is-on' : ''}`}
-                onClick={() => {
-                  writeSpeechLang(l)
-                  setSpeechLang(l)
-                }}
+                onClick={() => setSpeechLang(l)}
               >
                 <span>
                   <strong>
@@ -187,6 +187,54 @@ export function SettingsPage() {
               )
             })}
           </ul>
+
+          {/*
+            The address is editable because a deployed copy is served from a
+            server while the model stays on each listener's own machine. Nothing
+            here is rebuilt to change it; .env only sets what it starts as.
+          */}
+          {room.provider === 'ollama' && (
+            <form
+              className="endpoint-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                setOllamaUrl(endpoint)
+                setOllamaModel(modelName)
+                room.recheckProvider()
+              }}
+            >
+              <label className="field-label" htmlFor="ollama-url">
+                {tr('Alamat Ollama di perangkat ini', 'Ollama address on this device')}
+              </label>
+              <div className="endpoint-row">
+                <input
+                  id="ollama-url"
+                  className="text-input"
+                  value={endpoint}
+                  onChange={(e) => setEndpoint(e.target.value)}
+                  placeholder="http://localhost:11434"
+                  spellCheck={false}
+                />
+                <input
+                  className="text-input endpoint-model"
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  placeholder="qwen2.5:7b"
+                  spellCheck={false}
+                  aria-label={tr('Nama model', 'Model name')}
+                />
+                <button type="submit" className="btn">
+                  {tr('Simpan & periksa', 'Save & check')}
+                </button>
+              </div>
+              <p className="field-help">
+                {tr(
+                  'Aplikasi boleh disajikan dari server, modelnya tetap di mesin Anda. Kalau halaman ini datang dari server, jalankan Ollama dengan OLLAMA_ORIGINS berisi alamat halaman ini.',
+                  'The app may be served from a server while the model stays on your machine. If this page came from a server, run Ollama with OLLAMA_ORIGINS set to this page origin.',
+                )}
+              </p>
+            </form>
+          )}
 
           <p className="panel-note" style={{ marginTop: 12, marginBottom: 0 }}>
             Audio tidak pernah dikirim ke penyedia mana pun, termasuk yang di awan. Yang berpindah

@@ -56,12 +56,15 @@ import {
 import {
   ASR_MODES,
   pickChoice,
+  readSpeechLang,
+  writeSpeechLang,
   readAnswer,
   readAsrMode,
   recogniser,
   writeAsrMode,
   type AsrMode,
   type AsrStatus,
+  type SpeechLang,
 } from '../features/voice/speech'
 
 /*
@@ -126,11 +129,16 @@ interface RoomApi {
   provider: ProviderId
   setProvider: (id: ProviderId) => void
   providerState: { ready: boolean; detail: string }
+  /** Re-runs the check after the address or model name is changed. */
+  recheckProvider: () => void
 
   /** Who turns sound into words. Whisper on this device, or canned lines for a demo. */
   asrMode: AsrMode
   setAsrMode: (mode: AsrMode) => void
   asrStatus: AsrStatus
+  /** Which language the recogniser listens for. Shared by the dock and settings. */
+  speechLang: SpeechLang
+  setSpeechLang: (value: SpeechLang) => void
   /** A typed sentence, through exactly the same understanding as a spoken one. */
   submitText: (text: string) => void
   /** Picks an option of a standing question. Picking is the confirmation. */
@@ -251,20 +259,20 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const providerRef = useRef<ProviderId>(provider)
   providerRef.current = provider
 
-  useEffect(() => {
-    let alive = true
-    if (provider !== 'ollama') {
-      setProbe({ ready: true, detail: 'Pencocokan aturan, tanpa model.' })
+  const recheckProvider = useCallback(() => {
+    if (providerRef.current !== 'ollama') {
+      setProbe({ ready: true, detail: tr('Pencocokan aturan, tanpa model.', 'Rule matching, no model.') })
       return
     }
-    setProbe({ ready: false, detail: 'Memeriksa Ollama...' })
-    void probeOllama().then((result) => {
-      if (alive) setProbe(result)
-    })
-    return () => {
-      alive = false
-    }
-  }, [provider])
+    setProbe({ ready: false, detail: tr('Memeriksa Ollama...', 'Checking Ollama...') })
+    void probeOllama().then(setProbe)
+  }, [])
+
+  // Re-checked on demand too: the address can be changed from Settings without
+  // a rebuild, and a check that only runs at startup would report the old one.
+  useEffect(() => {
+    recheckProvider()
+  }, [provider, recheckProvider])
 
   const setProvider = useCallback((id: ProviderId) => {
     writeProvider(id)
@@ -275,6 +283,11 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   const asrModeRef = useRef(asrMode)
   asrModeRef.current = asrMode
   const [asrStatus, setAsrStatus] = useState<AsrStatus>(() => recogniser.getStatus())
+  const [speechLang, setSpeechLangState] = useState<SpeechLang>(readSpeechLang)
+  const setSpeechLang = useCallback((value: SpeechLang) => {
+    writeSpeechLang(value)
+    setSpeechLangState(value)
+  }, [])
   useEffect(() => recogniser.subscribe(setAsrStatus), [])
   const setAsrMode = useCallback((mode: AsrMode) => {
     writeAsrMode(mode)
@@ -965,9 +978,12 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     provider,
     setProvider,
     providerState,
+    recheckProvider,
     asrMode,
     setAsrMode,
     asrStatus,
+    speechLang,
+    setSpeechLang,
     submitText,
     chooseOption,
     view,

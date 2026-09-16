@@ -25,6 +25,8 @@ import { useState } from 'react'
 import { QuestionCard } from './QuestionCard'
 import { useRoom } from '../../app/RoomContext'
 import { tr } from '../../i18n/lang'
+import { SPEECH_LANG_CYCLE, SPEECH_LANG_SHORT } from './speech'
+import { useAnnouncer } from '../../a11y/Announcer'
 import { Icon } from '../../ui/icons'
 
 function pace(seconds: number): { label: string; tone: string } {
@@ -58,6 +60,7 @@ export function VoiceDock() {
     linkingFrom,
   } = useRoom()
   const room = useRoom()
+  const announcer = useAnnouncer()
 
   // Folded away by choice, not by state: somebody who trusts the capture
   // should not have to keep reading it.
@@ -225,6 +228,41 @@ export function VoiceDock() {
         </div>
 
         <span className="dock-sep" aria-hidden="true" />
+
+        {/*
+          Which language the microphone listens for, one press away.
+
+          It sits next to Talk rather than in Settings because the wrong answer
+          is discovered in the middle of a sentence, and whisper heard as the
+          wrong language does not come back slightly wrong -- it comes back as
+          a different sentence entirely.
+        */}
+        {room.asrMode !== 'contoh' && (
+          <button
+            type="button"
+            className="dock-lang"
+            onClick={() => {
+              const at = SPEECH_LANG_CYCLE.indexOf(room.speechLang)
+              const next = SPEECH_LANG_CYCLE[(at + 1) % SPEECH_LANG_CYCLE.length]
+              room.setSpeechLang(next)
+              announcer.announce(
+                next === 'auto'
+                  ? tr('Bahasa ucapan: deteksi otomatis.', 'Speech language: auto detect.')
+                  : next === 'id'
+                    ? tr('Bahasa ucapan: Bahasa Indonesia.', 'Speech language: Indonesian.')
+                    : tr('Bahasa ucapan: English.', 'Speech language: English.'),
+              )
+            }}
+            title={tr('Bahasa yang didengarkan mikrofon', 'The language the microphone listens for')}
+            aria-label={tr(
+              `Bahasa ucapan: ${SPEECH_LANG_SHORT[room.speechLang]}. Ketuk untuk mengganti.`,
+              `Speech language: ${SPEECH_LANG_SHORT[room.speechLang]}. Tap to change.`,
+            )}
+          >
+            <Icon name="message" size={13} />
+            {SPEECH_LANG_SHORT[room.speechLang]}
+          </button>
+        )}
 
         {/* Equal size, side by side. One is how a person who cannot use their
             hands contributes; the other is how a person who cannot see follows. */}

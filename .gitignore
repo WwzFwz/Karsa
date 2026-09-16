@@ -35,3 +35,7 @@ coverage/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# local configuration
+.env
+.env.local

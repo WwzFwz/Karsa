@@ -370,6 +370,33 @@ itu ukuran yang dipakai untuk menilai apakah rancangan ini benar.
 
 ---
 
+## 7b. Konfigurasi: satu kode, banyak pemasangan
+
+Nilai yang berbeda antar pemasangan tidak pernah jadi konstanta di dalam kode
+(D72). Semuanya lewat `src/config.ts`, yang membaca dua lapis:
+
+| Lapis | Siapa yang mengubah | Contoh |
+| ----- | ------------------- | ------ |
+| `.env` (`VITE_*`) saat membangun | institusi yang memasang sendiri | `VITE_OLLAMA_URL`, `VITE_OLLAMA_MODEL`, `VITE_ASR_MODEL` |
+| Halaman Pengaturan, per perangkat | satu peserta rapat | alamat dan nama model Ollama miliknya |
+
+Lapis kedua yang membuat **aplikasi ter-deploy tetap memakai model lokal**:
+berkasnya disajikan server, tetapi setiap pendengar memanggil Ollama di
+mesinnya sendiri. Contoh nilai ada di `.env.example`.
+
+Tiga hal yang harus benar supaya pola itu jalan di peramban:
+
+1. **Alamat lokal.** `http://localhost` dianggap asal tepercaya, jadi halaman
+   https boleh memanggilnya. Alamat IP mesin lain di jaringan tidak.
+2. **Asal halaman diizinkan.** Ollama menolak asal yang tidak dikenal; jalankan
+   dengan `OLLAMA_ORIGINS=https://alamat-halaman`.
+3. **Modelnya sudah diunduh** di mesin itu: `ollama pull qwen2.5:7b`.
+
+Pemeriksaan koneksi di halaman Pengaturan menyebut ketiganya secara terpisah,
+karena "tidak terjangkau" adalah tiga masalah dengan tiga perbaikan berbeda.
+
+---
+
 ## 8. Struktur folder
 
 ```

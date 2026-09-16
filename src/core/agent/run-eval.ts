@@ -12,6 +12,7 @@
 
 import { plan } from './orchestrator'
 import { planWithOllama } from './ollama'
+import { ollamaModel } from '../../config'
 import { CASES, type EvalCase } from './cases'
 import { buildSeedDoc } from '../../store/seed/room'
 import { projectTree } from '../tree/project'
@@ -110,7 +111,7 @@ function report(label: string, results: Result[]): number {
 
 const useOllama = process.argv.includes('--ollama')
 const results = await run(useOllama)
-const passed = report(useOllama ? 'Ollama (qwen2.5:7b)' : 'Pencocokan aturan', results)
+const passed = report(useOllama ? `Ollama (${ollamaModel()})` : 'Pencocokan aturan', results)
 
 console.log('')
 if (passed < results.length) {

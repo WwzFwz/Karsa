@@ -12,7 +12,10 @@
  * (section 8).
  */
 
-export type AsrModelId = 'onnx-community/whisper-base' | 'onnx-community/whisper-small'
+import { lang } from '../../i18n/lang'
+import { CONFIG } from '../../config'
+
+export type AsrModelId = string
 export type AsrMode = 'whisper-base' | 'whisper-small' | 'contoh'
 
 export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: AsrModelId }[] = [
@@ -20,13 +23,13 @@ export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: As
     id: 'whisper-base',
     label: 'Whisper base, di perangkat',
     detail: 'Sekitar 80 MB, diunduh sekali lalu disimpan peramban. Cepat, cukup untuk kalimat pendek.',
-    model: 'onnx-community/whisper-base',
+    model: CONFIG.asrModel,
   },
   {
     id: 'whisper-small',
     label: 'Whisper small, di perangkat',
     detail: 'Sekitar 250 MB. Lebih teliti untuk Bahasa Indonesia, lebih lambat tanpa WebGPU.',
-    model: 'onnx-community/whisper-small',
+    model: CONFIG.asrModelAccurate,
   },
   {
     id: 'contoh',
@@ -59,6 +62,11 @@ export function writeAsrMode(mode: AsrMode): void {
 export type SpeechLang = 'auto' | 'id' | 'en'
 const LANG_KEY = 'karsa:bahasa-ucapan'
 
+export const SPEECH_LANG_SHORT: Record<SpeechLang, string> = { auto: 'AUTO', id: 'ID', en: 'EN' }
+
+/** The cycle behind the dock chip: the two real languages first, auto last. */
+export const SPEECH_LANG_CYCLE: SpeechLang[] = ['id', 'en', 'auto']
+
 export function readSpeechLang(): SpeechLang {
   try {
     const value = localStorage.getItem(LANG_KEY)
@@ -66,7 +74,14 @@ export function readSpeechLang(): SpeechLang {
   } catch {
     // Storage blocked; use the default.
   }
-  return 'auto'
+  /*
+    Named, not auto-detected. Whisper's own detection reads short Indonesian
+    sentences as English often enough to be useless -- and a sentence detected
+    as the wrong language does not come back slightly wrong, it comes back as
+    a different sentence. Following the output language is the better guess,
+    and the dock chip makes changing it one press.
+  */
+  return lang() === 'en' ? 'en' : 'id'
 }
 
 export function writeSpeechLang(value: SpeechLang): void {
@@ -108,7 +123,7 @@ export class SpeechRecogniser {
   private worker: Worker | null = null
   private status: AsrStatus = { phase: 'idle', percent: 0, detail: 'Belum dimuat.' }
   private listeners = new Set<Listener>()
-  private model: AsrModelId = 'onnx-community/whisper-base'
+  private model: AsrModelId = CONFIG.asrModel
 
   private stream: MediaStream | null = null
   private context: AudioContext | null = null
