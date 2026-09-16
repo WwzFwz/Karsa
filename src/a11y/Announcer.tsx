@@ -9,7 +9,15 @@
  * We never speak. The person's own screen reader or braille display does.
  */
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { tr } from '../core/i18n'
 
 export type AnnouncePriority = 'polite' | 'assertive'

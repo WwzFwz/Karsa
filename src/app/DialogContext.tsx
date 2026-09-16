@@ -12,7 +12,14 @@ import { KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../core/vo
 import { SHAPE_HINT } from '../ui/labels'
 import { NODE_KINDS, TITLE_MAX } from '../core/rules/invariants'
 import { descendantsOf } from '../core/tree/project'
-import type { NodeId, NodeKind, NodeState, RelationKind, RoomShape, ToolKind } from '../core/model/types'
+import type {
+  NodeId,
+  NodeKind,
+  NodeState,
+  RelationKind,
+  RoomShape,
+  ToolKind,
+} from '../core/model/types'
 import { TOOL_LIST } from '../core/tools/registry'
 import { useRoom } from './RoomContext'
 import { findRoom } from '../features/rooms/rooms'

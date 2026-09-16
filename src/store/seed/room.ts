@@ -5,7 +5,17 @@
  * relation that crosses branches, and an unresolved comment.
  */
 
-import type { Actor, Comment, Node, NodeKind, NodeState, Participant, Relation, RelationKind, RoomDoc } from '../../core/model/types'
+import type {
+  Actor,
+  Comment,
+  Node,
+  NodeKind,
+  NodeState,
+  Participant,
+  Relation,
+  RelationKind,
+  RoomDoc,
+} from '../../core/model/types'
 import type { DocEvent, EventType } from '../../core/events/types'
 import type { InputPath, ToolKind } from '../../core/model/types'
 
