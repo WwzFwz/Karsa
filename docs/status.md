@@ -59,7 +59,7 @@ risiko yang harus benar sejak awal.
 ### 2.1 Uji otomatis untuk `core/` — **sudah dimulai (D73)**
 
 59 uji, `npm test`: aturan 1, 4, 5, satu pintu data, dan hitungan suara. Belum:
-mesin giliran suara (belum ada mesinnya), tata letak, dan orchestrator selain set
+alur suara per perangkat (belum ada), tata letak, dan orchestrator selain set
 uji eval.
 
 ### 2.2 Isi ruang hilang saat halaman dimuat ulang

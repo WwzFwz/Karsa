@@ -278,7 +278,7 @@ sudah lewat dan tidak lagi mengarahkan pekerjaan.
 Urutan:
 
 1. **Fondasi kode** - batas impor dijaga skrip, uji `core/`, `RoomContext`
-   dipecah jadi mesin giliran suara dan beberapa provider, `ollama.ts` dan
+   dipecah jadi alur suara per perangkat (state machine) dan beberapa provider, `ollama.ts` dan
    `CanvasView.tsx` dipecah.
 2. **Data sungguhan** - IndexedDB, `YjsDocStore` di balik `DocStore`, server
    satu kontainer (Hocuspocus + SQLite + room service), kehadiran lewat
