@@ -50,16 +50,13 @@ import { useLang } from '../ui/useLang'
 import {
   AGENT_UTTERANCES,
   buildDraft,
-  CONFIRM_UTTERANCE,
-  emptyDraft,
   UTTERANCES as STRUCTURE_UTTERANCES,
 } from '../features/voice/mockPipeline'
+import { VoiceFlow } from '../features/voice/flow'
 import {
   ASR_MODES,
-  pickChoice,
   readSpeechLang,
   writeSpeechLang,
-  readAnswer,
   readAsrMode,
   recogniser,
   writeAsrMode,
@@ -75,7 +72,7 @@ import {
 const UTTERANCES = STRUCTURE_UTTERANCES.flatMap((line, i) =>
   AGENT_UTTERANCES[i] ? [line, AGENT_UTTERANCES[i]] : [line],
 )
-import type { Draft, DraftOperation } from '../features/voice/types'
+import type { Draft } from '../features/voice/types'
 
 export type ViewMode = 'canvas' | 'outline'
 export type SessionMode = 'meeting' | 'review'
@@ -281,8 +278,6 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
   }, [])
 
   const [asrMode, setAsrModeState] = useState<AsrMode>(readAsrMode)
-  const asrModeRef = useRef(asrMode)
-  asrModeRef.current = asrMode
   const [asrStatus, setAsrStatus] = useState<AsrStatus>(() => recogniser.getStatus())
   const [speechLang, setSpeechLangState] = useState<SpeechLang>(readSpeechLang)
   const setSpeechLang = useCallback((value: SpeechLang) => {
@@ -296,14 +291,74 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     const model = ASR_MODES.find((m) => m.id === mode)?.model
     if (model) recogniser.load(model)
   }, [])
-  // Leaving the room mid-sentence must close the microphone (D4).
-  useEffect(() => () => recogniser.cancel(), [])
-  const [draft, setDraft] = useState<Draft>(emptyDraft)
-  const [talking, setTalking] = useState(false)
   const [traversing, setTraversing] = useState(false)
   const [traversalIndex, setTraversalIndex] = useState(0)
   const [thinkingSeconds, setThinkingSeconds] = useState(0)
-  const [performing, setPerforming] = useState<{ index: number; ops: DraftOperation[] } | null>(null)
+
+  /*
+    The voice flow of this person (features/voice/flow.ts). It lives outside
+    React and outlives renders, so it reads the room's current values through
+    this one ref, which every render refreshes. The announcer is read the same
+    way: its object changes with every announcement, and a flow rebuilt on each
+    one would forget the request it was in the middle of.
+  */
+  const latest = useRef({
+    run: (_command: Command, _via: InputPath): void => {},
+    focusId,
+    provider,
+    asrMode,
+    announcer,
+  })
+
+  const flow = useMemo(() => {
+    let cannedIndex = 0
+    return new VoiceFlow({
+      recogniser: {
+        get listening() {
+          return recogniser.listening
+        },
+        isReady: () => recogniser.getStatus().phase === 'ready',
+        load: (model) => recogniser.load(model),
+        start: (onPartial) => recogniser.start(onPartial),
+        stop: () => recogniser.stop(),
+        cancel: () => recogniser.cancel(),
+      },
+      asrModel: () => ASR_MODES.find((m) => m.id === latest.current.asrMode)?.model,
+      nextCannedUtterance: () => UTTERANCES[cannedIndex++ % UTTERANCES.length],
+      understand: (input, pending) => {
+        const current = store.getDoc()
+        return buildDraft(input, current, projectTree(current), latest.current.focusId, latest.current.provider, pending)
+      },
+      runCommand: (command, via) => latest.current.run(command, via),
+      runBatch: (commands, via) => {
+        const result = store.dispatchBatch(commands, { actorId: SELF_ID, inputPath: via })
+        return result.ok ? { ok: true } : { ok: false, message: result.violation.message }
+      },
+      announce: (text, politeness) => latest.current.announcer.announce(text, politeness),
+      earcon: (name) =>
+        audioBus.emit(
+          name === 'createNode'
+            ? { earcon: 'createNode', depth: 0, hue: store.getDoc().actors[SELF_ID]?.hue ?? 0 }
+            : { earcon: name, force: true },
+        ),
+      setSpeaking: (active) => {
+        store.updateSelf({ talking: active })
+        latest.current.announcer.setSpeechActive(active)
+      },
+      reportError: (message) => setLastError(message),
+      now: () => Date.now(),
+      after: (ms, fn) => {
+        const timer = window.setTimeout(fn, ms)
+        return () => window.clearTimeout(timer)
+      },
+    })
+  }, [store])
+
+  // Leaving the room mid-sentence must close the microphone (D4).
+  useEffect(() => () => flow.dispose(), [flow])
+
+  const voice = useSyncExternalStore(flow.subscribe, flow.getState, flow.getState)
+  const { draft, talking, latched: talkLatched, performing } = voice
   const [canvasMounted, setCanvasMounted] = useState(false)
 
   const visibleIds = useMemo(() => visibleOrder(tree, collapsed), [tree, collapsed])
@@ -514,337 +569,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     audioBus.emit({ earcon: 'undo', force: true })
   }, [store, announcer, nameOf])
 
-  // --- voice, mocked ------------------------------------------------------
+  // --- voice ---------------------------------------------------------------
 
-  const utteranceIndex = useRef(0)
-  const streamTimer = useRef<number | null>(null)
-  // A ref rather than the state value: a quick tap fires keydown and keyup in
-  // the same tick, before React re-renders, so a state read here would be stale
-  // and the switch would latch on.
-  const talkingRef = useRef(false)
-  /*
-    Hold-to-talk is the wrong default for the person this product is built for.
-
-    Persona A uses voice because pressing and holding is hard; asking them to
-    keep a key down for the length of a sentence is the same barrier in a new
-    place. So the switch does both: hold it and it behaves as push-to-talk, tap
-    it and the microphone latches until the next tap. One press instead of a
-    sustained one, and the light stays visible the whole time so nobody forgets
-    it is on.
-  */
-  const talkStartedAt = useRef(0)
-  const latchedRef = useRef(false)
-  const [talkLatched, setTalkLatched] = useState(false)
-  const LATCH_MS = 400
-
-  // Forward handles, so the talk handlers can stay stable callbacks while still
-  // seeing the current draft and the later-defined stop and apply functions.
-  const draftRef = useRef(draft)
-  /** Latched at the start of the turn: this turn is an answer, not a command. */
-  const answeringRef = useRef(false)
-  const stopTalkingRef = useRef<() => void>(() => {})
-  const applyDraftRef = useRef<() => void>(() => {})
-  const discardDraftRef = useRef<() => void>(() => {})
-  const chooseOptionRef = useRef<(ambiguityId: string, choiceId: string, via?: 'voice' | 'keyboard' | 'pointer') => void>(() => {})
-  const understandRef = useRef<
-    (text: string, answering: boolean, via?: 'voice' | 'keyboard') => Promise<void>
-  >(async () => {})
-  // The voice turn finishes after an await; it must read the room as it is then.
-  const treeRef = useRef(tree)
-  treeRef.current = tree
-  const focusRef = useRef(focusId)
-  focusRef.current = focusId
-
-  const startTalking = useCallback(() => {
-    if (talkingRef.current) {
-      // Already listening. A second tap on a latched mic ends the turn.
-      if (latchedRef.current) stopTalkingRef.current()
-      return
-    }
-    talkingRef.current = true
-    talkStartedAt.current = Date.now()
-    latchedRef.current = false
-    setTalkLatched(false)
-    setTalking(true)
-    store.updateSelf({ talking: true })
-    announcer.setSpeechActive(true)
-
-    // With a proposal already on screen, the next thing said is an answer to
-    // it, not a new command. That is what makes voice a complete loop: nothing
-    // in speak -> review -> apply needs a finger.
-    const answering = draftRef.current.status === 'ready'
-    answeringRef.current = answering
-
-    const model = ASR_MODES.find((m) => m.id === asrModeRef.current)?.model
-    if (model) {
-      if (answering) setDraft((d) => ({ ...d, transcript: '' }))
-      else setDraft({ ...emptyDraft(), status: 'listening', transcript: '' })
-      if (recogniser.getStatus().phase !== 'ready') {
-        recogniser.load(model)
-        announcer.announce(tr('Menyiapkan pengenalan suara di perangkat. Silakan mulai bicara.', 'Preparing on-device speech recognition. Go ahead and speak.'))
-      }
-      recogniser
-        .start((partial) => setDraft((d) => ({ ...d, transcript: partial })))
-        .catch((error: Error) => {
-          talkingRef.current = false
-          latchedRef.current = false
-          setTalkLatched(false)
-          setTalking(false)
-          store.updateSelf({ talking: false })
-          announcer.setSpeechActive(false)
-          if (!answering) setDraft(emptyDraft())
-          setLastError(error.message)
-          announcer.announce(error.message, 'assertive')
-        })
-      return
-    }
-
-    const utterance = answering
-      ? CONFIRM_UTTERANCE
-      : UTTERANCES[utteranceIndex.current % UTTERANCES.length]
-    const words = utterance.transcript.split(' ')
-    let shown = 0
-    // While answering, the proposal stays on screen. Clearing it would take the
-    // thing being answered away just as the person answers it.
-    if (answering) setDraft((d) => ({ ...d, transcript: '' }))
-    else setDraft({ ...emptyDraft(), status: 'listening', transcript: '' })
-
-    const tick = () => {
-      shown += 1
-      setDraft((d) => ({ ...d, transcript: words.slice(0, shown).join(' ') }))
-      if (shown < words.length) {
-        streamTimer.current = window.setTimeout(tick, 130)
-      }
-    }
-    streamTimer.current = window.setTimeout(tick, 200)
-  }, [store, announcer])
-
-  const stopTalking = useCallback(() => {
-    if (!talkingRef.current) return
-    talkingRef.current = false
-    latchedRef.current = false
-    setTalkLatched(false)
-    setTalking(false)
-    store.updateSelf({ talking: false })
-    announcer.setSpeechActive(false)
-    if (streamTimer.current !== null) window.clearTimeout(streamTimer.current)
-
-    if (recogniser.listening) {
-      const answering = answeringRef.current
-      answeringRef.current = false
-      if (!answering) setDraft((d) => ({ ...d, status: 'thinking' }))
-      void (async () => {
-        const heard = await recogniser.stop()
-        if (!heard.text) {
-          if (!answering) setDraft(emptyDraft())
-          const message = heard.error ?? tr('Tidak ada kata yang terdengar.', 'No words were heard.')
-          announcer.announce(message, 'assertive')
-          return
-        }
-        await understandRef.current(heard.text, answering)
-      })()
-      return
-    }
-
-    if (answeringRef.current) {
-      answeringRef.current = false
-      setDraft((d) => ({ ...d, transcript: CONFIRM_UTTERANCE.transcript }))
-      announcer.announce('Diterapkan, dari suara.', 'assertive')
-      applyDraftRef.current()
-      return
-    }
-
-    const utterance = UTTERANCES[utteranceIndex.current % UTTERANCES.length]
-    utteranceIndex.current += 1
-    setDraft((d) => ({ ...d, status: 'thinking', transcript: utterance.transcript }))
-
-    // The rule matcher answers instantly; a 7B model takes a couple of seconds.
-    // The transcript is already on screen either way, which is what makes the
-    // wait feel like nothing (section 10).
-    void (async () => {
-      const next = await buildDraft(utterance, store.getDoc(), tree, focusId, providerRef.current)
-      announceDraft(next)
-    })()
-  }, [store, announcer, focusId, tree])
-
-  /*
-    Words, from the microphone or the keyboard, into a proposal. One function
-    for both, so typing a sentence and saying it can never be understood
-    differently (rule 6).
-  */
-  const understand = async (text: string, answering: boolean, via: 'voice' | 'keyboard' = 'voice') => {
-    const standing = draftRef.current
-    const question = answering ? standing.ambiguities[0] : undefined
-    let pending: { question: string; transcript: string } | undefined
-    if (question) {
-      // An answer to a question: a number or an option's words picks it; a
-      // no cancels; anything else is an explanation that goes back to the
-      // model together with the question (D71).
-      const picked = pickChoice(text, question.choices)
-      if (picked) {
-        chooseOptionRef.current(question.id, picked, via)
-        return
-      }
-      if (readAnswer(text) === 'no') {
-        discardDraftRef.current()
-        return
-      }
-      pending = { question: question.question, transcript: standing.transcript }
-    } else if (answering) {
-      const answer = readAnswer(text)
-      if (answer === 'yes') {
-        setDraft((d) => ({ ...d, transcript: text }))
-        announcer.announce(tr('Diterapkan.', 'Applied.'), 'assertive')
-        applyDraftRef.current()
-        return
-      }
-      if (answer === 'no') {
-        discardDraftRef.current()
-        return
-      }
-      // Neither yes nor no: a new instruction replaces the proposal.
-    }
-    setDraft({ ...emptyDraft(), status: 'thinking', transcript: pending ? `${pending.transcript} → ${text}` : text })
-    const next = await buildDraft(text, store.getDoc(), treeRef.current, focusRef.current, providerRef.current, pending)
-    if (pending) next.transcript = `${pending.transcript} → ${text}`
-    announceDraft({ ...next, via })
-  }
-  understandRef.current = understand
-  const submitText = useCallback((text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || talkingRef.current) return
-    void understandRef.current(trimmed, draftRef.current.status === 'ready', 'keyboard')
-  }, [])
-
-  const chooseOption = (ambiguityId: string, choiceId: string, via: 'voice' | 'keyboard' | 'pointer' = 'pointer') => {
-    const amb = draftRef.current.ambiguities.find((a) => a.id === ambiguityId)
-    const choice = amb?.choices.find((c) => c.id === choiceId)
-    if (!amb || !choice) return
-    const result = store.dispatchBatch(choice.commands, { actorId: SELF_ID, inputPath: via })
-    if (!result.ok) {
-      setLastError(result.violation.message)
-      announcer.announce(result.violation.message, 'assertive')
-      return
-    }
-    audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(SELF_ID) })
-    announcer.announce(tr(`Dipilih: ${choice.label}. Diterapkan.`, `Chosen: ${choice.label}. Applied.`), 'assertive')
-    setDraft((d) => {
-      const rest = d.ambiguities.filter((a) => a.id !== ambiguityId)
-      return { ...d, ambiguities: rest, status: rest.length === 0 && d.operations.length === 0 ? 'applied' : d.status }
-    })
-  }
-  chooseOptionRef.current = chooseOption
-
-  function announceDraft(next: Draft) {
-    {
-      setDraft(next)
-      audioBus.emit({ earcon: 'draftReady', force: true })
-      if (next.operations.length > 0) {
-        // The routing is said out loud, not only drawn. A proposal you cannot
-        // hear the reason for is a proposal you can only accept on faith.
-        const why = next.intent === 'alat-diusulkan' ? ` ${next.reason}` : ''
-        announcer.announce(
-          tr(
-            `Draf siap. ${next.operations.length} usulan menunggu persetujuan.${why}`,
-            `Draft ready. ${next.operations.length} proposals waiting for approval.${why}`,
-          ),
-          'assertive',
-        )
-      } else if (next.ambiguities.length > 0) {
-        // The options are read out with their numbers, so they can be answered
-        // without seeing where the buttons are.
-        const amb = next.ambiguities[0]
-        const options = amb.choices.map((c, i) => `${i + 1}, ${c.label}.`).join(' ')
-        announcer.announce(
-          amb.choices.length > 0
-            ? tr(`${amb.question} ${options} Sebut nomornya, atau jelaskan.`, `${amb.question} ${options} Say the number, or explain.`)
-            : tr(`${amb.question} Jelaskan dengan suara atau ketik.`, `${amb.question} Explain by voice or typing.`),
-          'assertive',
-        )
-      } else {
-        announcer.announce(tr('Ucapan tidak dikenali. Teksnya bisa disunting sebelum diterapkan.', 'Not recognised as a command. The text can be edited before applying.'), 'assertive')
-      }
-    }
-  }
-
-  /*
-    Apply as a performance, not a dump.
-
-    Trido's agent walks a cursor to each target and does one thing at a time.
-    That reads as a collaborator rather than a batch job, and -- the part that
-    matters here -- it is also better without sight: three operations become
-    three sentences and three earcons at a pace a screen reader can follow,
-    instead of one "3 simpul ditambahkan" that says nothing about where.
-
-    The difference from Trido: they perform without asking. We ask first, then
-    perform.
-  */
-  /**
-   * Releasing the switch. A short press latches the microphone on; a long one
-   * ends the turn, the way push-to-talk always has.
-   */
-  const endTalkHold = useCallback(() => {
-    if (!talkingRef.current) return
-    if (Date.now() - talkStartedAt.current < LATCH_MS) {
-      latchedRef.current = true
-      setTalkLatched(true)
-      announcer.announce('Mikrofon tetap hidup. Ketuk sekali lagi untuk berhenti.')
-      return
-    }
-    stopTalking()
-  }, [announcer, stopTalking])
-
-  useEffect(() => {
-    draftRef.current = draft
-  }, [draft])
-
-  const applyDraft = useCallback(() => {
-    const accepted = draft.operations.filter((op) => op.accepted)
-    if (accepted.length === 0) return
-    setDraft((d) => ({ ...d, status: 'applying' }))
-    setPerforming({ index: 0, ops: accepted })
-  }, [draft])
-
-  useEffect(() => {
-    if (!performing) return
-    const { index, ops } = performing
-    if (index >= ops.length) {
-      setPerforming(null)
-      setDraft((d) => ({ ...d, status: 'applied' }))
-      return
-    }
-    // A beat before the first, then one step at a time. Slow enough to read and
-    // to hear, fast enough not to feel like waiting.
-    const timer = window.setTimeout(
-      () => {
-        const op = ops[index]
-        // A template step is several commands but one decision, so it lands as
-        // one gesture and takes one undo -- the same rule as the tool palette.
-        if (op.extraCommands && op.extraCommands.length > 0) {
-          const result = store.dispatchBatch([op.command, ...op.extraCommands], {
-            actorId: SELF_ID,
-            inputPath: draftRef.current.via ?? 'voice',
-          })
-          if (result.ok) {
-            announcer.announce(`${op.preview} Diterapkan.`)
-            audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(SELF_ID) })
-          } else {
-            setLastError(result.violation.message)
-            announcer.announce(result.violation.message, 'assertive')
-            audioBus.emit({ earcon: 'blocked', force: true })
-          }
-        } else {
-          run(op.command, draftRef.current.via ?? 'voice')
-        }
-        setPerforming({ index: index + 1, ops })
-      },
-      index === 0 ? 280 : 520,
-    )
-    return () => window.clearTimeout(timer)
-  }, [performing, run, store, announcer, hueOf])
-
-  stopTalkingRef.current = stopTalking
-  applyDraftRef.current = applyDraft
+  latest.current = { run, focusId, provider, asrMode, announcer }
 
   const agentTargetId = useMemo<NodeId | null>(() => {
     if (performing && performing.index < performing.ops.length) {
@@ -863,12 +590,6 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     if (!performing || performing.index >= performing.ops.length) return null
     return performing.ops[performing.index].preview
   }, [performing])
-
-  const discardDraft = useCallback(() => {
-    setDraft((d) => ({ ...d, status: 'discarded' }))
-    announcer.announce(tr('Draf dibatalkan. Kanvas tidak berubah.', 'Draft discarded. The canvas did not change.'))
-  }, [announcer])
-  discardDraftRef.current = discardDraft
 
   // --- audio traversal ----------------------------------------------------
 
@@ -985,8 +706,8 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     asrStatus,
     speechLang,
     setSpeechLang,
-    submitText,
-    chooseOption,
+    submitText: flow.submitText,
+    chooseOption: flow.choose,
     view,
     setView,
     panelHidden,
@@ -1008,18 +729,18 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     draft,
     thinkingSeconds,
     talkLatched,
-    endTalkHold,
+    endTalkHold: flow.release,
     draftTargets,
     agentTargetId,
     agentAction,
     canvasMounted,
     setCanvasMounted,
     talking,
-    startTalking,
-    stopTalking,
-    setDraft,
-    applyDraft,
-    discardDraft,
+    startTalking: flow.press,
+    stopTalking: flow.stop,
+    setDraft: flow.editDraft,
+    applyDraft: flow.apply,
+    discardDraft: flow.discard,
     traversing,
     toggleTraversal,
     traversalIndex,
