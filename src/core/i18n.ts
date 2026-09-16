@@ -13,8 +13,6 @@
  * structure, not in any one rendering of it.
  */
 
-import { useSyncExternalStore } from 'react'
-
 export type Lang = 'id' | 'en'
 
 const KEY = 'karsa:bahasa'
@@ -45,7 +43,7 @@ export function setLang(next: Lang): void {
   } catch {
     // Not remembered, still used for this session.
   }
-  document.documentElement.lang = next
+  if (typeof document !== 'undefined') document.documentElement.lang = next
   listeners.forEach((listener) => listener())
 }
 
@@ -67,15 +65,10 @@ export function bilingual<K extends string>(id: Record<K, string>, en: Record<K,
   return table
 }
 
-export function useLang(): Lang {
-  return useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener)
-      return () => listeners.delete(listener)
-    },
-    () => current,
-    () => current,
-  )
+/** For the one React hook that re-renders on a language change (ui/useLang). */
+export function subscribeLang(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
 }
 
 /**

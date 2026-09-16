@@ -20,7 +20,7 @@ import type { Command } from '../../core/commands/types'
 import type { NodeId, RoomDoc } from '../../core/model/types'
 import type { Draft, DraftAmbiguity, DraftOperation } from './types'
 import { structure, type StructureInput } from '../../core/agent/structure'
-import { tr } from '../../i18n/lang'
+import { tr } from '../../core/i18n'
 import type { PlanStep } from '../../core/agent/types'
 
 export interface Utterance {

@@ -37,35 +37,12 @@ import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/pro
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
 import { MemoryDocStore } from '../store/MemoryDocStore'
 import { useParams } from 'react-router-dom'
-import {
-  buildEmptyDoc,
-  buildSeedDoc,
-  buildSeedParticipants,
-  buildSoloParticipants,
-  SELF_ID,
-} from '../store/seed/room'
+import { buildEmptyDoc, buildSeedDoc, buildSeedParticipants, buildSoloParticipants, SELF_ID } from '../store/seed/room'
 import { findRoom } from '../features/rooms/rooms'
-import { tr, useLang } from '../i18n/lang'
-import {
-  AGENT_UTTERANCES,
-  buildDraft,
-  CONFIRM_UTTERANCE,
-  emptyDraft,
-  UTTERANCES as STRUCTURE_UTTERANCES,
-} from '../features/voice/mockPipeline'
-import {
-  ASR_MODES,
-  pickChoice,
-  readSpeechLang,
-  writeSpeechLang,
-  readAnswer,
-  readAsrMode,
-  recogniser,
-  writeAsrMode,
-  type AsrMode,
-  type AsrStatus,
-  type SpeechLang,
-} from '../features/voice/speech'
+import { tr } from '../core/i18n'
+import { useLang } from '../ui/useLang'
+import { AGENT_UTTERANCES, buildDraft, CONFIRM_UTTERANCE, emptyDraft, UTTERANCES as STRUCTURE_UTTERANCES } from '../features/voice/mockPipeline'
+import { ASR_MODES, pickChoice, readSpeechLang, writeSpeechLang, readAnswer, readAsrMode, recogniser, writeAsrMode, type AsrMode, type AsrStatus, type SpeechLang } from '../features/voice/speech'
 
 /*
   The canned lines, interleaved so a demo meets both halves early: sentences the

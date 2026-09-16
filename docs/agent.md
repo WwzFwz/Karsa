@@ -124,7 +124,7 @@ npm run eval              # pencocokan aturan
 npm run eval -- --ollama  # model lokal
 ```
 
-27 kasus di `core/agent/cases.ts` (lima di antaranya berbahasa Inggris, D69), dan yang dikumpulkan bukan kasus yang mudah
+27 kasus di `src/eval/cases.ts` (lima di antaranya berbahasa Inggris, D69), dan yang dikumpulkan bukan kasus yang mudah
 lulus melainkan yang mudah salah:
 
 - **Negatif.** Sebagian besar isi rapat itu isi biasa. Perute yang menyambar

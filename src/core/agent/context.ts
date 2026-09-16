@@ -13,7 +13,7 @@
 
 import type { TreeProjection } from '../tree/project'
 import type { NodeId, RoomDoc } from '../model/types'
-import { KIND_LABEL } from '../../ui/labels'
+import { KIND_LABEL } from '../vocabulary'
 import { TOOL_LIST } from '../tools/registry'
 import { TEMPLATES } from '../templates/registry'
 

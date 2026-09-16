@@ -10,13 +10,13 @@
  * "this sentence contains the word prioritas and is still ordinary content".
  */
 
-import { plan } from './orchestrator'
-import { planWithOllama } from './ollama'
-import { ollamaModel } from '../../config'
+import { plan } from '../core/agent/orchestrator'
+import { planWithOllama } from '../core/agent/ollama'
+import { ollamaModel } from '../core/config'
 import { CASES, type EvalCase } from './cases'
-import { buildSeedDoc } from '../../store/seed/room'
-import { projectTree } from '../tree/project'
-import type { Plan } from './types'
+import { buildSeedDoc } from '../store/seed/room'
+import { projectTree } from '../core/tree/project'
+import type { Plan } from '../core/agent/types'
 
 /*
   Declared rather than installed. Adding @types/node would mean an install, and

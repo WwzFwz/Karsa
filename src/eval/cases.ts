@@ -20,7 +20,7 @@
  * expected, because which template is a softer claim than whether any.
  */
 
-import type { Intent } from './types'
+import type { Intent } from '../core/agent/types'
 
 export interface EvalCase {
   transcript: string

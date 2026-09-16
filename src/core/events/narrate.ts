@@ -9,8 +9,8 @@
  * and review mode, so the three can never drift apart.
  */
 
-import { KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../../ui/labels'
-import { tr } from '../../i18n/lang'
+import { KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../vocabulary'
+import { tr } from '../i18n'
 import { TOOLS } from '../tools/registry'
 import type { DocEvent } from './types'
 

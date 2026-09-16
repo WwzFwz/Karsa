@@ -56,22 +56,11 @@ risiko yang harus benar sejak awal.
 
 ## 2. Belum ada — diurutkan menurut apa yang paling merugikan
 
-### 2.1 Uji otomatis untuk `core/` — **paling mendesak**
+### 2.1 Uji otomatis untuk `core/` — **sudah dimulai (D73)**
 
-Belum ada satu pun, kecuali set uji orchestrator.
-
-Yang paling perlu, dan alasannya:
-
-| Yang diuji | Kenapa |
-| ---------- | ------ |
-| `projectTree` pemulihan siklus | Bagian 9 menyebutnya risiko yang harus benar sejak awal. Sekarang cuma bisa dibuktikan lewat tombol "paksa pemindahan bersilangan" — dibuktikan dengan tangan, tiap kali |
-| `order.ts` indeks pecahan | Kalau kunci urutan tabrakan atau kehabisan presisi, urutan saudara rusak diam-diam |
-| `apply.ts` tiap penolakan | Tiap `checkMove`, `checkTitle`, `checkKind` yang menolak wajib punya kasus |
-| `narrate()` semua tipe peristiwa | Aturan 5 bilang tiap peristiwa punya kalimat; belum ada yang memastikan tidak ada yang terlewat |
-| `tally.ts` | "Peristiwa terakhir per aktor menang" — kasus Budi berubah pikiran ada di data contoh, belum jadi uji |
-
-Ongkosnya kecil: `core/` sengaja tidak mengimpor React, jadi bisa dijalankan di
-node persis seperti `npm run eval`. Tidak ada dependensi baru yang diperlukan.
+59 uji, `npm test`: aturan 1, 4, 5, satu pintu data, dan hitungan suara. Belum:
+mesin giliran suara (belum ada mesinnya), tata letak, dan orchestrator selain set
+uji eval.
 
 ### 2.2 Isi ruang hilang saat halaman dimuat ulang
 

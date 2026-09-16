@@ -24,7 +24,7 @@ import { planWithOllama } from './ollama'
 import type { NodeId } from '../model/types'
 import type { PlanInput, ProviderId } from './provider'
 import type { Plan, PlanStep } from './types'
-import { tr } from '../../i18n/lang'
+import { tr } from '../i18n'
 
 /**
  * Words that name a template.

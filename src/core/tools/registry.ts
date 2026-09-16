@@ -11,7 +11,7 @@
  * touching the model, and it must never mean touching rule 1 or rule 2.
  */
 
-import { localise } from '../../i18n/lang'
+import { localise } from '../i18n'
 import type { IconName } from '../../ui/icons'
 import type { NodeKind, ToolKind } from '../model/types'
 

@@ -12,8 +12,8 @@
  * (section 8).
  */
 
-import { lang } from '../../i18n/lang'
-import { CONFIG } from '../../config'
+import { lang } from '../../core/i18n'
+import { CONFIG } from '../../core/config'
 
 export type AsrModelId = string
 export type AsrMode = 'whisper-base' | 'whisper-small' | 'contoh'

@@ -8,7 +8,7 @@
 
 import { useRoom } from '../../app/RoomContext'
 import { narrate } from '../../core/events/narrate'
-import { INPUT_PATH_LABEL } from '../../ui/labels'
+import { INPUT_PATH_LABEL } from '../../core/vocabulary'
 import { Icon } from '../../ui/icons'
 
 function clock(at: number): string {

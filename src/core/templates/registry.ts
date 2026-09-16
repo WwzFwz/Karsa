@@ -18,7 +18,7 @@
  * task manager, and it does not belong here.
  */
 
-import { localise } from '../../i18n/lang'
+import { localise } from '../i18n'
 import type { NodeKind, ToolKind } from '../model/types'
 import type { IconName } from '../../ui/icons'
 

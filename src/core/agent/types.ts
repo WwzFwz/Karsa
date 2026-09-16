@@ -16,7 +16,7 @@
 
 import type { Command } from '../commands/types'
 import type { NodeId } from '../model/types'
-import { localise } from '../../i18n/lang'
+import { localise } from '../i18n'
 
 export type AgentId = 'penyusun' | 'pemilih' | 'perapi'
 

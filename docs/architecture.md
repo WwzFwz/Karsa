@@ -373,7 +373,7 @@ itu ukuran yang dipakai untuk menilai apakah rancangan ini benar.
 ## 7b. Konfigurasi: satu kode, banyak pemasangan
 
 Nilai yang berbeda antar pemasangan tidak pernah jadi konstanta di dalam kode
-(D72). Semuanya lewat `src/config.ts`, yang membaca dua lapis:
+(D72). Semuanya lewat `src/core/config.ts`, yang membaca dua lapis:
 
 | Lapis | Siapa yang mengubah | Contoh |
 | ----- | ------------------- | ------ |

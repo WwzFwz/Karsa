@@ -10,7 +10,7 @@
 import { useMemo, useState } from 'react'
 import { useRoom } from '../app/RoomContext'
 import type { NodeId } from '../core/model/types'
-import { KIND_LABEL } from './labels'
+import { KIND_LABEL } from '../core/vocabulary'
 import { pathTo } from '../core/tree/project'
 
 export function NodePicker({

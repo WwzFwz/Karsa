@@ -14,16 +14,7 @@
  * look anything up. A node deleted an hour ago can still be described.
  */
 
-import type {
-  ActorId,
-  EventId,
-  InputPath,
-  NodeKind,
-  NodeState,
-  RelationKind,
-  RoomShape,
-  ToolKind,
-} from '../model/types'
+import type { ActorId, EventId, InputPath, NodeKind, NodeState, RelationKind, RoomShape, ToolKind } from '../model/types'
 
 export type EventType =
   | 'createNode'

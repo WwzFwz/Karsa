@@ -14,7 +14,8 @@
 import { useState } from 'react'
 import { QuestionCard } from './QuestionCard'
 import { useRoom } from '../../app/RoomContext'
-import { bilingual, tr, useLang } from '../../i18n/lang'
+import { bilingual, tr } from '../../core/i18n'
+import { useLang } from '../../ui/useLang'
 import { Icon } from '../../ui/icons'
 import { AGENTS, type Intent } from '../../core/agent/types'
 

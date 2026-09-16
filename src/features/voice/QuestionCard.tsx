@@ -17,7 +17,7 @@
 
 import { useState } from 'react'
 import { useRoom } from '../../app/RoomContext'
-import { tr } from '../../i18n/lang'
+import { tr } from '../../core/i18n'
 import { Icon } from '../../ui/icons'
 import type { DraftAmbiguity } from './types'
 

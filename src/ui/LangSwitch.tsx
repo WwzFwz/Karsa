@@ -11,7 +11,8 @@
  */
 
 import { Icon } from './icons'
-import { lang, setLang, useLang, type Lang } from '../i18n/lang'
+import { lang, setLang, type Lang } from '../core/i18n'
+import { useLang } from './useLang'
 
 const OPTIONS: { id: Lang; short: string; full: string }[] = [
   { id: 'id', short: 'ID', full: 'Bahasa Indonesia' },

@@ -10,7 +10,7 @@
  */
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { tr } from '../i18n/lang'
+import { tr } from '../core/i18n'
 
 export type AnnouncePriority = 'polite' | 'assertive'
 

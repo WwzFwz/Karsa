@@ -16,7 +16,7 @@ const out = resolve('node_modules/.cache/karsa-eval.mjs')
 
 await mkdir(resolve('node_modules/.cache'), { recursive: true })
 await build({
-  entryPoints: ['src/core/agent/run-eval.ts'],
+  entryPoints: ['src/eval/run-eval.ts'],
   outfile: out,
   bundle: true,
   platform: 'node',

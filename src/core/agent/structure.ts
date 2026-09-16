@@ -19,8 +19,8 @@
 import type { Command } from '../commands/types'
 import type { NodeId, NodeKind, RelationKind, RoomDoc } from '../model/types'
 import { TITLE_MAX } from '../rules/invariants'
-import { KIND_LABEL, RELATION_LABEL } from '../../ui/labels'
-import { tr } from '../../i18n/lang'
+import { KIND_LABEL, RELATION_LABEL } from '../vocabulary'
+import { tr } from '../i18n'
 import type { PlanStep } from './types'
 
 export interface StructureInput {

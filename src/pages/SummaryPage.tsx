@@ -11,7 +11,7 @@ import { useMemo } from 'react'
 import { useRoom } from '../app/RoomContext'
 import { summarise, timelineBuckets } from '../features/summary/contributions'
 import { EventLog } from '../features/summary/EventLog'
-import { INPUT_PATH_LABEL } from '../ui/labels'
+import { INPUT_PATH_LABEL } from '../core/vocabulary'
 import { Icon } from '../ui/icons'
 import type { InputPath } from '../core/model/types'
 

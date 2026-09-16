@@ -32,9 +32,9 @@ import type { PlanInput } from './provider'
 import { findNodeByTitle, normalise, tidyTitle } from './structure'
 import type { Command } from '../commands/types'
 import type { NodeId, NodeKind, RelationKind } from '../model/types'
-import { KIND_LABEL, RELATION_LABEL } from '../../ui/labels'
-import { lang, tr } from '../../i18n/lang'
-import { isMixedContent, ollamaModel, ollamaUrl } from '../../config'
+import { KIND_LABEL, RELATION_LABEL } from '../vocabulary'
+import { lang, tr } from '../i18n'
+import { isMixedContent, ollamaModel, ollamaUrl } from '../config'
 
 /*
   Address and model name are configuration, not constants. A deployed copy is

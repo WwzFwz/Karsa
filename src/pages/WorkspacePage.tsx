@@ -24,7 +24,7 @@ import { PresencePanel } from '../features/presence/PresencePanel'
 import { CommentsPanel } from '../features/comments/CommentsPanel'
 import { useRoom } from '../app/RoomContext'
 import { useDialogs } from '../app/DialogContext'
-import { SHAPE_LABEL } from '../ui/labels'
+import { SHAPE_LABEL } from '../core/vocabulary'
 import { Icon, type IconName } from '../ui/icons'
 import { useWaiting } from '../features/rooms/WaitingRoom'
 

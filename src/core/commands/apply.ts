@@ -11,14 +11,7 @@ import { newCommentId, newEventId, newNodeId, newRelationId } from '../model/ids
 import { compareSiblings, orderBetween } from '../model/order'
 import type { DocEvent, EventPayload, EventType } from '../events/types'
 import type { Comment, Node, NodeId, RoomDoc } from '../model/types'
-import {
-  checkKind,
-  checkMove,
-  checkRelationLabel,
-  checkTitle,
-  NOTE_MAX,
-  type RuleViolation,
-} from '../rules/invariants'
+import { checkKind, checkMove, checkRelationLabel, checkTitle, NOTE_MAX, type RuleViolation } from '../rules/invariants'
 import { countVotes, hasVoted } from '../tools/tally'
 import { descendantsOf, projectTree } from '../tree/project'
 import type { Command, CommandContext, CommandResult } from './types'

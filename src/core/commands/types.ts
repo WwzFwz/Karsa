@@ -7,18 +7,7 @@
  * document, and no view derives its contents from another view.
  */
 
-import type {
-  ActorId,
-  CommentId,
-  InputPath,
-  NodeId,
-  NodeKind,
-  NodeState,
-  RelationId,
-  RelationKind,
-  RoomShape,
-  ToolKind,
-} from '../model/types'
+import type { ActorId, CommentId, InputPath, NodeId, NodeKind, NodeState, RelationId, RelationKind, RoomShape, ToolKind } from '../model/types'
 import type { DocEvent } from '../events/types'
 import type { RuleViolation } from '../rules/invariants'
 
