@@ -20,9 +20,9 @@ import { Icon } from '../ui/icons'
 import type { SoundProfile } from '../audio/earcons'
 
 const SOUND_LABEL: Record<SoundProfile, { name: string; hint: string }> = {
-  silent: { name: 'Diam', hint: 'Tidak ada bunyi peristiwa sama sekali.' },
-  sparse: { name: 'Hemat', hint: 'Hanya peristiwa penting. Bawaan mode rapat.' },
-  full: { name: 'Penuh', hint: 'Termasuk perpindahan fokus. Bawaan mode telaah.' },
+  silent: { name: 'Diam', hint: 'Tanpa bunyi' },
+  sparse: { name: 'Hemat', hint: 'Yang penting saja' },
+  full: { name: 'Penuh', hint: 'Termasuk perpindahan fokus' },
 }
 
 const THEME_LABEL: Record<ThemeChoice, string> = {
@@ -56,13 +56,8 @@ export function SettingsPage() {
               {tr('Bahasa', 'Language')}
             </h2>
           </header>
-          <p className="panel-note">
-            {tr(
-              'Bahasa keluaran mengatur narasi, usulan asisten, dan pengumuman. Judul simpul tetap dalam bahasa saat ditulis atau diucapkan.',
-              'Output language sets narration, assistant proposals and announcements. Node titles stay in the language they were written or spoken in.',
-            )}
-          </p>
-          <div className="option-row" role="radiogroup" aria-label={tr('Bahasa keluaran', 'Output language')}>
+          <span className="field-label">{tr('Narasi & usulan', 'Narration & proposals')}</span>
+          <div className="option-row is-compact" role="radiogroup" aria-label={tr('Bahasa keluaran', 'Output language')}>
             {(['id', 'en'] as const).map((l) => (
               <button
                 key={l}
@@ -74,17 +69,14 @@ export function SettingsPage() {
               >
                 <span>
                   <strong>{l === 'id' ? 'Bahasa Indonesia' : 'English'}</strong>
-                  <span className="option-hint">{tr('Bahasa keluaran', 'Output language')}</span>
                 </span>
               </button>
             ))}
           </div>
-          <div
-            className="option-row"
-            role="radiogroup"
-            aria-label={tr('Bahasa ucapan', 'Speech language')}
-            style={{ marginTop: 10 }}
-          >
+          <span className="field-label" style={{ marginTop: 12, display: 'block' }}>
+            {tr('Didengar mikrofon', 'Heard by the microphone')}
+          </span>
+          <div className="option-row is-compact" role="radiogroup" aria-label={tr('Bahasa ucapan', 'Speech language')}>
             {(['auto', 'id', 'en'] as const).map((l) => (
               <button
                 key={l}
@@ -98,11 +90,6 @@ export function SettingsPage() {
                   <strong>
                     {l === 'auto' ? tr('Otomatis', 'Automatic') : l === 'id' ? 'Bahasa Indonesia' : 'English'}
                   </strong>
-                  <span className="option-hint">
-                    {l === 'auto'
-                      ? tr('Whisper mendeteksi bahasa tiap kalimat', 'Whisper detects the language per sentence')
-                      : tr('Bahasa ucapan', 'Speech language')}
-                  </span>
                 </span>
               </button>
             ))}
@@ -120,11 +107,6 @@ export function SettingsPage() {
               Lokal
             </span>
           </header>
-          <p className="panel-note">
-            Satu antarmuka, beberapa penyedia. Yang lain belum dibangun dan sengaja tetap
-            ditampilkan supaya jelas apa yang berubah kalau salah satunya dinyalakan. Semua
-            pilihan di halaman ini berlaku untuk perangkat ini saja.
-          </p>
 
           {/*
             Buttons, not native radios. A controlled radio group where some
@@ -227,19 +209,13 @@ export function SettingsPage() {
                   {tr('Simpan & periksa', 'Save & check')}
                 </button>
               </div>
-              <p className="field-help">
-                {tr(
-                  'Aplikasi boleh disajikan dari server, modelnya tetap di mesin Anda. Kalau halaman ini datang dari server, jalankan Ollama dengan OLLAMA_ORIGINS berisi alamat halaman ini.',
-                  'The app may be served from a server while the model stays on your machine. If this page came from a server, run Ollama with OLLAMA_ORIGINS set to this page origin.',
-                )}
-              </p>
+              <details className="field-more">
+                <summary>{tr('Halaman ini dari server?', 'Page served from a server?')}</summary>
+                <code>OLLAMA_ORIGINS={'{'}alamat halaman{'}'}</code>
+              </details>
             </form>
           )}
 
-          <p className="panel-note" style={{ marginTop: 12, marginBottom: 0 }}>
-            Audio tidak pernah dikirim ke penyedia mana pun, termasuk yang di awan. Yang berpindah
-            paling jauh hanyalah teks dan struktur outline.
-          </p>
         </section>
 
         <section className="panel" aria-labelledby="asr-heading">
@@ -253,10 +229,6 @@ export function SettingsPage() {
               Di perangkat
             </span>
           </header>
-          <p className="panel-note">
-            Mikrofon hanya hidup selama tombol Bicara menyala. Suara diubah menjadi teks di peramban
-            ini; yang diteruskan ke penyedia model hanya teksnya.
-          </p>
           <ul className="provider-list" role="radiogroup" aria-labelledby="asr-heading">
             {ASR_MODES.map((m) => {
               const active = m.id === room.asrMode
@@ -328,10 +300,6 @@ export function SettingsPage() {
               Profil bunyi
             </h2>
           </header>
-          <p className="panel-note">
-            Setiap fitur tetap memancarkan peristiwa ke audio bus. Profil ini yang menentukan mana
-            yang terdengar, jadi diam secara bawaan bukan berarti ada fitur yang bisu.
-          </p>
           <div className="option-row">
             {(['silent', 'sparse', 'full'] as const).map((p) => (
               <label key={p} className={`option ${soundProfile === p ? 'is-on' : ''}`}>
@@ -408,9 +376,6 @@ export function SettingsPage() {
               Koordinat
             </li>
           </ul>
-          <p className="panel-note" style={{ marginTop: 12, marginBottom: 0 }}>
-            Justru karena itu ruang ini tetap nyaman dipakai pada sambungan yang lemah.
-          </p>
         </section>
       </aside>
     </div>

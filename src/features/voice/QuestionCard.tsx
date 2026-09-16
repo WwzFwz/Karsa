@@ -75,8 +75,8 @@ export function QuestionCard({ amb, compact = false }: { amb: DraftAmbiguity; co
       </form>
       <p className="question-hint">
         {amb.choices.length > 0
-          ? tr('Sebut nomornya, misalnya "yang kedua", atau jelaskan dengan kata-kata sendiri.', 'Say the number, like "the second one", or explain in your own words.')
-          : tr('Tekan Bicara lalu jelaskan, atau ketik di atas.', 'Press Talk and explain, or type above.')}
+          ? tr('Sebut nomornya, atau jelaskan sendiri.', 'Say the number, or explain yourself.')
+          : tr('Bicara atau ketik jawabannya.', 'Speak or type your answer.')}
       </p>
     </div>
   )

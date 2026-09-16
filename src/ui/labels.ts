@@ -89,8 +89,8 @@ export const MODE_LABEL = {
 } as const
 
 export const MODE_HINT = {
-  meeting: 'Bunyi ditekan, narasi menunggu jeda bicara.',
-  review: 'Bunyi penuh, setiap perpindahan fokus terdengar.',
+  meeting: 'Bunyi hemat, narasi menunggu jeda.',
+  review: 'Bunyi penuh, tiap fokus terdengar.',
 } as const
 
 /**

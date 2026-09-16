@@ -27,6 +27,8 @@ import { KIND_LABEL, SHAPE_LABEL } from '../ui/labels'
 import { ThemeSwitch } from '../ui/ThemeSwitch'
 import { VoiceDock } from '../features/voice/VoiceDock'
 import { rememberLastRoom } from '../features/rooms/rooms'
+import { LangSwitch } from '../ui/LangSwitch'
+import { followOutputLanguage } from '../features/voice/speech'
 import { CommandPalette } from '../features/commands/CommandPalette'
 import type { PaletteRoom } from '../features/commands/entries'
 
@@ -457,6 +459,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
             reader says "mode gelap, aktif" rather than leaving someone to guess
             what a button called "Tampilan" would do next.
           */}
+          <LangSwitch onChange={() => followOutputLanguage()} />
           <ThemeSwitch />
 
           {/*

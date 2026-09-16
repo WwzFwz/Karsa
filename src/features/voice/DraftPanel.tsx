@@ -42,13 +42,13 @@ export function DraftPanel() {
       </header>
 
       <p className="panel-note">
-        {tr('Perintah suara selalu berhenti di sini dulu. Kanvas bersama tidak berubah sampai Anda menekan Terapkan.', 'Voice commands always stop here first. The shared canvas does not change until you press Apply.')}
+        {tr('Tidak ada yang berubah sampai Anda menekan Terapkan.', 'Nothing changes until you press Apply.')}
       </p>
 
       <div className="transcript">
         <span className="field-label">{tr('Yang didengar', 'What was heard')}</span>
         <p className="transcript-text">
-          {draft.transcript || <em>{tr('Belum ada ucapan. Tahan tombol Bicara atau tekan spasi.', 'Nothing said yet. Hold Talk or press space.')}</em>}
+          {draft.transcript || <em>{tr('Tahan Bicara atau tekan spasi.', 'Hold Talk or press space.')}</em>}
           {draft.status === 'listening' && <span className="caret" aria-hidden="true" />}
         </p>
       </div>
@@ -88,7 +88,7 @@ export function DraftPanel() {
       {draft.status === 'thinking' && (
         <p className="thinking">
           <Icon name="sparkles" size={14} />
-          {tr('Menyusun operasi di perangkat ini. Tidak ada audio yang dikirim keluar.', 'Building operations on this device. No audio is sent anywhere.')}
+          {tr('Menyusun di perangkat ini.', 'Building on this device.')}
         </p>
       )}
 
@@ -159,7 +159,7 @@ export function DraftPanel() {
         <details className="agent-context">
           <summary>{tr('Yang dikirim ke model', 'What was sent to the model')}</summary>
           <p className="panel-note">
-            {tr('Struktur, bukan tangkapan layar — dan tidak ada audio. Semuanya tetap di perangkat ini.', 'Structure, not a screenshot, and no audio. Everything stays on this device.')}
+            {tr('Struktur, bukan tangkapan layar. Tanpa audio.', 'Structure, not a screenshot. No audio.')}
           </p>
           <pre>{draft.context}</pre>
         </details>
@@ -182,7 +182,7 @@ export function DraftPanel() {
             onChange={(e) => setDraft({ ...draft, rawText: e.target.value })}
           />
           <p className="field-help">
-            {tr('Ucapan disimpan apa adanya dan bisa disunting. Kalau ini memang sebuah gagasan, simpan sebagai simpul baru. Kalau bukan, biarkan.', 'The words are kept as they are and can be edited. If this is an idea, save it as a new node. If not, leave it.')}
+            {tr('Bisa disunting, lalu simpan sebagai simpul — atau biarkan.', 'Editable, then save as a node — or leave it.')}
           </p>
         </div>
       )}

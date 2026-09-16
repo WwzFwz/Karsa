@@ -30,22 +30,21 @@ export const PROVIDERS: ModelProvider[] = [
   {
     id: 'rules',
     name: 'Pencocokan aturan',
-    detail:
-      'Cadangan tanpa model. Cepat dan jalan tanpa apa pun terpasang, tapi hanya mengerti kalimat berpola tetap.',
+    detail: 'Cadangan. Hanya paham kalimat berpola tetap.',
     dataPath: 'Tidak ada yang keluar dari perangkat.',
     status: 'active',
   },
   {
     id: 'ollama',
     name: 'Ollama di perangkat',
-    detail: 'Bawaan. Model memahami maksud ucapan dan bertanya balik bila tidak jelas, dengan constrained decoding berskema JSON.',
+    detail: 'Bawaan. Paham maksud ucapan, bertanya kalau ragu.',
     dataPath: 'Tidak ada yang keluar dari perangkat.',
     status: 'active',
   },
   {
     id: 'webllm',
     name: 'WebLLM di peramban',
-    detail: 'Tanpa memasang apa pun. Butuh WebGPU, dan lebih lambat daripada Ollama.',
+    detail: 'Tanpa memasang apa pun. Butuh WebGPU.',
     dataPath: 'Tidak ada yang keluar dari perangkat.',
     status: 'planned',
   },

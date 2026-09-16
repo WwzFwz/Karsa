@@ -12,6 +12,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { LangSwitch } from '../ui/LangSwitch'
 import { useNavigate } from 'react-router-dom'
 import { Icon, type IconName } from '../ui/icons'
 import { SHAPE_LABEL } from '../ui/labels'
@@ -107,6 +108,7 @@ export function DashboardPage({ name }: { name: string }) {
             reader says "mode gelap, aktif" rather than leaving someone to guess
             what a button called "Tampilan" would do next.
           */}
+          <LangSwitch />
           <ThemeSwitch />
 
           <div className="side-card">

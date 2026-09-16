@@ -21,20 +21,20 @@ export type AsrMode = 'whisper-base' | 'whisper-small' | 'contoh'
 export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: AsrModelId }[] = [
   {
     id: 'whisper-base',
-    label: 'Whisper base, di perangkat',
-    detail: 'Sekitar 80 MB, diunduh sekali lalu disimpan peramban. Cepat, cukup untuk kalimat pendek.',
+    label: 'Whisper base',
+    detail: '±80 MB · cepat',
     model: CONFIG.asrModel,
   },
   {
     id: 'whisper-small',
-    label: 'Whisper small, di perangkat',
-    detail: 'Sekitar 250 MB. Lebih teliti untuk Bahasa Indonesia, lebih lambat tanpa WebGPU.',
+    label: 'Whisper small',
+    detail: '±250 MB · lebih teliti',
     model: CONFIG.asrModelAccurate,
   },
   {
     id: 'contoh',
-    label: 'Ucapan contoh, tanpa mikrofon',
-    detail: 'Memutar kalimat yang sudah disiapkan. Untuk demo di ruangan tanpa mikrofon.',
+    label: 'Ucapan contoh',
+    detail: 'Tanpa mikrofon · untuk demo',
   },
 ]
 
@@ -82,6 +82,23 @@ export function readSpeechLang(): SpeechLang {
     and the dock chip makes changing it one press.
   */
   return lang() === 'en' ? 'en' : 'id'
+}
+
+/** True when someone picked a speech language instead of letting it follow. */
+export function hasExplicitSpeechLang(): boolean {
+  try {
+    return localStorage.getItem(LANG_KEY) !== null
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Keeps the microphone on the language the app is speaking, until someone
+ * splits them on purpose in Settings. One switch, two things, no surprise.
+ */
+export function followOutputLanguage(): void {
+  if (!hasExplicitSpeechLang()) recogniser.retune()
 }
 
 export function writeSpeechLang(value: SpeechLang): void {
@@ -170,6 +187,11 @@ export class SpeechRecogniser {
     }
     this.worker = worker
     return worker
+  }
+
+  /** Nothing to reload: the language is read per request. Here to notify React. */
+  retune(): void {
+    this.setStatus({ ...this.status })
   }
 
   /** Starts the download early, so the first sentence does not wait for it. */

@@ -3128,3 +3128,41 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 .endpoint-row { display: flex; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .endpoint-row .text-input { flex: 1 1 200px; min-width: 0; }
 .endpoint-row .endpoint-model { flex: 0 1 140px; }
+
+/* Detail that only some people need, folded until they do. */
+.field-more { font-size: 12px; opacity: 0.8; }
+.field-more summary { cursor: pointer; }
+.field-more code { display: inline-block; margin-top: 4px; font-size: 11px; }
+
+/* Output language: the same row as the theme switch, so the pair lines up. */
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.lang-switch-label { margin-inline-end: auto; font-size: 13px; }
+.seg { display: flex; flex: none; padding: 2px; gap: 2px; border-radius: var(--r-full); background: var(--line-strong); }
+.seg-item {
+  min-width: 34px;
+  height: 18px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.seg-item.is-on { background: var(--surface); color: var(--ink); }
+
+/* Short one-word choices: narrower columns so a row of three still fits. */
+.option-row.is-compact { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.option-row.is-compact .option { padding: 9px 12px; align-items: center; }
