@@ -11,13 +11,13 @@
  * system we do not have.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { LangSwitch } from '../../components/shared/LangSwitch'
 import { useNavigate } from 'react-router-dom'
 import { Icon, type IconName } from '../../components/shared/icons'
 import { SHAPE_LABEL } from '../../core/vocabulary'
 import { ThemeSwitch } from '../../components/shared/ThemeSwitch'
-import { agoLabel, lastRoom, listRooms, type RoomSummary } from '../../services/rooms/rooms'
+import { agoLabel, lastRoom, listRooms, serverMode, type RoomSummary } from '../../services/rooms/rooms'
 import { RoomThumbnail } from '../../components/rooms/RoomThumbnail'
 import { NewRoomDialog } from '../../components/rooms/NewRoomDialog'
 import { useAnnouncer } from '../../a11y/Announcer'
@@ -34,7 +34,18 @@ export function DashboardPage({ name }: { name: string }) {
   const navigate = useNavigate()
   const [scope, setScope] = useState<Scope>('semua')
   const [query, setQuery] = useState('')
-  const [rooms, setRooms] = useState<RoomSummary[]>(() => listRooms())
+  const [rooms, setRooms] = useState<RoomSummary[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const reload = () =>
+    listRooms()
+      .then((list) => {
+        setRooms(list)
+        setLoadError(null)
+      })
+      .catch((error: Error) => setLoadError(error.message))
+  useEffect(() => {
+    void reload()
+  }, [])
   const [copied, setCopied] = useState<string | null>(null)
   const [making, setMaking] = useState(false)
   const { announce } = useAnnouncer()
@@ -129,7 +140,7 @@ export function DashboardPage({ name }: { name: string }) {
           <div>
             <h1>Ruang</h1>
             <p className="dash-sub">
-              {shown.length} ruang. Semuanya berjalan di perangkat ini.
+              {shown.length} ruang{serverMode() ? '' : ' di perangkat ini'}.
             </p>
           </div>
 
@@ -154,9 +165,19 @@ export function DashboardPage({ name }: { name: string }) {
 
         <p className="dash-note">
           <Icon name="shield" size={15} />
-          Membuat ruang tidak mengirim apa pun ke mana pun. Kode ruang itulah yang dibagikan, dan
-          siapa pun yang punya kodenya bisa bergabung tanpa akun.
+          {serverMode()
+            ? 'Suara dan model tetap di perangkat. Yang disimpan server hanya isi ruang.'
+            : 'Tanpa server: ruang hanya ada di perangkat ini.'}
         </p>
+
+        {loadError && (
+          <p className="dash-empty" role="status">
+            {loadError}{' '}
+            <button type="button" className="link" onClick={() => void reload()}>
+              Coba lagi
+            </button>
+          </p>
+        )}
 
         {shown.length === 0 && query.trim() ? (
           <p className="dash-empty">
@@ -247,10 +268,11 @@ export function DashboardPage({ name }: { name: string }) {
 
       {making && (
         <NewRoomDialog
+          name={name}
           onClose={() => setMaking(false)}
           onCreated={(room) => {
             setMaking(false)
-            setRooms(listRooms())
+            void reload()
             announce(`Ruang ${room.title} dibuat, kode ${room.id}.`)
             openRoom(room.id)
           }}

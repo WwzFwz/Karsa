@@ -29,7 +29,7 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
     onJoin(name.trim())
     // A code goes straight to that room; without one, the dashboard is the
     // better landing -- it is where the rooms are.
-    navigate(code.trim() ? `/ruang/${code.trim()}` : '/ruang')
+    navigate(code.trim() ? `/ruang/${code.trim().toUpperCase()}` : '/ruang', { state: { via: 'kode' } })
   }
 
   return (

@@ -5,9 +5,9 @@
   "type": "module",
   "description": "One container: room service (NestJS) and document sync (Hocuspocus) in one process, SQLite on disk.",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node build-seed.mjs",
     "start": "node --experimental-sqlite dist/main.js",
-    "dev": "tsc -p tsconfig.json && node --experimental-sqlite dist/main.js"
+    "dev": "npm run build && node --experimental-sqlite dist/main.js"
   },
   "engines": {
     "node": ">=22"
@@ -18,6 +18,9 @@
     "@nestjs/common": "^12.0.3",
     "@nestjs/core": "^12.0.3",
     "@nestjs/platform-express": "^12.0.3",
+    "@nestjs/swagger": "^12.0.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "ws": "^8.21.3",

@@ -31,7 +31,14 @@ const SERVER_WAIT_MS = 3000
 */
 const RECONNECT = { delay: 1000, factor: 2, maxDelay: 30_000, minDelay: 1000, maxAttempts: 0, jitter: true }
 
-export function connectRoom(store: YjsDocStore, roomId: string): () => void {
+export interface ConnectOptions {
+  /** Join token from the room service. Sync refuses a connection without one. */
+  token?: string | null
+  /** The server refused the token: expired, or for another room. */
+  onDenied?: () => void
+}
+
+export function connectRoom(store: YjsDocStore, roomId: string, options: ConnectOptions = {}): () => void {
   const name = `karsa:ruang:${roomId}`
   const persistence = new IndexeddbPersistence(name, store.ydoc)
   const closeTabs = connectTabs(store.ydoc, name)
@@ -49,7 +56,10 @@ export function connectRoom(store: YjsDocStore, roomId: string): () => void {
       name: roomId,
       document: store.ydoc,
       awareness,
+      token: options.token ?? null,
       ...RECONNECT,
+      onAuthenticationFailed: () => options.onDenied?.(),
+      onStateless: ({ payload }) => store.signals.receive(payload),
       onStatus: ({ status }) =>
         store.presence.setConnection(status === 'connected' ? 'connected' : 'connecting'),
     })

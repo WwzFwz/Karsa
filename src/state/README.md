@@ -9,6 +9,7 @@ Keadaan React: provider, hook, dan apa pun yang harus berlangganan perubahan. Ko
 | File | Isi |
 | --- | --- |
 | room/ | Lima provider satu ruang |
+| rooms/ | Masuk ruang, akses, dan ketukan di pintu |
 | dialogs/ | Dialog mana yang sedang dibuka |
 | shortcuts/ | Pintasan papan ketik global |
 | theme.ts | Tema terang/gelap |

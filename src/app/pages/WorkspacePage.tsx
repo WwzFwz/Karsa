@@ -28,7 +28,7 @@ import { useAssistant } from '../../state/room/AssistantProvider'
 import { useDialogs } from '../../state/dialogs/DialogProvider'
 import { SHAPE_LABEL } from '../../core/vocabulary'
 import { Icon, type IconName } from '../../components/shared/icons'
-import { useWaiting } from '../../components/rooms/WaitingRoom'
+import { useJoinRequests } from '../../state/rooms/useJoinRequests'
 
 type ViewId = 'canvas' | 'outline'
 type InspectorId = 'jejak' | 'perintah' | 'peserta' | 'komentar'
@@ -79,7 +79,7 @@ export function WorkspacePage() {
 
   const pendingOps = draft.status === 'ready' ? draft.operations.filter((o) => o.accepted).length : 0
   const openComments = Object.values(doc.comments).filter((c) => !c.resolvedAt).length
-  const waiting = useWaiting(doc.room.id).length
+  const waiting = useJoinRequests().waiting.length
   const badgeFor = (id: InspectorId) =>
     id === 'perintah' ? pendingOps : id === 'komentar' ? openComments : id === 'peserta' ? waiting : 0
 

@@ -37,6 +37,7 @@ import type {
 } from '../core/model/types'
 import type { DocStore } from './DocStore'
 import { RoomPresence, type RoomPresenceOptions } from './presence'
+import { RoomSignals } from './signals'
 
 /** Transactions made by this device's commands. The only ones undo may take back. */
 const LOCAL = 'karsa:local'
@@ -65,6 +66,12 @@ export interface YjsDocStoreOptions {
   initial: RoomDoc
   self: Actor
   presence?: RoomPresenceOptions
+  /**
+   * Whether this device may write the room's first content. False when a
+   * server owns the room: the server seeds it, and a device that cannot reach
+   * the server must not invent a second root (D79).
+   */
+  seedLocally?: boolean
   ydoc?: Y.Doc
   now?: () => number
 }
@@ -84,6 +91,9 @@ export class YjsDocStore implements DocStore {
   private snapshot: RoomDoc
   /** Who is here. Separate from the document on purpose: never logged, never undone. */
   readonly presence: RoomPresence
+  /** Notices from the server about this room, outside the document. */
+  readonly signals = new RoomSignals()
+  private readonly seedLocally: boolean
   private readonly undoManager: Y.UndoManager
   private history: HistoryEntry[] = []
   private recording = false
@@ -116,6 +126,7 @@ export class YjsDocStore implements DocStore {
     this.now = options.now ?? Date.now
     this.openedAt = this.now()
     this.presence = new RoomPresence(options.self, options.presence)
+    this.seedLocally = options.seedLocally ?? true
 
     // Until the room exists in Yjs, the interface shows what it will be seeded with.
     this.snapshot = this.isSeeded() ? this.read() : options.initial
@@ -250,19 +261,22 @@ export class YjsDocStore implements DocStore {
    * has. A room nobody has written to yet is seeded here, and this device's
    * name is put in the document so other people's narration can say it.
    *
-   * Seeding uses fixed ids, so two devices seeding at the same moment write the
-   * same keys and converge. The server seeds rooms itself once it exists.
+   * With a server, the server has already seeded the room and this only adds
+   * the name. Without one, seeding uses fixed ids, so two tabs seeding at the
+   * same moment write the same keys and converge.
    */
   markLoaded = (): void => {
-    this.ensureSeeded()
+    if (!this.ensureSeeded()) return
     const known = this.snapshot.actors[this.self.id]
     if (!known || known.displayName !== this.self.displayName || known.hue !== this.self.hue) {
       this.ydoc.transact(() => this.flat.actors.set(this.self.id, { ...this.self }), SYSTEM)
     }
   }
 
-  private ensureSeeded(): void {
-    if (this.isSeeded()) return
+  /** True when the room has content to work on. */
+  private ensureSeeded(): boolean {
+    if (this.isSeeded()) return true
+    if (!this.seedLocally) return false
     const seed = this.initial
     this.ydoc.transact(() => {
       for (const [key, value] of Object.entries(seed.room)) this.room.set(key, value)
@@ -272,12 +286,21 @@ export class YjsDocStore implements DocStore {
       }
       this.events.push(seed.events.map(clean))
     }, SYSTEM)
+    return true
+  }
+
+  /** Refused, not queued: writing into a room that has not arrived yet would fork it. */
+  private notLoaded(): CommandResult {
+    return {
+      ok: false,
+      violation: { rule: 0, code: 'room-not-loaded', message: 'Ruang belum termuat dari server. Tunggu sampai tersambung.' },
+    }
   }
 
   // --- writing -------------------------------------------------------------
 
   dispatch = (command: Command, ctx: CommandContext): CommandResult => {
-    this.ensureSeeded()
+    if (!this.ensureSeeded()) return this.notLoaded()
     const { doc, result } = applyCommand(this.snapshot, command, ctx)
     if (result.ok) this.commit(this.snapshot, doc, result.events)
     return result
@@ -288,7 +311,7 @@ export class YjsDocStore implements DocStore {
    * refused, nothing is written.
    */
   dispatchBatch = (commands: Command[], ctx: CommandContext): CommandResult => {
-    this.ensureSeeded()
+    if (!this.ensureSeeded()) return this.notLoaded()
     const before = this.snapshot
     let working = before
     const events: DocEvent[] = []

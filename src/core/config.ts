@@ -46,7 +46,15 @@ export const CONFIG = {
    * `off` keeps every room on this device only.
    */
   syncUrl: text('VITE_SYNC_URL', '/sync'),
+  /** The room service. A path means the server this page came from. */
+  apiUrl: text('VITE_API_URL', '/api'),
 } as const
+
+/** Where room service calls go, without a trailing slash. */
+export function apiUrl(): string {
+  const value = CONFIG.apiUrl
+  return value.endsWith('/') ? value.slice(0, -1) : value
+}
 
 /** The WebSocket address of the sync server, or null when sync is off. */
 export function syncUrl(): string | null {

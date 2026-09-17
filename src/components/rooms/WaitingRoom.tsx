@@ -13,23 +13,17 @@
  * who cannot see the badge still knows somebody is waiting.
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useAnnouncer } from '../../a11y/Announcer'
 import { audioBus } from '../../audio/bus'
 import { Icon } from '../shared/icons'
 import { agoLabel, type RoomAccess } from '../../services/rooms/rooms'
-import { answer, answerAll, answeredFor, snapshot, subscribe, waitingFor } from '../../services/rooms/requests'
+import { useJoinRequests } from '../../state/rooms/useJoinRequests'
 
 const STATUS_WORD = { diterima: 'Diterima', ditolak: 'Ditolak' } as const
 
-export function useWaiting(roomId: string) {
-  useSyncExternalStore(subscribe, snapshot, snapshot)
-  return waitingFor(roomId)
-}
-
-export function WaitingRoom({ roomId, access }: { roomId: string; access: RoomAccess }) {
-  const waiting = useWaiting(roomId)
-  const answered = answeredFor(roomId)
+export function WaitingRoom({ access }: { access: RoomAccess }) {
+  const { waiting, answered, answer } = useJoinRequests()
   const { announce } = useAnnouncer()
 
   const knocks = useRef(0)
@@ -42,8 +36,8 @@ export function WaitingRoom({ roomId, access }: { roomId: string; access: RoomAc
   }, [waiting])
 
   const respond = useCallback(
-    (id: string, status: 'diterima' | 'ditolak') => {
-      const done = answer(id, status)
+    async (id: string, status: 'diterima' | 'ditolak') => {
+      const done = await answer(id, status)
       if (!done) return
       announce(
         status === 'diterima'
@@ -56,11 +50,13 @@ export function WaitingRoom({ roomId, access }: { roomId: string; access: RoomAc
         hue: done.hue,
       })
     },
-    [announce],
+    [announce, answer],
   )
 
-  const respondAll = (status: 'diterima' | 'ditolak') => {
-    const done = answerAll(roomId, status)
+  const respondAll = async (status: 'diterima' | 'ditolak') => {
+    const done = (await Promise.all(waiting.map((request) => answer(request.id, status)))).filter(
+      (request): request is NonNullable<typeof request> => request !== null,
+    )
     if (done.length === 0) return
     announce(
       status === 'diterima'
@@ -121,21 +117,20 @@ export function WaitingRoom({ roomId, access }: { roomId: string; access: RoomAc
                   <p className="person-where">
                     <Icon name={request.via === 'tautan' ? 'link' : 'keyboard'} size={12} />
                     Lewat {request.via}, {agoLabel(request.askedAt)}
-                    {request.email && <span className="tag">{request.email}</span>}
                   </p>
                 </div>
                 <div className="person-actions">
                   <button
                     type="button"
                     className="btn btn-small btn-primary"
-                    onClick={() => respond(request.id, 'diterima')}
+                    onClick={() => void respond(request.id, 'diterima')}
                   >
                     Terima
                   </button>
                   <button
                     type="button"
                     className="btn btn-small"
-                    onClick={() => respond(request.id, 'ditolak')}
+                    onClick={() => void respond(request.id, 'ditolak')}
                   >
                     Tolak
                   </button>
@@ -149,12 +144,12 @@ export function WaitingRoom({ roomId, access }: { roomId: string; access: RoomAc
               <button
                 type="button"
                 className="btn btn-small"
-                onClick={() => respondAll('diterima')}
+                onClick={() => void respondAll('diterima')}
               >
                 <Icon name="check" size={15} />
                 Terima semua
               </button>
-              <button type="button" className="btn btn-small" onClick={() => respondAll('ditolak')}>
+              <button type="button" className="btn btn-small" onClick={() => void respondAll('ditolak')}>
                 <Icon name="x" size={15} />
                 Tolak semua
               </button>

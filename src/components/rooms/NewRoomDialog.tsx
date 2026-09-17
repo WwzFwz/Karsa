@@ -26,7 +26,8 @@
 import { useMemo, useState } from 'react'
 import { Dialog } from '../shared/Dialog'
 import { Icon } from '../shared/icons'
-import { createRoom, hueFor, newRoomCode, type RoomAccess, type RoomSummary } from '../../services/rooms/rooms'
+import { createRoom, hueFor, newRoomCode, serverMode, type RoomAccess, type RoomSummary } from '../../services/rooms/rooms'
+import { meFrom } from '../../state/rooms/useRoomEntry'
 
 const TITLE_MAX = 70
 
@@ -58,9 +59,12 @@ function nameFromEmail(email: string): string {
 const looksLikeEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 
 export function NewRoomDialog({
+  name,
   onClose,
   onCreated,
 }: {
+  /** Who is making it: the maker is the first member. */
+  name: string
   onClose: () => void
   onCreated: (room: RoomSummary) => void
 }) {
@@ -71,6 +75,8 @@ export function NewRoomDialog({
   const [invited, setInvited] = useState<string[]>([])
   const [guest, setGuest] = useState('')
   const [copied, setCopied] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const named = title.trim()
   const over = named.length > TITLE_MAX
@@ -119,14 +125,21 @@ export function NewRoomDialog({
   }
 
   const create = () => {
-    if (!named || over) return
-    onCreated(createRoom(named, { id: code, access, invited: invited.map(nameFromEmail) }))
+    if (!named || over || busy) return
+    setBusy(true)
+    setError(null)
+    createRoom(meFrom(name), named, { id: code, access })
+      .then(onCreated)
+      .catch((failure: Error) => {
+        setError(failure.message)
+        setBusy(false)
+      })
   }
 
   return (
     <Dialog
       title="Ruang baru"
-      description="Ruang dibuat di perangkat ini. Tidak ada yang dikirim ke mana pun sampai kodenya kamu bagikan."
+      description={serverMode() ? 'Isi ruang disimpan di server. Suara tetap di perangkat.' : 'Ruang dibuat di perangkat ini.'}
       onClose={onClose}
       footer={
         <>
@@ -136,7 +149,7 @@ export function NewRoomDialog({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!named || over}
+            disabled={!named || over || busy}
             onClick={create}
           >
             <Icon name="plus" size={16} />
@@ -168,6 +181,11 @@ export function NewRoomDialog({
           ? `Terlalu panjang: ${named.length} dari ${TITLE_MAX} karakter.`
           : 'Nama ini yang muncul di daftar ruang dan dibacakan pembaca layar. Bisa diganti kapan saja.'}
       </p>
+      {error && (
+        <p className="field-help is-error" role="alert">
+          {error}
+        </p>
+      )}
 
       <fieldset className="chips chips-stack" style={{ marginTop: 16 }}>
         <legend className="field-label">Siapa yang boleh masuk</legend>

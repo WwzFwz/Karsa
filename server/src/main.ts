@@ -1,51 +1,76 @@
 /**
- * One process, one container (D2, D75): the room service and document sync
+ * One process, one container (D2, D76): the room service and document sync
  * share an HTTP server, and the built app is served from the same origin, so a
  * classroom needs one address and nothing else.
  */
 
 import 'reflect-metadata'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import type { Server } from 'node:http'
+import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module.js'
-import { openStorage } from './sync/storage.js'
-import { mountSync, SYNC_PATH } from './sync/sync.js'
-
-const PORT = Number(process.env.PORT ?? 3000)
-const DATA_FILE = resolve(process.env.KARSA_DATA ?? 'data/karsa.sqlite')
-const STATIC_DIR = resolve(process.env.KARSA_STATIC ?? '../dist')
+import { Tokens } from './auth/token.js'
+import { readConfig } from './config.js'
+import { openDatabase } from './db.js'
+import { JoinRequests } from './rooms/requests.js'
+import { RoomsRepository } from './rooms/rooms.repository.js'
+import { RoomsService } from './rooms/rooms.service.js'
+import { loadSeed } from './rooms/seed.js'
+import { documentStorage } from './sync/storage.js'
+import { createSync, mountSync, SYNC_PATH } from './sync/sync.js'
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error', 'warn'] })
-  app.setGlobalPrefix('api')
+  const config = readConfig()
+  const db = openDatabase(config.dataFile)
+  const storage = documentStorage(db)
+  const repository = new RoomsRepository(db)
+  const tokens = new Tokens(config.secret, config.tokenDays)
+  const seed = await loadSeed()
+  const hocuspocus = createSync({ storage, rooms: repository, tokens, seed })
+  const rooms = new RoomsService(repository, storage, new JoinRequests(), tokens, seed, hocuspocus)
+  rooms.ensureDemoRoom()
 
-  const storage = openStorage(DATA_FILE)
-  const hocuspocus = mountSync(app.getHttpServer() as Server, storage)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule.register({ rooms, tokens }), {
+    logger: ['error', 'warn'],
+  })
+  app.setGlobalPrefix('api')
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
+  // Behind a proxy in the deployed setup, so rate limits see the real address.
+  app.set('trust proxy', true)
+
+  const docs = new DocumentBuilder()
+    .setTitle('Karsa room service')
+    .setDescription('Ruang, token masuk, dan ruang tunggu. Dokumen ruang lewat WebSocket /sync.')
+    .addBearerAuth()
+    .build()
+  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, docs))
+
+  mountSync(app.getHttpServer() as Server, hocuspocus)
 
   // The built client, when there is one. In development Vite serves it instead.
-  if (existsSync(join(STATIC_DIR, 'index.html'))) {
-    app.useStaticAssets(STATIC_DIR)
+  if (existsSync(join(config.staticDir, 'index.html'))) {
+    app.useStaticAssets(config.staticDir)
     app.use((req: { method: string; path: string }, res: { sendFile(path: string): void }, next: () => void) => {
       if (req.method !== 'GET' || req.path.startsWith('/api') || req.path === SYNC_PATH) return next()
-      res.sendFile(join(STATIC_DIR, 'index.html'))
+      res.sendFile(join(config.staticDir, 'index.html'))
     })
   }
 
-  app.enableShutdownHooks()
   const shutdown = async () => {
     hocuspocus.flushPendingStores()
     await app.close()
-    storage.close()
+    db.close()
     process.exit(0)
   }
   process.on('SIGINT', shutdown)
   process.on('SIGTERM', shutdown)
 
-  await app.listen(PORT)
-  console.log(`Karsa server di http://localhost:${PORT} (sinkronisasi ${SYNC_PATH}, data ${DATA_FILE})`)
+  await app.listen(config.port)
+  console.log(`Karsa server di http://localhost:${config.port} (API /api, dokumentasi /api/docs, sinkronisasi ${SYNC_PATH})`)
 }
 
 void bootstrap()

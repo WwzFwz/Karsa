@@ -13,7 +13,8 @@ import { useView } from '../../state/room/ViewProvider'
 import { MODE_LABEL } from '../shared/labels'
 import { Icon } from '../shared/icons'
 import { WaitingRoom } from '../rooms/WaitingRoom'
-import { findRoom } from '../../services/rooms/rooms'
+import { serverMode } from '../../services/rooms/rooms'
+import { useRoomAccess } from '../../state/rooms/useRoomAccess'
 
 export function PresencePanel() {
   const { doc, simulateConflict } = useDocument()
@@ -22,7 +23,7 @@ export function PresencePanel() {
   const online = participants
   // People at the door come before people in the room: they are the only ones
   // here who are waiting on a decision.
-  const access = findRoom(doc.room.id)?.access ?? 'terkunci'
+  const { access } = useRoomAccess()
 
   return (
     <section className="panel" aria-labelledby="presence-heading">
@@ -34,7 +35,8 @@ export function PresencePanel() {
         <span className="pill pill-ok">{online.length} hadir</span>
       </header>
 
-      <WaitingRoom roomId={doc.room.id} access={access} />
+      {/* Without a server nobody else can reach the room, so there is no door. */}
+      {serverMode() && access && <WaitingRoom access={access} />}
 
       <h3 className="panel-sub">Di dalam ruang</h3>
       <ul className="people">

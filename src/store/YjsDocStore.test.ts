@@ -192,3 +192,23 @@ describe('two devices at once', () => {
     assert.equal(ani.store.getDoc().actors[BAYU.id]?.displayName, 'Bayu')
   })
 })
+
+describe('a room the server owns (D79)', () => {
+  it('is not seeded by this device, and writes wait until it arrives', () => {
+    const store = new YjsDocStore({
+      initial: buildEmptyDoc('TES-002', 'Milik server', ANI),
+      self: ANI,
+      seedLocally: false,
+    })
+    store.markLoaded()
+    assert.equal(store.ydoc.getMap('room').size, 0, 'no second root invented')
+    const result = store.dispatch(add('Terlalu cepat'), { actorId: ANI.id, inputPath: 'keyboard' })
+    assert.equal(result.ok, false)
+
+    const server = device(BAYU)
+    Y.applyUpdate(store.ydoc, Y.encodeStateAsUpdate(server.store.ydoc), 'remote')
+    store.markLoaded()
+    assert.equal(store.dispatch(add('Sekarang boleh'), { actorId: ANI.id, inputPath: 'keyboard' }).ok, true)
+    assert.equal(store.getDoc().events.filter((e) => e.type === 'createNode' && !e.payload.title?.startsWith('Sekarang')).length, 1)
+  })
+})

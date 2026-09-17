@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Dialog } from '../shared/Dialog'
 import { Icon } from '../shared/icons'
 import { useDocument } from '../../state/room/DocumentProvider'
-import { findRoom } from '../../services/rooms/rooms'
+import { useRoomAccess } from '../../state/rooms/useRoomAccess'
 
 /**
  * Sharing is a code, not an invitation.
@@ -16,7 +16,7 @@ export function ShareDialog({ onClose }: { onClose: () => void }) {
   const { doc } = useDocument()
   const [copied, setCopied] = useState<'kode' | 'tautan' | null>(null)
   const link = `${window.location.origin}/ruang/${doc.room.id}`
-  const locked = (findRoom(doc.room.id)?.access ?? 'terkunci') === 'terkunci'
+  const locked = useRoomAccess().access !== 'terbuka'
 
   const copy = async (what: 'kode' | 'tautan') => {
     const text = what === 'kode' ? doc.room.id : link

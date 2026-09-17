@@ -14,8 +14,8 @@
     "check": "npm run typecheck && npm run typecheck:server && npm run check:boundaries && npm test && npm run eval",
     "shots": "node scripts/shots.mjs",
     "dev:server": "npm --prefix server run dev",
-    "smoke:sync": "node scripts/sync-smoke.mjs",
-    "typecheck:server": "tsc -p server/tsconfig.json --noEmit"
+    "typecheck:server": "tsc -p server/tsconfig.json --noEmit",
+    "test:server": "npm --prefix server run build && node --test scripts/server-e2e.mjs"
   },
   "dependencies": {
     "@hocuspocus/provider": "^4.7.0",

@@ -35,7 +35,7 @@ import { templateById } from '../../core/templates/registry'
 import { countVotes, hasVoted } from '../../core/tools/tally'
 import { projectTree, type TreeProjection } from '../../core/tree/project'
 import { selfActor } from '../../services/identity'
-import { findRoom } from '../../services/rooms/rooms'
+import { serverMode } from '../../services/rooms/rooms'
 import { connectRoom } from '../../store/connectRoom'
 import { buildEmptyDoc, buildSeedDoc } from '../../store/seed/room'
 import { YjsDocStore } from '../../store/YjsDocStore'
@@ -73,9 +73,27 @@ export interface DocumentApi {
   simulateConflict: () => void
 }
 
+/** How this device got into the room (app/RoomGate). */
+export interface RoomEntry {
+  /** Join token; null without a server. */
+  token: string | null
+  /** The room's title as the room service knows it, for a room still loading. */
+  title: string | null
+  /** Sync refused the token. */
+  onDenied: () => void
+}
+
 const DocumentContext = createContext<DocumentApi | null>(null)
 
-export function DocumentProvider({ selfName, children }: { selfName: string; children: ReactNode }) {
+export function DocumentProvider({
+  selfName,
+  entry,
+  children,
+}: {
+  selfName: string
+  entry: RoomEntry
+  children: ReactNode
+}) {
   const announcer = useAnnouncer()
   // Re-render everything that speaks when the output language changes.
   const language = useLang()
@@ -92,14 +110,22 @@ export function DocumentProvider({ selfName, children }: { selfName: string; chi
     return new YjsDocStore({
       initial: room === DEMO_ROOM
         ? buildSeedDoc(self)
-        : buildEmptyDoc(room, findRoom(room)?.title ?? 'Ruang tanpa nama', self),
+        : buildEmptyDoc(room, entry.title ?? 'Ruang tanpa nama', self),
       self,
+      // With a server, the server seeds every room; a device never does (D79).
+      seedLocally: !serverMode(),
     })
+    // The title only matters for a room made on this device without a server.
   }, [self, room])
 
   // Opening the store is pure; connecting it is an effect, so a StrictMode
   // double run connects, disconnects and connects cleanly.
-  useEffect(() => connectRoom(store, room), [store, room])
+  const onDenied = useRef(entry.onDenied)
+  onDenied.current = entry.onDenied
+  useEffect(
+    () => connectRoom(store, room, { token: entry.token, onDenied: () => onDenied.current() }),
+    [store, room, entry.token],
+  )
 
   const doc = useSyncExternalStore(store.subscribeDoc, store.getDoc, store.getDoc)
   const tree = useMemo(() => projectTree(doc), [doc])

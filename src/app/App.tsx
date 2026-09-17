@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AnnouncerProvider } from '../a11y/Announcer'
-import { RoomProvider } from '../state/room/RoomProvider'
+import { RoomGate } from './RoomGate'
 import { DialogProvider } from '../state/dialogs/DialogProvider'
 import { RoomShell } from '../components/layout/RoomShell'
 import { DialogHost } from '../components/dialogs/DialogHost'
@@ -33,7 +33,7 @@ export function App() {
           path="/ruang/:roomId/*"
           element={
             name ? (
-              <RoomProvider selfName={name}>
+              <RoomGate name={name}>
                 <DialogProvider>
                   <RoomShell>
                     <Routes>
@@ -50,7 +50,7 @@ export function App() {
                   </RoomShell>
                   <DialogHost />
                 </DialogProvider>
-              </RoomProvider>
+              </RoomGate>
             ) : (
               <Navigate to="/" replace />
             )

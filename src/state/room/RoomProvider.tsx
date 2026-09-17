@@ -9,15 +9,24 @@
  */
 
 import type { ReactNode } from 'react'
+import type { RoomEntry } from './DocumentProvider'
 import { AssistantProvider } from './AssistantProvider'
 import { DocumentProvider } from './DocumentProvider'
 import { PresenceProvider } from './PresenceProvider'
 import { SessionProvider } from './SessionProvider'
 import { ViewProvider } from './ViewProvider'
 
-export function RoomProvider({ selfName, children }: { selfName: string; children: ReactNode }) {
+export function RoomProvider({
+  selfName,
+  entry,
+  children,
+}: {
+  selfName: string
+  entry: RoomEntry
+  children: ReactNode
+}) {
   return (
-    <DocumentProvider selfName={selfName}>
+    <DocumentProvider selfName={selfName} entry={entry}>
       <PresenceProvider>
         <ViewProvider>
           <SessionProvider>
