@@ -42,15 +42,17 @@ dan data contoh. Yang sudah sungguhan sejak sekarang:
 
 | Jalur | Isi |
 | ----- | --- |
+| `src/app/` | Rute dan halaman. |
+| `src/components/` | UI per fitur, `shared/` untuk yang dipakai bersama. |
+| `src/state/` | Provider dan hook React; satu ruang = lima provider. |
+| `src/services/` | Logika tanpa React: suara, penyedia model, ruang. |
+| `src/store/` | `YjsDocStore`, IndexedDB, sambungan server, data contoh. |
 | `src/core/` | Model, aturan, proyeksi pohon, command, peristiwa. Tidak mengimpor React. |
-| `src/store/` | `DocStore` sebagai satu-satunya antarmuka data, ditambah implementasi memori dan data contoh. |
 | `src/a11y/` | Antrean narasi, tabel pintasan, perilaku papan ketik yang dipakai bersama. |
 | `src/audio/` | Audio bus dan earcon oscillator. |
-| `src/views/` | Tiga tampilan setara. Tidak saling mengimpor. |
-| `src/features/` | Suara, kehadiran, komentar, ringkasan. |
-| `src/pages/` | Enam halaman. |
+| `server/` | Satu proses: NestJS + Hocuspocus + SQLite. |
 | `docs/` | Model data, peta pintasan, kosakata bunyi. |
 
-Dua aturan struktural yang dijaga: `core/` tidak boleh mengimpor React, dan
-`views/` tidak boleh saling mengimpor. Kalau dua tampilan mulai saling impor,
-prinsip tiga tampilan setara sudah bocor.
+Arah impor dan catatan folder dijaga `scripts/check-boundaries.mjs`: tiap folder
+di `components/`, `state/`, dan `services/` punya `README.md` yang menjelaskan apa
+yang masuk ke sana.

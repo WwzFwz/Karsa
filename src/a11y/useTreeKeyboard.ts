@@ -8,16 +8,18 @@
  */
 
 import { useCallback } from 'react'
-import { useRoom } from '../app/RoomContext'
-import { useDialogs } from '../app/DialogContext'
+import { useDocument } from '../state/room/DocumentProvider'
+import { usePresence } from '../state/room/PresenceProvider'
+import { useView } from '../state/room/ViewProvider'
+import { useDialogs } from '../state/dialogs/DialogProvider'
 import type { NodeId } from '../core/model/types'
 import { isTypingTarget } from './keys'
 
 export function useTreeKeyboard() {
-  const room = useRoom()
+  const { tree, run } = useDocument()
+  const { pointAt } = usePresence()
+  const { visibleIds, focusId, setFocus, collapsed, toggleCollapse, setEditingId } = useView()
   const dialogs = useDialogs()
-  const { visibleIds, focusId, setFocus, tree, collapsed, toggleCollapse, run, pointAt, setEditingId } =
-    room
 
   return useCallback(
     (event: React.KeyboardEvent) => {
@@ -132,7 +134,7 @@ export function useTreeKeyboard() {
           // the command says so rather than the key being silently inert.
           if (id) {
             event.preventDefault()
-            room.run({ type: 'voteNode', id })
+            run({ type: 'voteNode', id })
           }
           return
         case 'l':

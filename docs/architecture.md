@@ -401,6 +401,11 @@ karena "tidak terjangkau" adalah tiga masalah dengan tiga perbaikan berbeda.
 
 ```
 src/
+  app/             rute + halaman (pages/)
+  components/      UI saja, per fitur; shared/ untuk yang dipakai bersama
+  state/           provider + hook React: room/ (5 provider), dialogs/, shortcuts/
+  services/        logika tanpa React: voice/, ai/, rooms/, summary/, identity
+  store/           YjsDocStore, IndexedDB, server, data contoh
   core/            tidak mengenal React sama sekali
     model/         tipe, id, indeks pecahan
     rules/         invarian aturan 1–9
@@ -411,18 +416,16 @@ src/
     tools/         registry alat + hitungan suara
     templates/     templat sebagai kumpulan createNode
     agent/         orchestrator, konteks, penyedia, set uji
-  store/           DocStore + implementasi memori + data contoh
   a11y/            announcer, peta tuts, papan ketik pohon
   audio/           bus + kosakata earcon
-  views/           kanvas, outline
-  features/        dok suara, kehadiran, komentar, ruang, perintah
-  pages/           enam halaman
-  ui/              ikon, dialog, label, tema
 ```
 
-Aturan yang menjaga ini tetap rapi: **`core/` tidak boleh mengimpor apa pun dari
-`views/`, `features/`, atau `pages/`.** Itu yang membuat set uji bisa berjalan di
-node tanpa DOM, dan yang membuat `core/` bisa diuji tanpa merender apa pun.
+Arah impor dijaga `scripts/check-boundaries.mjs` (D73, D77):
+`app → components → state → services → store → core`. Komponen tidak membaca
+`store/` langsung, `services/`, `store/`, dan `core/` tidak mengimpor React, dan
+`components/shared/` tidak mengimpor folder komponen lain. Setiap folder di
+`components/`, `state/`, dan `services/` punya `README.md` pendek: apa isinya, apa
+yang masuk ke sana, apa yang tidak, dan tabel file yang diperiksa skrip yang sama.
 
 ---
 

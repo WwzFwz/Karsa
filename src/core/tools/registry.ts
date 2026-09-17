@@ -12,7 +12,7 @@
  */
 
 import { localise } from '../i18n'
-import type { IconName } from '../../ui/icons'
+import type { IconName } from '../../components/shared/icons'
 import type { NodeKind, ToolKind } from '../model/types'
 
 export interface ToolSpec {

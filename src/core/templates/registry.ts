@@ -20,7 +20,7 @@
 
 import { localise } from '../i18n'
 import type { NodeKind, ToolKind } from '../model/types'
-import type { IconName } from '../../ui/icons'
+import type { IconName } from '../../components/shared/icons'
 
 export interface TemplateNode {
   kind: NodeKind

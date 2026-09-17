@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AnnouncerProvider } from '../a11y/Announcer'
-import { RoomProvider } from './RoomContext'
-import { DialogProvider } from './DialogContext'
-import { RoomShell } from './RoomShell'
-import { JoinPage } from '../pages/JoinPage'
-import { DashboardPage } from '../pages/DashboardPage'
-import { WorkspacePage } from '../pages/WorkspacePage'
-import { SummaryPage } from '../pages/SummaryPage'
-import { SettingsPage } from '../pages/SettingsPage'
+import { RoomProvider } from '../state/room/RoomProvider'
+import { DialogProvider } from '../state/dialogs/DialogProvider'
+import { RoomShell } from '../components/layout/RoomShell'
+import { DialogHost } from '../components/dialogs/DialogHost'
+import { JoinPage } from './pages/JoinPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { WorkspacePage } from './pages/WorkspacePage'
+import { SummaryPage } from './pages/SummaryPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 const NAME_KEY = 'karsa:nama'
 
@@ -47,6 +48,7 @@ export function App() {
                       <Route path="pengaturan" element={<SettingsPage />} />
                     </Routes>
                   </RoomShell>
+                  <DialogHost />
                 </DialogProvider>
               </RoomProvider>
             ) : (
