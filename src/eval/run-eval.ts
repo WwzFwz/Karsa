@@ -61,7 +61,7 @@ function judge(test: EvalCase, got: Plan): { pass: boolean; note: string } {
 }
 
 async function run(useOllama: boolean): Promise<Result[]> {
-  const doc = buildSeedDoc()
+  const doc = buildSeedDoc({ id: 'a_eval', displayName: 'Eval', hue: 0 })
   const tree = projectTree(doc)
   const results: Result[] = []
 

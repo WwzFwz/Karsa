@@ -1,10 +1,9 @@
 /**
  * The one interface the interface knows about.
  *
- * Today this is backed by an in-memory store with sample data. At real P0 a
- * YjsDocStore implements the same shape and not a single component changes.
- * Presence is kept on its own channel because it is ephemeral and noisy --
- * exactly the split Yjs makes between the document and Awareness.
+ * Backed by `YjsDocStore`. Presence is kept on its own channel because it is
+ * ephemeral and noisy -- exactly the split Yjs makes between the document and
+ * Awareness.
  */
 
 import type { Command, CommandContext, CommandResult } from '../core/commands/types'
@@ -20,14 +19,22 @@ export interface DocStore {
   getDoc(): RoomDoc
   subscribeDoc(listener: () => void): () => void
 
+  /**
+   * Events that arrived from another device while the room was open. Changes
+   * made here are announced by whoever dispatched them; these are the ones
+   * nobody on this device caused, and following them is the core claim.
+   */
+  subscribeRemoteEvents(listener: (events: DocEvent[]) => void): () => void
+
   /** The only way to change the document. */
   dispatch(command: Command, ctx: CommandContext): CommandResult
 
+  /** Several commands as one gesture and one undo step (D44). */
+  dispatchBatch(commands: Command[], ctx: CommandContext): CommandResult
+
   /**
-   * Reverse the last change by this device.
-   *
-   * Undo is what lets a voice command apply straight away instead of waiting
-   * behind a confirmation for every single word. Returns the event describing
+   * Reverse the last change made on this device, and only that: a change by
+   * someone else that landed afterwards stays. Returns the event describing
    * what was reversed, or null when there is nothing left to reverse.
    */
   undo(actorId: ActorId): DocEvent | null

@@ -22,14 +22,11 @@ import type { InputPath, ToolKind } from '../../core/model/types'
 const ORDER_KEYS = 'abcdefghijklmnopqrstuvwxyz'
 const MINUTE = 60_000
 
-export const SELF_ID = 'a_anda'
-
 export const ACTORS: Record<string, Actor> = {
   a_rina: { id: 'a_rina', displayName: 'Rina Halimah', hue: 268 },
   a_budi: { id: 'a_budi', displayName: 'Budi Santoso', hue: 24 },
   a_sari: { id: 'a_sari', displayName: 'Sari Wulandari', hue: 152 },
   a_teguh: { id: 'a_teguh', displayName: 'Teguh Prasetyo', hue: 202 },
-  [SELF_ID]: { id: SELF_ID, displayName: 'Anda', hue: 340 },
 }
 
 interface SeedRow {
@@ -132,7 +129,8 @@ const EXTRA_EVENTS: { type: EventType; by: string; path: InputPath; minutesAgo: 
   { type: 'voteNode', by: 'a_budi', path: 'voice', minutesAgo: 8, payload: { nodeId: 'n_opsi_gabung', title: 'Gabungkan dua mata kuliah', voteCount: 1 } },
 ]
 
-export function buildSeedDoc(now = Date.now()): RoomDoc {
+/** `self` is this device, added to the cast so its own changes have a name. */
+export function buildSeedDoc(self: Actor, now = Date.now()): RoomDoc {
   const nodes: Record<string, Node> = {}
   const orderCounter = new Map<string, number>()
 
@@ -253,7 +251,7 @@ export function buildSeedDoc(now = Date.now()): RoomDoc {
     relations,
     comments,
     events,
-    actors: ACTORS,
+    actors: { ...ACTORS, [self.id]: self },
   }
 }
 
@@ -266,16 +264,16 @@ export function buildSeedDoc(now = Date.now()): RoomDoc {
  * point, and it is a real event in the log so the room's history begins where
  * the room did.
  */
-export function buildEmptyDoc(id: string, title: string, now = Date.now()): RoomDoc {
+export function buildEmptyDoc(id: string, title: string, self: Actor, now = Date.now()): RoomDoc {
   const root: Node = {
     id: 'n_akar',
     parentId: null,
     order: 'a',
     kind: 'root',
     title,
-    createdBy: SELF_ID,
+    createdBy: self.id,
     createdAt: now,
-    updatedBy: SELF_ID,
+    updatedBy: self.id,
     updatedAt: now,
     inputPath: 'keyboard',
   }
@@ -290,23 +288,23 @@ export function buildEmptyDoc(id: string, title: string, now = Date.now()): Room
         seq: 1,
         type: 'createNode',
         at: now,
-        actorId: SELF_ID,
+        actorId: self.id,
         inputPath: 'keyboard',
         origin: 'user',
         payload: { nodeId: root.id, title },
       },
     ],
-    actors: { [SELF_ID]: ACTORS[SELF_ID] },
+    actors: { [self.id]: self },
   }
 }
 
 /** A new room has one person in it, and it is you. */
-export function buildSoloParticipants(selfName: string, now = Date.now()): Participant[] {
+export function buildSoloParticipants(self: Actor, now = Date.now()): Participant[] {
   return [
     {
-      actorId: SELF_ID,
-      displayName: selfName,
-      hue: ACTORS[SELF_ID].hue,
+      actorId: self.id,
+      displayName: self.displayName,
+      hue: self.hue,
       talking: false,
       focusNodeId: 'n_akar',
       pointingNodeId: null,
@@ -317,12 +315,12 @@ export function buildSoloParticipants(selfName: string, now = Date.now()): Parti
   ]
 }
 
-export function buildSeedParticipants(selfName: string, now = Date.now()): Participant[] {
+export function buildSeedParticipants(self: Actor, now = Date.now()): Participant[] {
   return [
     {
-      actorId: SELF_ID,
-      displayName: selfName,
-      hue: ACTORS[SELF_ID].hue,
+      actorId: self.id,
+      displayName: self.displayName,
+      hue: self.hue,
       talking: false,
       focusNodeId: 'n_akar',
       pointingNodeId: null,

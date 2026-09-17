@@ -58,10 +58,14 @@ risiko yang harus benar sejak awal.
 
 ### 2.1 Uji otomatis untuk `core/` — **sudah dimulai (D73)**
 
-76 uji, `npm test`: aturan 1, 4, 5, satu pintu data, hitungan suara, dan alur
-suara per perangkat (D74). Belum: tata letak, dan orchestrator selain set uji eval.
+88 uji, `npm test`: aturan 1, 4, 5, satu pintu data, hitungan suara, alur
+suara per perangkat (D74), dan dokumen Yjs dua perangkat (D75). Belum: tata letak, dan orchestrator selain set uji eval.
 
-### 2.2 Isi ruang hilang saat halaman dimuat ulang
+### 2.2 Isi ruang hilang saat halaman dimuat ulang — **selesai (D75)**
+
+Dokumen kini Yjs, disimpan di IndexedDB dan tersinkron antar tab peramban yang
+sama. Yang tersisa: server, supaya dua perangkat tersambung. Catatan lama di
+bawah ini dibiarkan sebagai alasan.
 
 Dokumen hidup di memori. Tekan F5, semuanya hilang. Daftar ruang, tema, dan
 pilihan penyedia bertahan di `localStorage`; isinya tidak.

@@ -35,14 +35,17 @@ import { readProvider, writeProvider, type ProviderId } from '../core/agent/prov
 import { expandTemplate, templateSize } from '../core/templates/expand'
 import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/project'
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
-import { MemoryDocStore } from '../store/MemoryDocStore'
+import { YjsDocStore } from '../store/YjsDocStore'
+import { connectLocal } from '../store/connectLocal'
+import type { PresenceSnapshot } from '../store/DocStore'
+import type { DocEvent } from '../core/events/types'
+import { selfActor } from '../features/presence/identity'
 import { useParams } from 'react-router-dom'
 import {
   buildEmptyDoc,
   buildSeedDoc,
   buildSeedParticipants,
   buildSoloParticipants,
-  SELF_ID,
 } from '../store/seed/room'
 import { findRoom } from '../features/rooms/rooms'
 import { tr } from '../core/i18n'
@@ -81,7 +84,7 @@ interface RoomApi {
   doc: RoomDoc
   tree: TreeProjection
   suggestion: ShapeSuggestion
-  participants: ReturnType<MemoryDocStore['getPresence']>['participants']
+  participants: PresenceSnapshot['participants']
   selfId: string
   nameOf: (actorId: string) => string
   hueOf: (actorId: string) => number
@@ -211,18 +214,22 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     code carries the seeded twenty nodes; any other room starts with its own
     name on a single root and nobody in it but you.
   */
+  const self = useMemo(() => selfActor(selfName), [selfName])
+  const room = roomId ?? DEMO_ROOM
   const store = useMemo(() => {
-    const id = roomId ?? DEMO_ROOM
-    if (id === DEMO_ROOM) {
-      return new MemoryDocStore(buildSeedDoc(), SELF_ID, buildSeedParticipants(selfName))
-    }
-    const summary = findRoom(id)
-    return new MemoryDocStore(
-      buildEmptyDoc(id, summary?.title ?? 'Ruang tanpa nama'),
-      SELF_ID,
-      buildSoloParticipants(selfName),
-    )
-  }, [selfName, roomId])
+    const demo = room === DEMO_ROOM
+    return new YjsDocStore({
+      initial: demo
+        ? buildSeedDoc(self)
+        : buildEmptyDoc(room, findRoom(room)?.title ?? 'Ruang tanpa nama', self),
+      self,
+      participants: demo ? buildSeedParticipants(self) : buildSoloParticipants(self),
+    })
+  }, [self, room])
+
+  // Opening the store is pure; keeping it on the device is an effect, so a
+  // StrictMode double run connects, disconnects and connects cleanly.
+  useEffect(() => connectLocal(store, room), [store, room])
 
   const doc = useSyncExternalStore(store.subscribeDoc, store.getDoc, store.getDoc)
   const presence = useSyncExternalStore(store.subscribePresence, store.getPresence, store.getPresence)
@@ -331,14 +338,14 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       },
       runCommand: (command, via) => latest.current.run(command, via),
       runBatch: (commands, via) => {
-        const result = store.dispatchBatch(commands, { actorId: SELF_ID, inputPath: via })
+        const result = store.dispatchBatch(commands, { actorId: self.id, inputPath: via })
         return result.ok ? { ok: true } : { ok: false, message: result.violation.message }
       },
       announce: (text, politeness) => latest.current.announcer.announce(text, politeness),
       earcon: (name) =>
         audioBus.emit(
           name === 'createNode'
-            ? { earcon: 'createNode', depth: 0, hue: store.getDoc().actors[SELF_ID]?.hue ?? 0 }
+            ? { earcon: 'createNode', depth: 0, hue: store.getDoc().actors[self.id]?.hue ?? 0 }
             : { earcon: name, force: true },
         ),
       setSpeaking: (active) => {
@@ -418,9 +425,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       // "Anda" is a pronoun, not a name, so it is the one name that is translated.
       const name = doc.actors[actorId]?.displayName
       if (!name) return tr('Seseorang', 'Someone')
-      return actorId === SELF_ID ? tr(name, 'You') : name
+      return actorId === self.id ? tr('Anda', 'You') : name
     },
-    [doc.actors, language],
+    [doc.actors, self.id, language],
   )
   const hueOf = useCallback((actorId: string) => doc.actors[actorId]?.hue ?? 0, [doc.actors])
 
@@ -481,17 +488,10 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     })
   }, [announcer])
 
-  const run = useCallback(
-    (command: Command, inputPath: InputPath = 'keyboard'): CommandResult => {
-      const result = store.dispatch(command, { actorId: SELF_ID, inputPath })
-      if (!result.ok) {
-        setLastError(result.violation.message)
-        announcer.announce(result.violation.message, 'assertive')
-        audioBus.emit({ earcon: 'blocked', force: true })
-        return result
-      }
-      setLastError(null)
-      for (const event of result.events) {
+  /** One sentence and one earcon per event, whoever made it (rule 5, rule 9). */
+  const announceEvents = useCallback(
+    (events: DocEvent[]) => {
+      for (const event of events) {
         announcer.announce(narrate(event, nameOf(event.actorId)))
         audioBus.emit({
           earcon: event.type,
@@ -499,6 +499,30 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
           hue: hueOf(event.actorId),
         })
       }
+    },
+    [announcer, nameOf, hueOf, tree],
+  )
+
+  /*
+    Following a change as it happens is the gap this product exists for
+    (section 1). A change made on another device gets exactly what a change
+    made here gets. Read through a ref so the subscription is made once.
+  */
+  const announceRef = useRef(announceEvents)
+  announceRef.current = announceEvents
+  useEffect(() => store.subscribeRemoteEvents((events) => announceRef.current(events)), [store])
+
+  const run = useCallback(
+    (command: Command, inputPath: InputPath = 'keyboard'): CommandResult => {
+      const result = store.dispatch(command, { actorId: self.id, inputPath })
+      if (!result.ok) {
+        setLastError(result.violation.message)
+        announcer.announce(result.violation.message, 'assertive')
+        audioBus.emit({ earcon: 'blocked', force: true })
+        return result
+      }
+      setLastError(null)
+      announceEvents(result.events)
       /*
         A hand placement is an opinion about where a node sits under the layout
         it was placed in. Giving the node a new parent invalidates that opinion
@@ -521,7 +545,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       if (created?.payload.nodeId) setFocusId(created.payload.nodeId as NodeId)
       return result
     },
-    [store, announcer, nameOf, hueOf, tree, doc.room.shape],
+    [store, announcer, announceEvents, doc.room.shape],
   )
 
   /*
@@ -536,7 +560,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       if (!spec) return
       const built = spec.build()
       const commands = expandTemplate(built, parentId)
-      const result = store.dispatchBatch(commands, { actorId: SELF_ID, inputPath: 'pointer' })
+      const result = store.dispatchBatch(commands, { actorId: self.id, inputPath: 'pointer' })
       if (!result.ok) {
         setLastError(result.violation.message)
         announcer.announce(result.violation.message, 'assertive')
@@ -546,7 +570,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
       announcer.announce(
         `Anda menambahkan templat ${spec.label}, ${templateSize(built)} simpul.`,
       )
-      audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(SELF_ID) })
+      audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(self.id) })
       const first = result.events.find((event) => event.payload.nodeId)
       if (first?.payload.nodeId) setFocusId(first.payload.nodeId as NodeId)
     },
@@ -559,7 +583,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     and a line in the log.
   */
   const undo = useCallback(() => {
-    const event = store.undo(SELF_ID)
+    const event = store.undo(self.id)
     if (!event) {
       announcer.announce('Tidak ada perubahan yang bisa dibatalkan.', 'assertive')
       audioBus.emit({ earcon: 'blocked', force: true })
@@ -694,7 +718,7 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     toggleCollapse,
     visibleIds,
     canvasIds,
-    votedByMe: (id: NodeId) => hasVoted(doc, id, SELF_ID),
+    votedByMe: (id: NodeId) => hasVoted(doc, id, self.id),
     votesOn: (id: NodeId) => countVotes(doc, id),
     insertTemplate,
     provider,
