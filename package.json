@@ -11,10 +11,14 @@
     "test": "node scripts/test.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "eval": "node scripts/eval.mjs",
-    "check": "npm run typecheck && npm run check:boundaries && npm test && npm run eval",
-    "shots": "node scripts/shots.mjs"
+    "check": "npm run typecheck && npm run typecheck:server && npm run check:boundaries && npm test && npm run eval",
+    "shots": "node scripts/shots.mjs",
+    "dev:server": "npm --prefix server run dev",
+    "smoke:sync": "node scripts/sync-smoke.mjs",
+    "typecheck:server": "tsc -p server/tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@hocuspocus/provider": "^4.7.0",
     "@huggingface/transformers": "^3.8.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

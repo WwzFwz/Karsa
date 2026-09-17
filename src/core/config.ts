@@ -40,7 +40,23 @@ export const CONFIG = {
   /** Speech recognition model, downloaded once and cached by the browser. */
   asrModel: text('VITE_ASR_MODEL', 'onnx-community/whisper-base'),
   asrModelAccurate: text('VITE_ASR_MODEL_ACCURATE', 'onnx-community/whisper-small'),
+  /**
+   * The sync server. A path means "the server this page came from", which is
+   * right for the one-container install and for Vite's dev proxy alike.
+   * `off` keeps every room on this device only.
+   */
+  syncUrl: text('VITE_SYNC_URL', '/sync'),
 } as const
+
+/** The WebSocket address of the sync server, or null when sync is off. */
+export function syncUrl(): string | null {
+  const value = CONFIG.syncUrl
+  if (value === 'off') return null
+  if (value.startsWith('ws://') || value.startsWith('wss://')) return value
+  const here = globalThis.location
+  if (!here) return null
+  return `${here.protocol === 'https:' ? 'wss' : 'ws'}://${here.host}${value.startsWith('/') ? '' : '/'}${value}`
+}
 
 const URL_KEY = 'karsa:ollama-url'
 const MODEL_KEY = 'karsa:ollama-model'

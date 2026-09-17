@@ -11,11 +11,20 @@ npm run dev
 ```
 
 Buka `http://localhost:5173`, isi nama panggilan, gabung ke ruang contoh
-`KUR-482`.
+`KUR-482`. Tanpa server, ruang tetap jalan dan tersimpan di perangkat ini.
+
+Supaya beberapa perangkat berada di ruang yang sama, jalankan server di terminal
+lain (Node 22+). Vite meneruskan `/sync` dan `/api` ke sana:
 
 ```bash
-npm run typecheck   # tsc
-npm run build       # bundel produksi
+npm --prefix server install
+npm run dev:server   # port 3000, data di server/data/karsa.sqlite
+```
+
+```bash
+npm run check        # typecheck klien + server, batas impor, uji, eval
+npm run smoke:sync -- ws://localhost:3000/sync   # dua klien lewat server sungguhan
+npm run build        # bundel produksi; server menyajikannya dari dist/
 ```
 
 ## Status

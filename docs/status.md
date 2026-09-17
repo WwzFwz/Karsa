@@ -63,8 +63,8 @@ suara per perangkat (D74), dan dokumen Yjs dua perangkat (D75). Belum: tata leta
 
 ### 2.2 Isi ruang hilang saat halaman dimuat ulang — **selesai (D75)**
 
-Dokumen kini Yjs, disimpan di IndexedDB dan tersinkron antar tab peramban yang
-sama. Yang tersisa: server, supaya dua perangkat tersambung. Catatan lama di
+Dokumen kini Yjs, disimpan di IndexedDB, tersinkron antar tab, dan antar
+perangkat lewat server satu proses (D76). Catatan lama di
 bawah ini dibiarkan sebagai alasan.
 
 Dokumen hidup di memori. Tekan F5, semuanya hilang. Daftar ruang, tema, dan
@@ -92,9 +92,9 @@ belum diukur dengan ucapan manusia; bila kurang, `whisper-small` tinggal dipilih
 
 Semua yang menghubungkan satu orang dengan orang lain belum ada:
 
-- **Hocuspocus** — sinkronisasi Yjs
-- **Room service** — membuat ruang dan token tanpa akun
-- **PostgreSQL** — snapshot dan metadata (SQLite untuk mode kelas)
+- ~~**Hocuspocus** — sinkronisasi Yjs~~ — ada, SQLite (D76)
+- **Room service** — NestJS sudah berdiri, endpoint ruang dan token belum
+- **PostgreSQL** — untuk mode lintas daerah; mode kelas sudah SQLite
 - **Kehadiran sungguhan** — sekarang data contoh; empat peserta itu palsu
 - **Permintaan masuk sungguhan** — ruang tunggu jalan, tapi yang mengetuk palsu
 

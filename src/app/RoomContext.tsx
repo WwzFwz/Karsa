@@ -36,7 +36,7 @@ import { expandTemplate, templateSize } from '../core/templates/expand'
 import { projectTree, visibleOrder, type TreeProjection } from '../core/tree/project'
 import { suggestShape, type ShapeSuggestion } from '../core/shape/suggest'
 import { YjsDocStore } from '../store/YjsDocStore'
-import { connectLocal } from '../store/connectLocal'
+import { connectRoom } from '../store/connectRoom'
 import type { PresenceSnapshot } from '../store/DocStore'
 import type { DocEvent } from '../core/events/types'
 import { selfActor } from '../features/presence/identity'
@@ -227,9 +227,9 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     })
   }, [self, room])
 
-  // Opening the store is pure; keeping it on the device is an effect, so a
-  // StrictMode double run connects, disconnects and connects cleanly.
-  useEffect(() => connectLocal(store, room), [store, room])
+  // Opening the store is pure; connecting it is an effect, so a StrictMode
+  // double run connects, disconnects and connects cleanly.
+  useEffect(() => connectRoom(store, room), [store, room])
 
   const doc = useSyncExternalStore(store.subscribeDoc, store.getDoc, store.getDoc)
   const presence = useSyncExternalStore(store.subscribePresence, store.getPresence, store.getPresence)
@@ -420,16 +420,23 @@ export function RoomProvider({ selfName, children }: { selfName: string; childre
     return () => window.clearInterval(timer)
   }, [draft.status])
 
+  /*
+    Read from the store, not from this render's `doc`: a change from another
+    device can bring its author's name in the same update, and it is announced
+    before React has rendered that update.
+  */
   const nameOf = useCallback(
     (actorId: string) => {
       // "Anda" is a pronoun, not a name, so it is the one name that is translated.
-      const name = doc.actors[actorId]?.displayName
-      if (!name) return tr('Seseorang', 'Someone')
-      return actorId === self.id ? tr('Anda', 'You') : name
+      if (actorId === self.id) return tr('Anda', 'You')
+      return store.getDoc().actors[actorId]?.displayName ?? tr('Seseorang', 'Someone')
     },
-    [doc.actors, self.id, language],
+    [store, self.id, doc.actors, language],
   )
-  const hueOf = useCallback((actorId: string) => doc.actors[actorId]?.hue ?? 0, [doc.actors])
+  const hueOf = useCallback(
+    (actorId: string) => store.getDoc().actors[actorId]?.hue ?? 0,
+    [store, doc.actors],
+  )
 
   useEffect(() => {
     audioBus.setProfile(soundProfile)

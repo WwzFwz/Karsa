@@ -39,3 +39,6 @@ desktop.ini
 # local configuration
 .env
 .env.local
+
+# sync server data (SQLite)
+server/data/
