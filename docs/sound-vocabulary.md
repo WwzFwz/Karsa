@@ -38,6 +38,9 @@ Nada dasar 880 Hz, di atas pita bicara. Setiap bunyi di bawah 180 milidetik.
 | Ada yang minta masuk | satu nada diulang, +7 lalu +7 | nada berulang itu bunyi mengetuk pintu |
 | Permintaan diterima | trinada naik, 0 +4 +7 | bentuk paling mirip "kedatangan" |
 | Permintaan ditolak | +2 lalu −5 | turun, dan tidak kembali ke nada awal |
+| Seseorang bergabung | −5 lalu 0, lembut | naik: ada yang datang, lebih pelan dari simpul baru |
+| Seseorang keluar | 0 lalu −5, lebih pelan | kebalikannya; mati dalam mode rapat |
+| Seseorang menunjuk | satu ketukan tinggi, +12 | menunjuk itu sesaat, bukan benda |
 | Perpindahan fokus | satu klik sangat pelan | hanya terdengar di mode telaah |
 | Telusur audio | satu nada per simpul | tingginya menyatakan kedalaman |
 

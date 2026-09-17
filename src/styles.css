@@ -511,8 +511,12 @@ kbd {
 @media (max-width: 1240px) {
   .mode-detail { display: none; }
 }
+/* Same chip as the badge, so the two statuses read as a pair. */
+.sync-chip.is-connecting { background: var(--warn-soft); color: var(--warn); }
+.sync-chip.is-offline { background: var(--surface); color: var(--ink-2, currentColor); }
+
 @media (max-width: 900px) {
-  .mode-badge { display: none; }
+  .mode-badge:not(.sync-chip) { display: none; }
 }
 
 .topbar-right { display: flex; align-items: center; gap: 6px; }

@@ -37,12 +37,7 @@ import { projectTree, type TreeProjection } from '../../core/tree/project'
 import { selfActor } from '../../services/identity'
 import { findRoom } from '../../services/rooms/rooms'
 import { connectRoom } from '../../store/connectRoom'
-import {
-  buildEmptyDoc,
-  buildSeedDoc,
-  buildSeedParticipants,
-  buildSoloParticipants,
-} from '../../store/seed/room'
+import { buildEmptyDoc, buildSeedDoc } from '../../store/seed/room'
 import { YjsDocStore } from '../../store/YjsDocStore'
 import { useLang } from '../useLang'
 
@@ -94,13 +89,11 @@ export function DocumentProvider({ selfName, children }: { selfName: string; chi
   const self = useMemo(() => selfActor(selfName), [selfName])
   const room = roomId ?? DEMO_ROOM
   const store = useMemo(() => {
-    const demo = room === DEMO_ROOM
     return new YjsDocStore({
-      initial: demo
+      initial: room === DEMO_ROOM
         ? buildSeedDoc(self)
         : buildEmptyDoc(room, findRoom(room)?.title ?? 'Ruang tanpa nama', self),
       self,
-      participants: demo ? buildSeedParticipants(self) : buildSoloParticipants(self),
     })
   }, [self, room])
 

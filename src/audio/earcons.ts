@@ -39,7 +39,10 @@ export const EARCONS: Record<
   | 'blocked'
   | 'joinRequest'
   | 'joinAccepted'
-  | 'joinDeclined',
+  | 'joinDeclined'
+  | 'peerJoined'
+  | 'peerLeft'
+  | 'peerPointed',
   EarconSpec
 > = {
   createNode: { steps: [0, 4], step: 55, gain: 0.16, important: true },
@@ -77,6 +80,13 @@ export const EARCONS: Record<
   joinAccepted: { steps: [0, 4, 7], step: 45, gain: 0.14, important: true },
   // Turning away: down, and it does not settle on the note it started from.
   joinDeclined: { steps: [2, -5], step: 62, gain: 0.12, important: false },
+  // Someone came in: a low rise, softer than a node appearing, since people matter
+  // but should not compete with the work.
+  peerJoined: { steps: [-5, 0], step: 60, gain: 0.1, important: true },
+  // Someone went away: the same two notes, falling. Quiet, and off in meetings.
+  peerLeft: { steps: [0, -5], step: 60, gain: 0.08, important: false },
+  // "Yang ini": one short high tick, so it points at a moment rather than a thing.
+  peerPointed: { steps: [12], step: 36, gain: 0.08, important: true },
 }
 
 export type EarconName = keyof typeof EARCONS

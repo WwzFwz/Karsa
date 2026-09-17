@@ -11,7 +11,6 @@ import type {
   Node,
   NodeKind,
   NodeState,
-  Participant,
   Relation,
   RelationKind,
   RoomDoc,
@@ -296,81 +295,4 @@ export function buildEmptyDoc(id: string, title: string, self: Actor, now = Date
     ],
     actors: { [self.id]: self },
   }
-}
-
-/** A new room has one person in it, and it is you. */
-export function buildSoloParticipants(self: Actor, now = Date.now()): Participant[] {
-  return [
-    {
-      actorId: self.id,
-      displayName: self.displayName,
-      hue: self.hue,
-      talking: false,
-      focusNodeId: 'n_akar',
-      pointingNodeId: null,
-      mode: 'meeting',
-      online: true,
-      lastSeen: now,
-    },
-  ]
-}
-
-export function buildSeedParticipants(self: Actor, now = Date.now()): Participant[] {
-  return [
-    {
-      actorId: self.id,
-      displayName: self.displayName,
-      hue: self.hue,
-      talking: false,
-      focusNodeId: 'n_akar',
-      pointingNodeId: null,
-      mode: 'meeting',
-      online: true,
-      lastSeen: now,
-    },
-    {
-      actorId: 'a_rina',
-      displayName: ACTORS.a_rina.displayName,
-      hue: ACTORS.a_rina.hue,
-      talking: false,
-      focusNodeId: 'n_anggaran',
-      pointingNodeId: 'n_anggaran',
-      mode: 'meeting',
-      online: true,
-      lastSeen: now,
-    },
-    {
-      actorId: 'a_budi',
-      displayName: ACTORS.a_budi.displayName,
-      hue: ACTORS.a_budi.hue,
-      talking: true,
-      focusNodeId: 'n_bobot',
-      pointingNodeId: 'n_bobot',
-      mode: 'meeting',
-      online: true,
-      lastSeen: now,
-    },
-    {
-      actorId: 'a_sari',
-      displayName: ACTORS.a_sari.displayName,
-      hue: ACTORS.a_sari.hue,
-      talking: false,
-      focusNodeId: 'n_ujicoba',
-      pointingNodeId: null,
-      mode: 'review',
-      online: true,
-      lastSeen: now,
-    },
-    {
-      actorId: 'a_teguh',
-      displayName: ACTORS.a_teguh.displayName,
-      hue: ACTORS.a_teguh.hue,
-      talking: false,
-      focusNodeId: 'n_draf',
-      pointingNodeId: null,
-      mode: 'meeting',
-      online: false,
-      lastSeen: now - 6 * MINUTE,
-    },
-  ]
 }

@@ -19,8 +19,7 @@ export function PresencePanel() {
   const { doc, simulateConflict } = useDocument()
   const { participants, selfId, pointAt } = usePresence()
   const { setFocus, focusId } = useView()
-  const online = participants.filter((p) => p.online)
-  const offline = participants.filter((p) => !p.online)
+  const online = participants
   // People at the door come before people in the room: they are the only ones
   // here who are waiting on a decision.
   const access = findRoom(doc.room.id)?.access ?? 'terkunci'
@@ -88,28 +87,6 @@ export function PresencePanel() {
           )
         })}
       </ul>
-
-      {offline.length > 0 && (
-        <>
-          <h3 className="panel-sub">Pernah hadir</h3>
-          <ul className="people is-dim">
-            {offline.map((p) => (
-              <li key={p.actorId} className="person" style={{ ['--hue' as string]: String(p.hue) }}>
-                <span className="avatar is-off" aria-hidden="true">
-                  {p.displayName.charAt(0)}
-                </span>
-                <div className="person-body">
-                  <p className="person-name">{p.displayName}</p>
-                  <p className="person-where">
-                    <Icon name="wifiOff" size={12} />
-                    Terputus
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
 
       <div className="panel-actions">
         <button type="button" className="btn btn-small" onClick={() => pointAt(focusId)} disabled={!focusId}>

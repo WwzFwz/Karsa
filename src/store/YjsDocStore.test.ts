@@ -21,7 +21,6 @@ function device(self: Actor) {
   const store = new YjsDocStore({
     initial: buildEmptyDoc('TES-001', 'Rapat uji', ANI),
     self,
-    participants: [],
   })
   store.markLoaded()
   const heard: DocEvent[] = []
@@ -58,7 +57,7 @@ describe('one device', () => {
     store.dispatch(add('Pelatihan dosen'), as)
     const copy = new Y.Doc()
     Y.applyUpdate(copy, Y.encodeStateAsUpdate(store.ydoc))
-    const reader = new YjsDocStore({ initial: store.getDoc(), self: ANI, participants: [], ydoc: copy })
+    const reader = new YjsDocStore({ initial: store.getDoc(), self: ANI, ydoc: copy })
     assert.ok(idOf(reader, 'Pelatihan dosen'))
     assert.equal(reader.getDoc().events.length, 2)
   })
@@ -177,7 +176,6 @@ describe('two devices at once', () => {
     const late = new YjsDocStore({
       initial: buildEmptyDoc('TES-001', 'Rapat uji', BAYU),
       self: BAYU,
-      participants: [],
       now: () => Date.now() + 60 * 60_000,
     })
     const heard: DocEvent[] = []

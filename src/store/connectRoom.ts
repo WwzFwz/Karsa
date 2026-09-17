@@ -7,12 +7,14 @@
  * the same update twice is harmless.
  *
  * IndexedDB is what makes a reload stop erasing a meeting and lets work carry
- * on offline. The server is what makes it a meeting of more than one device.
+ * on offline. The server is what makes it a meeting of more than one device,
+ * and it carries presence too, through its Awareness.
  */
 
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { HocuspocusProvider } from '@hocuspocus/provider'
+import { Awareness } from 'y-protocols/awareness'
 import { syncUrl } from '../core/config'
 import type { YjsDocStore } from './YjsDocStore'
 
@@ -23,13 +25,36 @@ import type { YjsDocStore } from './YjsDocStore'
 */
 const SERVER_WAIT_MS = 3000
 
+/*
+  Reconnecting: quickly at first, then backing off to half a minute. A server
+  that is down for a while should not fill the console with an attempt a second.
+*/
+const RECONNECT = { delay: 1000, factor: 2, maxDelay: 30_000, minDelay: 1000, maxAttempts: 0, jitter: true }
+
 export function connectRoom(store: YjsDocStore, roomId: string): () => void {
   const name = `karsa:ruang:${roomId}`
   const persistence = new IndexeddbPersistence(name, store.ydoc)
   const closeTabs = connectTabs(store.ydoc, name)
 
   const url = syncUrl()
-  const server = url ? new HocuspocusProvider({ url, name: roomId, document: store.ydoc }) : null
+  let server: HocuspocusProvider | null = null
+  let detachPresence = () => {}
+  if (url) {
+    // One Awareness per connection: the provider destroys it when it closes.
+    const awareness = new Awareness(store.ydoc)
+    detachPresence = store.presence.attach(awareness)
+    store.presence.setConnection('connecting')
+    server = new HocuspocusProvider({
+      url,
+      name: roomId,
+      document: store.ydoc,
+      awareness,
+      ...RECONNECT,
+      onStatus: ({ status }) =>
+        store.presence.setConnection(status === 'connected' ? 'connected' : 'connecting'),
+    })
+  }
+
   const serverReady = server
     ? new Promise<void>((resolve) => {
         server.on('synced', () => resolve())
@@ -45,6 +70,7 @@ export function connectRoom(store: YjsDocStore, roomId: string): () => void {
   return () => {
     open = false
     server?.destroy()
+    detachPresence()
     closeTabs()
     void persistence.destroy()
   }

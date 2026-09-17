@@ -1,19 +1,16 @@
 /**
  * The one interface the interface knows about.
  *
- * Backed by `YjsDocStore`. Presence is kept on its own channel because it is
+ * Backed by `YjsDocStore`. Presence is kept on its own channel (`RoomPresence`,
+ * Yjs Awareness) because it is
  * ephemeral and noisy -- exactly the split Yjs makes between the document and
  * Awareness.
  */
 
 import type { Command, CommandContext, CommandResult } from '../core/commands/types'
-import type { ActorId, NodeId, Participant, RoomDoc } from '../core/model/types'
+import type { ActorId, RoomDoc } from '../core/model/types'
+import type { RoomPresence } from './presence'
 import type { DocEvent } from '../core/events/types'
-
-export interface PresenceSnapshot {
-  selfId: ActorId
-  participants: Participant[]
-}
 
 export interface DocStore {
   getDoc(): RoomDoc
@@ -40,10 +37,6 @@ export interface DocStore {
   undo(actorId: ActorId): DocEvent | null
   canUndo(): boolean
 
-  getPresence(): PresenceSnapshot
-  subscribePresence(listener: () => void): () => void
-  updateSelf(patch: Partial<Omit<Participant, 'actorId'>>): void
-
-  /** Ephemeral, symbolic, never a coordinate. */
-  pointAt(nodeId: NodeId | null): void
+  /** Who is here, through Awareness. */
+  presence: RoomPresence
 }

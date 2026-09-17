@@ -11,9 +11,16 @@ import { usePresence } from '../../state/room/PresenceProvider'
 import { useView } from '../../state/room/ViewProvider'
 import { Icon } from '../shared/icons'
 
+const CONNECTION_LABEL = { connected: 'Tersambung', connecting: 'Menyambung', offline: 'Luring' } as const
+const CONNECTION_HINT = {
+  connected: 'Perubahan sampai ke peserta lain',
+  connecting: 'Menyambung ke server; perubahan disimpan di perangkat ini dulu',
+  offline: 'Hanya di perangkat ini',
+} as const
+
 export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
   const { doc } = useDocument()
-  const { participants, selfId } = usePresence()
+  const { participants, selfId, connection } = usePresence()
   const { sidebarHidden, toggleSidebar } = useView()
   const dialogs = useDialogs()
   const online = participants.filter((p) => p.online)
@@ -52,6 +59,14 @@ export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
         <span className="mode-badge" title="Tidak ada audio yang keluar dari perangkat ini">
           <Icon name="shield" size={13} />
           Lokal
+        </span>
+        {/*
+          Whether changes are reaching anyone. A label, not a colour alone, and
+          polite live text so a screen reader hears a dropped connection.
+        */}
+        <span className={`mode-badge sync-chip is-${connection}`} title={CONNECTION_HINT[connection]} role="status">
+          <Icon name={connection === 'offline' ? 'wifiOff' : 'wifi'} size={13} />
+          {CONNECTION_LABEL[connection]}
         </span>
         <ul className="avatar-stack" aria-label={`${online.length} peserta hadir`}>
           {online.slice(0, 5).map((p) => (

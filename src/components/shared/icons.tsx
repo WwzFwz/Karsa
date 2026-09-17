@@ -22,7 +22,7 @@ export type IconName =
   | 'sparkles' | 'shield' | 'target' | 'lightbulb' | 'list' | 'diamond'
   | 'fileText' | 'checkSquare' | 'folder' | 'pointer' | 'eye' | 'presentation'
   | 'play' | 'stop' | 'alert' | 'clock' | 'activity' | 'search' | 'send'
-  | 'wifiOff' | 'copy' | 'zap' | 'more' | 'panelRight' | 'logIn' | 'dot'
+  | 'wifi' | 'wifiOff' | 'copy' | 'zap' | 'more' | 'panelRight' | 'logIn' | 'dot'
   | 'sun' | 'moon' | 'maximize' | 'minimize' | 'panelRightOpen' | 'undo' | 'settings' | 'lock' | 'menu' | 'minus' | 'share' | 'home'
 
 const PATHS: Record<IconName, JSX.Element> = {
@@ -216,6 +216,14 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M22 2 11 13" />
       <path d="M22 2 15 22l-4-9-9-4Z" />
+    </>
+  ),
+  wifi: (
+    <>
+      <path d="M8.5 16.4a5 5 0 0 1 7 0" />
+      <path d="M5 12.9a10 10 0 0 1 14 0" />
+      <path d="M2 8.8a15 15 0 0 1 20 0" />
+      <path d="M12 20h.01" />
     </>
   ),
   wifiOff: (

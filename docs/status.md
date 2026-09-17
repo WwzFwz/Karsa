@@ -58,8 +58,8 @@ risiko yang harus benar sejak awal.
 
 ### 2.1 Uji otomatis untuk `core/` — **sudah dimulai (D73)**
 
-88 uji, `npm test`: aturan 1, 4, 5, satu pintu data, hitungan suara, alur
-suara per perangkat (D74), dan dokumen Yjs dua perangkat (D75). Belum: tata letak, dan orchestrator selain set uji eval.
+96 uji, `npm test`: aturan 1, 4, 5, satu pintu data, hitungan suara, alur
+suara per perangkat (D74), dokumen Yjs dua perangkat (D75), dan kehadiran (D78). Belum: tata letak, dan orchestrator selain set uji eval.
 
 ### 2.2 Isi ruang hilang saat halaman dimuat ulang — **selesai (D75)**
 
@@ -95,7 +95,7 @@ Semua yang menghubungkan satu orang dengan orang lain belum ada:
 - ~~**Hocuspocus** — sinkronisasi Yjs~~ — ada, SQLite (D76)
 - **Room service** — NestJS sudah berdiri, endpoint ruang dan token belum
 - **PostgreSQL** — untuk mode lintas daerah; mode kelas sudah SQLite
-- **Kehadiran sungguhan** — sekarang data contoh; empat peserta itu palsu
+- ~~**Kehadiran sungguhan**~~ — lewat Awareness, dengan chip sambungan (D78)
 - **Permintaan masuk sungguhan** — ruang tunggu jalan, tapi yang mengetuk palsu
 
 Konsekuensi yang jarang disebut: **belum pernah ada dua orang di satu ruang.**

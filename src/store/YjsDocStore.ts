@@ -31,12 +31,12 @@ import type {
   Comment,
   Node,
   NodeId,
-  Participant,
   Relation,
   Room,
   RoomDoc,
 } from '../core/model/types'
-import type { DocStore, PresenceSnapshot } from './DocStore'
+import type { DocStore } from './DocStore'
+import { RoomPresence, type RoomPresenceOptions } from './presence'
 
 /** Transactions made by this device's commands. The only ones undo may take back. */
 const LOCAL = 'karsa:local'
@@ -64,7 +64,7 @@ export interface YjsDocStoreOptions {
   /** Written into the document the first time the room is opened anywhere. */
   initial: RoomDoc
   self: Actor
-  participants: Participant[]
+  presence?: RoomPresenceOptions
   ydoc?: Y.Doc
   now?: () => number
 }
@@ -82,7 +82,8 @@ export class YjsDocStore implements DocStore {
   private readonly openedAt: number
 
   private snapshot: RoomDoc
-  private presence: PresenceSnapshot
+  /** Who is here. Separate from the document on purpose: never logged, never undone. */
+  readonly presence: RoomPresence
   private readonly undoManager: Y.UndoManager
   private history: HistoryEntry[] = []
   private recording = false
@@ -98,7 +99,6 @@ export class YjsDocStore implements DocStore {
   }
 
   private docListeners = new Set<() => void>()
-  private presenceListeners = new Set<() => void>()
   private remoteListeners = new Set<(events: DocEvent[]) => void>()
 
   constructor(options: YjsDocStoreOptions) {
@@ -115,7 +115,7 @@ export class YjsDocStore implements DocStore {
     this.self = options.self
     this.now = options.now ?? Date.now
     this.openedAt = this.now()
-    this.presence = { selfId: options.self.id, participants: options.participants }
+    this.presence = new RoomPresence(options.self, options.presence)
 
     // Until the room exists in Yjs, the interface shows what it will be seeded with.
     this.snapshot = this.isSeeded() ? this.read() : options.initial
@@ -392,29 +392,6 @@ export class YjsDocStore implements DocStore {
     // Content rewinds; the log does not (D21).
     this.ydoc.transact(() => this.events.push([clean(event)]), SYSTEM)
     return event
-  }
-
-  // --- presence (Awareness arrives in the next stage) -----------------------
-
-  getPresence = (): PresenceSnapshot => this.presence
-
-  subscribePresence = (listener: () => void): (() => void) => {
-    this.presenceListeners.add(listener)
-    return () => this.presenceListeners.delete(listener)
-  }
-
-  updateSelf = (patch: Partial<Omit<Participant, 'actorId'>>): void => {
-    this.presence = {
-      ...this.presence,
-      participants: this.presence.participants.map((p) =>
-        p.actorId === this.presence.selfId ? { ...p, ...patch, lastSeen: this.now() } : p,
-      ),
-    }
-    this.presenceListeners.forEach((l) => l())
-  }
-
-  pointAt = (nodeId: NodeId | null): void => {
-    this.updateSelf({ pointingNodeId: nodeId })
   }
 
   /**
