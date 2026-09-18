@@ -11,7 +11,7 @@
  */
 
 import { plan } from '../core/agent/orchestrator'
-import { planWithOllama } from '../core/agent/ollama'
+import { planWithOllama } from '../core/agent/ollama/plan'
 import { ollamaModel } from '../core/config'
 import { CASES, type EvalCase } from './cases'
 import { buildSeedDoc } from '../store/seed/room'

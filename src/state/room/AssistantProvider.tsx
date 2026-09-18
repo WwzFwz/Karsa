@@ -19,7 +19,7 @@ import {
 } from 'react'
 import { useAnnouncer } from '../../a11y/Announcer'
 import { audioBus } from '../../audio/bus'
-import { probeOllama } from '../../core/agent/ollama'
+import { probeOllama } from '../../core/agent/ollama/plan'
 import { readProvider, writeProvider, type ProviderId } from '../../core/agent/provider'
 import type { Command } from '../../core/commands/types'
 import { tr } from '../../core/i18n'

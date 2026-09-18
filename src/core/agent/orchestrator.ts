@@ -20,7 +20,7 @@
 
 import { expandTemplate, templateSize } from '../templates/expand'
 import { templateById } from '../templates/registry'
-import { planWithOllama } from './ollama'
+import { planWithOllama } from './ollama/plan'
 import type { NodeId } from '../model/types'
 import type { PlanInput, ProviderId } from './provider'
 import type { Plan, PlanStep } from './types'
