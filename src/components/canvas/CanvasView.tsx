@@ -28,13 +28,13 @@ import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { layoutFor, NODE_H, NODE_W, sizeOf } from '../../core/shape/layout'
 import { toolOf } from '../../core/tools/registry'
 import { RELATION_LABEL, SHAPE_LABEL } from '../../core/vocabulary'
-import { Icon } from '../shared/icons'
 import { AgentCursor } from '../voice/AgentCursor'
 import { Edges, type Edge, type LabelledEdge } from './Edges'
 import { GhostCard } from './GhostCard'
 import { NodeCard } from './NodeCard'
+import { ZoomBar } from './ZoomBar'
 import { useFocusInView } from './useFocusInView'
-import { descendantsOf } from '../../core/tree/project'
+import { useNodeDrag } from './useNodeDrag'
 import type { NodeId } from '../../core/model/types'
 import type { Point } from '../../core/shape/layout'
 
@@ -118,6 +118,10 @@ export function CanvasView() {
   }, [setCanvasMounted])
 
   const refs = useRef(new Map<NodeId, HTMLLIElement>())
+  const registerCard = useCallback((id: NodeId, el: HTMLLIElement | null) => {
+    if (el) refs.current.set(id, el)
+    else refs.current.delete(id)
+  }, [])
   const viewportRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
 
@@ -386,6 +390,24 @@ export function CanvasView() {
   const offsetY = (sizerH - stageH * zoom) / 2
 
   /*
+    Carrying a card by hand, and the board following when it reaches the edge.
+    The machinery is `useNodeDrag`; what stays here is what it needs to know
+    about this board and what to do when a card lands on another one.
+  */
+  const drag = useNodeDrag({
+    viewportRef,
+    zoom,
+    doc,
+    tree,
+    origin: { x: originX, y: originY },
+    extent: { w: layout.width, h: layout.height },
+    slack: ORIGIN,
+    nodeWidth: NODE_W,
+    setNodeOverride,
+    onDropOnto: (id, parentId) => dialogs.open({ kind: 'move', nodeId: id, presetParent: parentId }),
+  })
+
+  /*
     Growing the board leftwards moves every node's stage coordinate right by the
     same amount, so without this the whole diagram would jump sideways the
     instant a placement crossed the old edge. Board coordinate zero is pinned to
@@ -408,147 +430,9 @@ export function CanvasView() {
     if (!dx && !dy) return
     vp.scrollLeft += dx
     vp.scrollTop += dy
-    const drag = nodeDragRef.current
-    if (drag) {
-      drag.startLeft += dx
-      drag.startTop += dy
-    }
-  }, [originX, originY, stageOriginX, stageOriginY])
+    drag.shiftBy(dx, dy)
+  }, [originX, originY, stageOriginX, stageOriginY, drag])
 
-  /*
-    Dragging a node moves it on this screen only. Nothing is dispatched, no
-    event is written, nothing crosses the wire -- so it cannot carry meaning to
-    anyone else, which is exactly why it stays inside rule 2. The structural
-    move, the one that does mean something, is still `m`.
-  */
-  const nodeDragRef = useRef<{
-    id: NodeId
-    startX: number
-    startY: number
-    /*
-      Where the board was scrolled to when the node was picked up, and where the
-      pointer is now. Both exist for the same reason: the board may scroll under
-      a drag (see the edge pull below), and a node placed from the pointer's
-      screen delta alone would slide out from under the finger by exactly the
-      distance scrolled. The placement is computed in board space instead.
-    */
-    startLeft: number
-    startTop: number
-    pointerX: number
-    pointerY: number
-    from: Point
-    /** What the node's placement was before the drag, so a cancel can restore it. */
-    hadPlacement: Point | null
-  } | null>(null)
-  const suppressClickRef = useRef(false)
-  const [draggingNode, setDraggingNode] = useState<NodeId | null>(null)
-  /*
-    Dropping a node on another node reparents it -- the assembly gesture from
-    FigJam and draw.io, where you move a thing by putting it where it belongs
-    rather than by naming its new parent in a list. It is an addition, not a
-    replacement: `m` and the command list still open the picker, so rule D6
-    holds -- no operation is drag-only.
-
-    The drop still goes through the confirmation gate, because a reparent is
-    structural and rule 8 puts moves behind one.
-  */
-  const [dropParent, setDropParent] = useState<NodeId | null>(null)
-  const dropRef = useRef<NodeId | null>(null)
-
-  /** The node under the pointer that this one is allowed to land inside. */
-  const parentUnder = useCallback(
-    (clientX: number, clientY: number, dragged: NodeId): NodeId | null => {
-      const forbidden = new Set<NodeId>([dragged, ...descendantsOf(tree, dragged)])
-      const stack = document.elementsFromPoint(clientX, clientY)
-      for (const el of stack) {
-        const id = el.closest('[data-node-id]')?.getAttribute('data-node-id')
-        if (!id) continue
-        if (forbidden.has(id)) return null
-        return doc.nodes[dragged]?.parentId === id ? null : id
-      }
-      return null
-    },
-    [tree, doc],
-  )
-
-  /** Put the dragged node where the pointer is, in board space. */
-  const placeDragged = useCallback(() => {
-    const drag = nodeDragRef.current
-    const vp = viewportRef.current
-    if (!drag || !vp) return
-    const dx = (drag.pointerX - drag.startX + vp.scrollLeft - drag.startLeft) / zoom
-    const dy = (drag.pointerY - drag.startY + vp.scrollTop - drag.startTop) / zoom
-    /*
-      Bounded by the board, not by the layout's origin -- and the board keeps
-      ORIGIN of clear ground past the furthest thing on it in every direction.
-      Going right and down `extent` already grows with the node; going left and
-      up `origin` now does the same, so neither end is a wall somebody can be
-      stopped by while still carrying something.
-    */
-    const limit = (value: number, extent: number, origin: number) =>
-      Math.min(extent + ORIGIN - NODE_W, Math.max(-origin + 12, value))
-    setNodeOverride(drag.id, {
-      x: limit(drag.from.x + dx, layout.width, originX),
-      y: limit(drag.from.y + dy, layout.height, originY),
-    })
-    const over = parentUnder(drag.pointerX, drag.pointerY, drag.id)
-    if (over !== dropRef.current) {
-      dropRef.current = over
-      setDropParent(over)
-    }
-  }, [zoom, layout.width, layout.height, originX, originY, setNodeOverride, parentUnder])
-
-  /*
-    Carrying a node to the edge pulls the board along, the way every board tool
-    does it.
-
-    Without this the only way to reach somewhere off-screen was to drop the node,
-    pan, and pick it up again -- and the reparent gesture (D34) is worth nothing
-    if the intended parent cannot be reached while holding the child.
-
-    The speed ramps with depth into the zone rather than switching on, so easing
-    up to the rim slows the board down instead of stopping it dead. The zone is
-    measured inside the floating chrome (D30): the rim that matters is where the
-    board stops being visible, not where the window ends.
-  */
-  const EDGE_ZONE = 72
-  const EDGE_SPEED = 22
-  const edgePullRef = useRef<number | null>(null)
-  /* Read imperatively from the frame loop: `placeDragged` changes identity on
-     every frame of a drag, and a loop that restarted with it would be the very
-     bug this file already learned once (D74, D77). */
-  const placeRef = useRef(placeDragged)
-  placeRef.current = placeDragged
-
-  const stopEdgePull = useCallback(() => {
-    if (edgePullRef.current === null) return
-    cancelAnimationFrame(edgePullRef.current)
-    edgePullRef.current = null
-  }, [])
-
-  const edgePull = useCallback(() => {
-    edgePullRef.current = null
-    const drag = nodeDragRef.current
-    const vp = viewportRef.current
-    if (!drag || !vp) return
-    const box = vp.getBoundingClientRect()
-    const pad = measureChrome(box)
-    // Zero at the inner lip of the zone, full speed at the rim and beyond it.
-    const pull = (gap: number) => (gap >= EDGE_ZONE ? 0 : EDGE_SPEED * (1 - Math.max(0, gap) / EDGE_ZONE))
-    const dx =
-      pull(box.right - pad.right - drag.pointerX) - pull(drag.pointerX - (box.left + pad.left))
-    const dy =
-      pull(box.bottom - pad.bottom - drag.pointerY) - pull(drag.pointerY - (box.top + pad.top))
-    if (dx || dy) {
-      const was = { left: vp.scrollLeft, top: vp.scrollTop }
-      vp.scrollLeft += dx
-      vp.scrollTop += dy
-      // Only when the board actually moved: at the end of the scroll range it
-      // does not, and re-placing then would drift the node away from the pointer.
-      if (vp.scrollLeft !== was.left || vp.scrollTop !== was.top) placeRef.current()
-    }
-    edgePullRef.current = requestAnimationFrame(edgePull)
-  }, [])
 
   /*
     Where a board that does not exist yet is drawn.
@@ -582,7 +466,7 @@ export function CanvasView() {
     origin: { x: originX, y: originY },
     offset: { x: offsetX, y: offsetY },
     zoom,
-    dragging: () => nodeDragRef.current !== null,
+    dragging: drag.isCarrying,
   })
 
   useEffect(() => {
@@ -759,25 +643,7 @@ export function CanvasView() {
         vp.setPointerCapture(event.pointerId)
       }}
       onPointerMove={(event) => {
-        const node = nodeDragRef.current
-        if (node) {
-          if (
-            !suppressClickRef.current &&
-            Math.hypot(event.clientX - node.startX, event.clientY - node.startY) < 4 * zoom
-          ) {
-            return
-          }
-          const starting = !suppressClickRef.current
-          suppressClickRef.current = true
-          node.pointerX = event.clientX
-          node.pointerY = event.clientY
-          setDraggingNode(node.id)
-          placeDragged()
-          // The board only follows a node that is actually being carried, so the
-          // pull starts here rather than at pointerdown.
-          if (starting) edgePullRef.current = requestAnimationFrame(edgePull)
-          return
-        }
+        if (drag.move(event)) return
         const start = panRef.current
         const vp = viewportRef.current
         if (!start || !vp) return
@@ -785,42 +651,14 @@ export function CanvasView() {
         vp.scrollTop = start.top - (event.clientY - start.y)
       }}
       onPointerUp={(event) => {
-        const dragged = nodeDragRef.current
-        if (dragged) {
-          stopEdgePull()
-          const parent = dropRef.current
-          dropRef.current = null
-          setDropParent(null)
-          nodeDragRef.current = null
-          setDraggingNode(null)
-          if (parent) {
-            // Put it back exactly as it was picked up -- including having no
-            // placement at all. If the move is confirmed the layout puts the
-            // node under its new parent; if it is not, nothing has changed.
-            setNodeOverride(dragged.id, dragged.hadPlacement)
-            dialogs.open({ kind: 'move', nodeId: dragged.id, presetParent: parent })
-          }
-          // The click that follows a drag would re-focus; that is harmless, but
-          // it must not be read as a plain selection gesture.
-          window.setTimeout(() => {
-            suppressClickRef.current = false
-          }, 0)
-        }
+        drag.finish()
         if (!panRef.current) return
         panRef.current = null
         setPanning(false)
         viewportRef.current?.releasePointerCapture(event.pointerId)
       }}
       onPointerCancel={() => {
-        stopEdgePull()
-        if (nodeDragRef.current) {
-          // A cancelled carry is not a drop: put the node back where it was.
-          setNodeOverride(nodeDragRef.current.id, nodeDragRef.current.hadPlacement)
-          nodeDragRef.current = null
-          setDraggingNode(null)
-          dropRef.current = null
-          setDropParent(null)
-        }
+        drag.cancel()
         panRef.current = null
         setPanning(false)
       }}
@@ -920,8 +758,8 @@ export function CanvasView() {
                 state={{
                   focused: focusId === id,
                   editing: editingId === id,
-                  dragging: draggingNode === id,
-                  dropTarget: dropParent === id,
+                  dragging: drag.carried === id,
+                  dropTarget: drag.dropParent === id,
                   linkTarget: Boolean(linkingFrom && linkingFrom !== id),
                   linkSource: linkingFrom === id,
                   placed: Boolean(nodeOverrides[id]),
@@ -935,25 +773,16 @@ export function CanvasView() {
                 spec={toolOf(entry.node.tool)}
                 votesOn={votesOn}
                 votedByMe={votedByMe}
-                dropParent={dropParent}
+                dropParent={drag.dropParent}
+                register={registerCard}
                 on={{
                   pointerDown: (event) => {
                     if (linkingFrom || editingId === id || event.button !== 0) return
                     if ((event.target as HTMLElement).closest('.node-anchor, .node-handle')) return
-                    nodeDragRef.current = {
-                      id,
-                      startX: event.clientX,
-                      startY: event.clientY,
-                      startLeft: viewportRef.current?.scrollLeft ?? 0,
-                      startTop: viewportRef.current?.scrollTop ?? 0,
-                      pointerX: event.clientX,
-                      pointerY: event.clientY,
-                      from: { x: pos.x, y: pos.y },
-                      hadPlacement: nodeOverrides[id] ?? null,
-                    }
+                    drag.start(id, event, { x: pos.x, y: pos.y }, nodeOverrides[id] ?? null)
                   },
                   click: () => {
-                    if (suppressClickRef.current) return
+                    if (drag.swallowedClick()) return
                     if (linkingFrom) {
                       finishLink(id)
                       return
@@ -1019,47 +848,7 @@ export function CanvasView() {
       the zoom bar scrolled away with the board and ended up hundreds of pixels
       off-screen.
     */}
-      <div className="zoom-bar" role="group" aria-label="Perbesaran kanvas">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Perkecil"
-          title="Perkecil (Ctrl -)"
-          onClick={() => zoomAt(zoom - 0.15)}
-          disabled={zoom <= MIN_ZOOM + 0.001}
-        >
-          <Icon name="minus" size={17} />
-        </button>
-        <button
-          type="button"
-          className="zoom-value"
-          aria-label={`Perbesaran ${Math.round(zoom * 100)} persen. Kembalikan ke ukuran asli.`}
-          title="Kembali ke 100 persen (Ctrl 0)"
-          onClick={() => zoomAt(1)}
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Perbesar"
-          title="Perbesar (Ctrl +)"
-          onClick={() => zoomAt(zoom + 0.15)}
-          disabled={zoom >= MAX_ZOOM - 0.001}
-        >
-          <Icon name="plus" size={17} />
-        </button>
-        <span className="dock-sep" aria-hidden="true" />
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Paskan seluruh kanvas ke layar"
-          title="Paskan ke layar"
-          onClick={zoomToFit}
-        >
-          <Icon name="maximize" size={17} />
-        </button>
-      </div>
+      <ZoomBar zoom={zoom} min={MIN_ZOOM} max={MAX_ZOOM} onZoom={zoomAt} onFit={zoomToFit} />
     </>
   )
 }

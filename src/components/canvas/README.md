@@ -13,6 +13,8 @@ Tampilan visual ruang: simpul, relasi, kursor agen, geser, perbesar, dan seret u
 | CanvasView.tsx | Merakit papan: tata letak, geser, perbesar, seret (D11, D28, D29, D34) |
 | NodeCard.tsx | Satu kartu simpul, termasuk kalimat yang dibaca pembaca layar |
 | ToolCard.tsx | Kartu voting, retro, dan matriks (D40, D59) |
+| ZoomBar.tsx | Kontrol perbesaran, di luar wadah gulir (D29) |
+| useNodeDrag.ts | Membawa kartu dengan tangan, tarikan tepi, gerbang pindah (D31, D34, D84) |
 | Edges.tsx | Lapisan garis: pohon, relasi, dan garis yang sedang ditarik |
 | GhostCard.tsx | Pratinjau papan yang diusulkan, sebelum disetujui (D83) |
 | viewport.ts | Fungsi biasa: mengukur chrome mengambang, menghitung gulir (D30) |

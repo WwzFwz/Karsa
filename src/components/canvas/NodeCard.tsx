@@ -62,6 +62,7 @@ export function NodeCard({
   votesOn,
   votedByMe,
   dropParent,
+  register,
   on,
 }: {
   id: NodeId
@@ -79,6 +80,15 @@ export function NodeCard({
   votesOn: (id: NodeId) => number
   votedByMe: (id: NodeId) => boolean
   dropParent: NodeId | null
+  /**
+   * Hands the drawn element back to the board.
+   *
+   * Two things need it and neither can work without it: the layout measures
+   * what it actually painted rather than guessing a card's height (D54), and a
+   * click has to move real DOM focus, or the single-letter shortcuts work after
+   * the arrow keys and not after the mouse.
+   */
+  register: (id: NodeId, el: HTMLLIElement | null) => void
   on: {
     pointerDown: (event: ReactPointerEvent<HTMLLIElement>) => void
     click: () => void
@@ -149,6 +159,7 @@ export function NodeCard({
         minHeight: sizeOf(tree, id).h,
         ['--kh' as string]: String(hue),
       }}
+      ref={(el) => register(id, el)}
       onPointerDown={on.pointerDown}
       onClick={on.click}
     >
