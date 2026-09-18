@@ -12,105 +12,39 @@
  * (section 8).
  */
 
-import { lang } from '../../core/i18n'
-import { CONFIG, modelUrl } from '../../core/config'
+import { hasExplicitSpeechLang, type AsrModelId } from './settings'
+import { VoiceDetector } from './vad'
+import { Transcriber, type AsrStatus } from './transcriber'
+import { modelUrl } from '../../core/config'
 
-export type AsrModelId = string
-export type AsrMode = 'whisper-base' | 'whisper-small' | 'contoh'
-
-export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: AsrModelId }[] = [
-  {
-    id: 'whisper-base',
-    label: 'Whisper base',
-    detail: '±80 MB · cepat',
-    model: CONFIG.asrModel,
-  },
-  {
-    id: 'whisper-small',
-    label: 'Whisper small',
-    detail: '±250 MB · lebih teliti',
-    model: CONFIG.asrModelAccurate,
-  },
-  {
-    id: 'contoh',
-    label: 'Ucapan contoh',
-    detail: 'Tanpa mikrofon · untuk demo',
-  },
-]
-
-const KEY = 'karsa:pengenalan-suara'
-
-export function readAsrMode(): AsrMode {
-  try {
-    const value = localStorage.getItem(KEY)
-    if (value && ASR_MODES.some((m) => m.id === value)) return value as AsrMode
-  } catch {
-    // Storage blocked; use the default.
-  }
-  return 'whisper-base'
-}
-
-export function writeAsrMode(mode: AsrMode): void {
-  try {
-    localStorage.setItem(KEY, mode)
-  } catch {
-    // Not remembered, still used for this session.
-  }
-}
-
-/** Which language Whisper listens for. Auto lets it detect per sentence. */
-export type SpeechLang = 'auto' | 'id' | 'en'
-const LANG_KEY = 'karsa:bahasa-ucapan'
-
-export function readSpeechLang(): SpeechLang {
-  try {
-    const value = localStorage.getItem(LANG_KEY)
-    if (value === 'auto' || value === 'id' || value === 'en') return value
-  } catch {
-    // Storage blocked; use the default.
-  }
-  /*
-    Named, not auto-detected. Whisper's own detection reads short Indonesian
-    sentences as English often enough to be useless -- and a sentence detected
-    as the wrong language does not come back slightly wrong, it comes back as
-    a different sentence. Following the output language is the better guess,
-    and the sidebar language switch changes both at once.
-  */
-  return lang() === 'en' ? 'en' : 'id'
-}
-
-/** True when someone picked a speech language instead of letting it follow. */
-export function hasExplicitSpeechLang(): boolean {
-  try {
-    return localStorage.getItem(LANG_KEY) !== null
-  } catch {
-    return false
-  }
-}
+/*
+  Which model and which language are preferences, not machinery: `settings.ts`.
+  Re-exported here so the rest of the app keeps one door into speech.
+*/
+export {
+  ASR_MODES,
+  hasExplicitSpeechLang,
+  readAsrMode,
+  readSpeechLang,
+  writeAsrMode,
+  writeSpeechLang,
+  type AsrMode,
+  type AsrModelId,
+  type SpeechLang,
+} from './settings'
 
 /**
- * Keeps the microphone on the language the app is speaking, until someone
+ * Keeps the microphone on the language the app is speaking, until somebody
  * splits them on purpose in Settings. One switch, two things, no surprise.
+ *
+ * It lives here rather than with the other settings because it has to nudge the
+ * running recogniser, and a preference is not allowed to know that exists.
  */
 export function followOutputLanguage(): void {
   if (!hasExplicitSpeechLang()) recogniser.retune()
 }
 
-export function writeSpeechLang(value: SpeechLang): void {
-  try {
-    localStorage.setItem(LANG_KEY, value)
-  } catch {
-    // Not remembered, still used for this session.
-  }
-}
-
-export interface AsrStatus {
-  phase: 'idle' | 'loading' | 'ready' | 'error'
-  percent: number
-  detail: string
-}
-
-type Listener = (status: AsrStatus) => void
+export type { AsrStatus } from './transcriber'
 
 const SAMPLE_RATE = 16000
 const PARTIAL_EVERY_MS = 1200
@@ -180,79 +114,28 @@ registerProcessor('karsa-capture', Capture)
 `
 
 export class SpeechRecogniser {
-  private worker: Worker | null = null
-  private status: AsrStatus = { phase: 'idle', percent: 0, detail: 'Belum dimuat.' }
-  private listeners = new Set<Listener>()
-  private model: AsrModelId = CONFIG.asrModel
+  /*
+    Two collaborators, each owning a worker and each failing its own way: one
+    turns samples into words, the other says where a sentence stops. What stays
+    here is the microphone and the buffers between them.
+  */
+  private readonly asr = new Transcriber()
+  private readonly vad = new VoiceDetector()
 
   private stream: MediaStream | null = null
   private context: AudioContext | null = null
   private chunks: Float32Array[] = []
   private partialTimer: number | null = null
   private busy = false
-  private nextId = 1
-  private pending = new Map<number, (text: string, error?: string) => void>()
 
-  getStatus(): AsrStatus {
-    return this.status
-  }
-
-  subscribe(listener: Listener): () => void {
-    this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
-  }
-
-  private setStatus(status: AsrStatus) {
-    this.status = status
-    this.listeners.forEach((l) => l(status))
-  }
-
-  private ensureWorker(): Worker {
-    if (this.worker) return this.worker
-    const worker = new Worker(new URL('./asr.worker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (event) => {
-      const m = event.data
-      if (m.type === 'progress') {
-        this.setStatus({ phase: 'loading', percent: m.percent, detail: `Mengunduh model suara ${m.percent}%.` })
-      } else if (m.type === 'ready') {
-        this.setStatus({
-          phase: 'ready',
-          percent: 100,
-          detail: `${m.model.split('/')[1]} lewat ${m.device === 'webgpu' ? 'WebGPU' : 'WASM'}, di perangkat ini.`,
-        })
-      } else if (m.type === 'error') {
-        this.setStatus({ phase: 'error', percent: 0, detail: `Model suara gagal dimuat: ${m.message}` })
-      } else if (m.type === 'result') {
-        const resolve = this.pending.get(m.id)
-        this.pending.delete(m.id)
-        resolve?.(m.text, m.error)
-      }
-    }
-    this.worker = worker
-    return worker
-  }
+  /* Forwarded, so the rest of the app still has one door into speech. */
+  getStatus = (): AsrStatus => this.asr.getStatus()
+  subscribe = (listener: (status: AsrStatus) => void): (() => void) => this.asr.subscribe(listener)
+  retune = (): void => this.asr.retune()
+  load = (model: AsrModelId): void => this.asr.load(model)
 
   /** Nothing to reload: the language is read per request. Here to notify React. */
-  retune(): void {
-    this.setStatus({ ...this.status })
-  }
-
   /** Starts the download early, so the first sentence does not wait for it. */
-  load(model: AsrModelId): void {
-    if (this.model === model && (this.status.phase === 'ready' || this.status.phase === 'loading')) return
-    this.model = model
-    this.setStatus({ phase: 'loading', percent: 0, detail: 'Menyiapkan model suara.' })
-    this.ensureWorker().postMessage({ type: 'load', model })
-  }
-
-  private transcribe(audio: Float32Array, final: boolean): Promise<{ text: string; error?: string }> {
-    const id = this.nextId++
-    return new Promise((resolve) => {
-      this.pending.set(id, (text, error) => resolve({ text, error }))
-      this.ensureWorker().postMessage({ type: 'transcribe', id, audio, final, language: readSpeechLang() })
-    })
-  }
-
   private collected(): Float32Array {
     return join(this.chunks)
   }
@@ -303,11 +186,11 @@ export class SpeechRecogniser {
     await this.openMic((frame) => this.chunks.push(frame))
 
     this.partialTimer = window.setInterval(() => {
-      if (this.busy || this.status.phase !== 'ready') return
+      if (this.busy || this.asr.getStatus().phase !== 'ready') return
       const audio = this.collected()
       if (audio.length < MIN_SAMPLES) return
       this.busy = true
-      void this.transcribe(audio, false).then(({ text }) => {
+      void this.asr.transcribe(audio, false).then(({ text }) => {
         this.busy = false
         if (this.stream && text) onPartial(text)
       })
@@ -326,18 +209,9 @@ export class SpeechRecogniser {
     const audio = this.collected()
     this.chunks = []
     if (audio.length < MIN_SAMPLES) return { text: '', error: 'Tidak ada suara yang terekam.' }
-    if (this.status.phase === 'loading') {
-      await new Promise<void>((resolve) => {
-        const off = this.subscribe((s) => {
-          if (s.phase !== 'loading') {
-            off()
-            resolve()
-          }
-        })
-      })
-    }
-    if (this.status.phase !== 'ready') return { text: '', error: this.status.detail }
-    return this.transcribe(audio, true)
+    const status = await this.asr.settled()
+    if (status.phase !== 'ready') return { text: '', error: status.detail }
+    return this.asr.transcribe(audio, true)
   }
 
   /*
@@ -353,7 +227,6 @@ export class SpeechRecogniser {
     decides when a sentence started -- a model instead of a thumb -- which is
     the difference between speaking and having a hand free to press something.
   */
-  private vad: Worker | null = null
   private watching = false
   private heard: Float32Array[] = []
   private recent: Float32Array[] = []
@@ -362,18 +235,6 @@ export class SpeechRecogniser {
 
   get listeningMode(): boolean {
     return this.watching
-  }
-
-  private ensureVad(onError: (message: string) => void): Worker {
-    if (this.vad) return this.vad
-    const worker = new Worker(new URL('./vad.worker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (event) => {
-      const m = event.data
-      if (m.type === 'speech') this.onSpeech(m.active)
-      else if (m.type === 'error') onError(m.detail ?? m.message)
-    }
-    this.vad = worker
-    return worker
   }
 
   private onSpeechStart: (() => void) | null = null
@@ -393,8 +254,8 @@ export class SpeechRecogniser {
     const audio = join(this.heard)
     this.heard = []
     if (audio.length < MIN_SAMPLES) return
-    if (this.status.phase !== 'ready') return
-    void this.transcribe(audio, true).then(({ text }) => {
+    if (this.asr.getStatus().phase !== 'ready') return
+    void this.asr.transcribe(audio, true).then(({ text }) => {
       if (this.watching && text.trim()) this.onUtterance?.(text.trim())
     })
   }
@@ -418,12 +279,13 @@ export class SpeechRecogniser {
     this.recentLength = 0
     this.capturing = false
 
-    const vad = this.ensureVad(handlers.onError)
-    vad.postMessage({ type: 'reset' })
-    vad.postMessage({ type: 'load', model: modelFile(VAD_MODEL), quietMs: QUIET_MS })
+    this.vad.listen(modelFile(VAD_MODEL), QUIET_MS, {
+      onSpeech: (active) => this.onSpeech(active),
+      onError: handlers.onError,
+    })
 
     await this.openMic((frame) => {
-      vad.postMessage({ type: 'audio', samples: frame })
+      this.vad.feed(frame)
       if (this.capturing) {
         this.heard.push(frame)
         // A monologue must not grow without end; drop the oldest instead.
@@ -451,7 +313,7 @@ export class SpeechRecogniser {
     this.recentLength = 0
     this.onUtterance = null
     this.onSpeechStart = null
-    this.vad?.postMessage({ type: 'reset' })
+    this.vad.stop()
     this.stream?.getTracks().forEach((track) => track.stop())
     this.stream = null
     void this.context?.close().catch(() => undefined)
