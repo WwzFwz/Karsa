@@ -33,45 +33,12 @@ import { Edges, type Edge, type LabelledEdge } from './Edges'
 import { GhostCard } from './GhostCard'
 import { NodeCard } from './NodeCard'
 import { ZoomBar } from './ZoomBar'
+import { useChromeInsets } from './useChromeInsets'
+import { useBoardView, MIN_ZOOM, MAX_ZOOM } from './useBoardView'
 import { useFocusInView } from './useFocusInView'
 import { useNodeDrag } from './useNodeDrag'
 import type { NodeId } from '../../core/model/types'
 import type { Point } from '../../core/shape/layout'
-
-const BREATH = 28
-
-/**
- * How much of the viewport each floating panel covers.
- *
- * Every panel is anchored to an edge, so the edge it is nearest to is the one
- * it occludes. Guessing from width and height instead needed thresholds, and
- * the thresholds missed the inspector on a narrow window -- too narrow to count
- * as a band, too short to count as a column, so it was ignored entirely and
- * nodes kept sliding underneath it.
- */
-function measureChrome(box: DOMRect): { top: number; right: number; bottom: number; left: number } {
-  const pad = { top: 0, right: 0, bottom: 0, left: 0 }
-  for (const selector of ['.topbar', '.canvas-toolbar', '.sidebar', '.inspector', '.dock', '.zoom-bar']) {
-    const el = document.querySelector(selector)
-    if (!el) continue
-    const r = el.getBoundingClientRect()
-    if (r.width <= 0 || r.height <= 0) continue
-    const distance = {
-      top: r.top - box.top,
-      right: box.right - r.right,
-      bottom: box.bottom - r.bottom,
-      left: r.left - box.left,
-    }
-    const side = (Object.keys(distance) as (keyof typeof distance)[]).reduce((best, key) =>
-      distance[key] < distance[best] ? key : best,
-    )
-    if (side === 'top') pad.top = Math.max(pad.top, r.bottom - box.top)
-    else if (side === 'bottom') pad.bottom = Math.max(pad.bottom, box.bottom - r.top)
-    else if (side === 'left') pad.left = Math.max(pad.left, r.right - box.left)
-    else pad.right = Math.max(pad.right, box.right - r.left)
-  }
-  return pad
-}
 
 export function CanvasView() {
   const { doc, tree, votedByMe, votesOn, run } = useDocument()
@@ -159,9 +126,6 @@ export function CanvasView() {
 
     Space is deliberately not a modifier here. It is the talk switch, and the
     person who most needs panning is often the one holding it.
-  */
-  const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null)
-  const [panning, setPanning] = useState(false)
 
   /*
     Zoom, because a diagram that outgrows the window should be shrinkable rather
@@ -179,51 +143,7 @@ export function CanvasView() {
     in clear space, and there is always a scroll position that shows any node
     whole.
   */
-  const [inset, setInset] = useState({ top: 96, right: 32, bottom: 96, left: 32 })
-  const [viewBox, setViewBox] = useState({ w: 1000, h: 700 })
-
-  const [zoom, setZoom] = useState(1)
-  const MIN_ZOOM = 0.25
-  const MAX_ZOOM = 2
-
-  const measure = useCallback(() => {
-    const vp = viewportRef.current
-    if (!vp) return
-    const box = vp.getBoundingClientRect()
-    setViewBox((prev) =>
-      Math.abs(prev.w - box.width) < 2 && Math.abs(prev.h - box.height) < 2
-        ? prev
-        : { w: box.width, h: box.height },
-    )
-    const chrome = measureChrome(box)
-    setInset((prev) => {
-      const next = {
-        top: chrome.top + BREATH,
-        right: chrome.right + BREATH,
-        bottom: chrome.bottom + BREATH,
-        left: chrome.left + BREATH,
-      }
-      const same =
-        Math.abs(prev.top - next.top) < 2 &&
-        Math.abs(prev.right - next.right) < 2 &&
-        Math.abs(prev.bottom - next.bottom) < 2 &&
-        Math.abs(prev.left - next.left) < 2
-      return same ? prev : next
-    })
-  }, [])
-
-  useLayoutEffect(() => {
-    measure()
-    const vp = viewportRef.current
-    if (!vp) return
-    const observer = new ResizeObserver(measure)
-    observer.observe(vp)
-    for (const selector of ['.topbar', '.canvas-toolbar', '.sidebar', '.inspector', '.dock']) {
-      const el = document.querySelector(selector)
-      if (el) observer.observe(el)
-    }
-    return () => observer.disconnect()
-  }, [measure, panelHidden, focusMode])
+  const { inset, viewBox } = useChromeInsets({ viewportRef, watch: [panelHidden, focusMode] })
 
   /*
     A board wider than the window, with the diagram centred in it.
@@ -235,37 +155,6 @@ export function CanvasView() {
     with the content in the middle, does the job without any of that.
   */
 
-  const toStage = useCallback(
-    (clientX: number, clientY: number): Point => {
-      const rect = stageRef.current?.getBoundingClientRect()
-      // The stage is scaled, so screen pixels are not stage pixels.
-      return { x: (clientX - (rect?.left ?? 0)) / zoom, y: (clientY - (rect?.top ?? 0)) / zoom }
-    },
-    [zoom],
-  )
-
-  /** Zoom about a screen point, so the thing under the cursor stays put. */
-  const zoomAt = useCallback(
-    (next: number, clientX?: number, clientY?: number) => {
-      const vp = viewportRef.current
-      const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next))
-      if (!vp) {
-        setZoom(clamped)
-        return
-      }
-      const box = vp.getBoundingClientRect()
-      const anchorX = (clientX ?? box.left + box.width / 2) - box.left
-      const anchorY = (clientY ?? box.top + box.height / 2) - box.top
-      const stageX = (vp.scrollLeft + anchorX) / zoom
-      const stageY = (vp.scrollTop + anchorY) / zoom
-      setZoom(clamped)
-      requestAnimationFrame(() => {
-        vp.scrollLeft = stageX * clamped - anchorX
-        vp.scrollTop = stageY * clamped - anchorY
-      })
-    },
-    [zoom],
-  )
 
   const visible = useMemo(() => new Set(visibleIds), [visibleIds])
 
@@ -341,7 +230,6 @@ export function CanvasView() {
     }
   }, [computed, nodeOverrides])
 
-  const BOARD_SLACK = 320
 
   /*
     The board has a coordinate space, not a corner.
@@ -364,6 +252,27 @@ export function CanvasView() {
   const originY = ORIGIN - layout.minY
 
   /*
+    Where the board sits and how big it is. It needs the diagram's reach and
+    the origin that follows it, so it is called once both are known.
+  */
+  const board = useBoardView({
+    viewportRef,
+    stageRef,
+    reach: layout,
+    origin: { x: originX, y: originY },
+    slack: ORIGIN,
+    inset,
+    viewBox,
+  })
+  const { zoom, zoomAt, zoomToFit, toStage, panning } = board
+  const stageW = board.stage.w
+  const stageH = board.stage.h
+  const sizerW = board.sizer.w
+  const sizerH = board.sizer.h
+  const offsetX = board.offset.x
+  const offsetY = board.offset.y
+
+  /*
     The board is always larger than the window by at least the chrome it hides
     behind.
 
@@ -373,21 +282,6 @@ export function CanvasView() {
     under it. Scroll range has to exist precisely where a panel covers the
     canvas, or that strip of board is unreachable.
   */
-  const boardSize = useCallback(
-    (atZoom: number, contentW: number, contentH: number) => ({
-      w: Math.max(viewBox.w + inset.left + inset.right, contentW * atZoom + BOARD_SLACK * 2),
-      h: Math.max(viewBox.h + inset.top + inset.bottom, contentH * atZoom + BOARD_SLACK * 2),
-    }),
-    [viewBox, inset],
-  )
-
-  const stageW = layout.width + originX + ORIGIN
-  const stageH = layout.height + originY + ORIGIN
-  const board = boardSize(zoom, stageW, stageH)
-  const sizerW = board.w
-  const sizerH = board.h
-  const offsetX = (sizerW - stageW * zoom) / 2
-  const offsetY = (sizerH - stageH * zoom) / 2
 
   /*
     Carrying a card by hand, and the board following when it reaches the edge.
@@ -469,53 +363,8 @@ export function CanvasView() {
     dragging: drag.isCarrying,
   })
 
-  useEffect(() => {
-    const onZoomKey = (event: Event) => {
-      const key = (event as CustomEvent<string>).detail
-      if (key === '0') zoomAt(1)
-      else if (key === '-') zoomAt(zoom - 0.15)
-      else zoomAt(zoom + 0.15)
-    }
-    window.addEventListener('kanvas:zoom', onZoomKey)
-    return () => window.removeEventListener('kanvas:zoom', onZoomKey)
-  }, [zoomAt, zoom])
 
   /** Put the diagram in the middle of the free space, not the middle of the window. */
-  const centreOnContent = useCallback(
-    (atZoom: number) => {
-      const vp = viewportRef.current
-      if (!vp) return
-      const freeCentreX = inset.left + (vp.clientWidth - inset.left - inset.right) / 2
-      const freeCentreY = inset.top + (vp.clientHeight - inset.top - inset.bottom) / 2
-      const stagedW = layout.width + originX + ORIGIN
-      const stagedH = layout.height + originY + ORIGIN
-      const { w, h } = boardSize(atZoom, stagedW, stagedH)
-      // Centre the diagram, not the padding around it. The diagram now starts
-      // at `minX`, not at zero, so its middle has to be read from both ends.
-      const midX = originX + (layout.minX + layout.width) / 2
-      const midY = originY + (layout.minY + layout.height) / 2
-      vp.scrollLeft = (w - stagedW * atZoom) / 2 + midX * atZoom - freeCentreX
-      vp.scrollTop = (h - stagedH * atZoom) / 2 + midY * atZoom - freeCentreY
-    },
-    [inset, layout, boardSize, originX, originY],
-  )
-
-  /** Shrink until the whole diagram fits the space the chrome leaves free. */
-  const zoomToFit = useCallback(() => {
-    const vp = viewportRef.current
-    if (!vp) return
-    // Fit against the window, not against what the chrome leaves: subtracting
-    // the panels shrank the diagram to a third of the screen for no good reason.
-    const usableW = Math.max(240, vp.clientWidth - 160)
-    const usableH = Math.max(240, vp.clientHeight - 200)
-    const next = Math.max(MIN_ZOOM, Math.min(1, usableW / layout.width, usableH / layout.height))
-    // Fit is for seeing the whole shape, and the button is always there for
-    // that. Opening at it is different: below about two thirds the titles stop
-    // being readable, and an unreadable overview is worse than a readable
-    // fragment you can pan.
-    setZoom(next)
-    requestAnimationFrame(() => centreOnContent(next))
-  }, [layout, inset, centreOnContent])
 
   const centreOf = (id: NodeId) => {
     const p = positionOf(id)
@@ -581,28 +430,6 @@ export function CanvasView() {
     the middle of a large diagram still passes under a floating bar. Opening at
     a zoom where the whole thing fits means nothing has to pass under anything.
   */
-  const didFit = useRef(false)
-  useEffect(() => {
-    if (didFit.current) return
-    const vp = viewportRef.current
-    if (!vp || vp.clientWidth === 0) return
-    didFit.current = true
-    const overflows =
-      layout.width > vp.clientWidth - inset.left - inset.right ||
-      layout.height > vp.clientHeight - inset.top - inset.bottom
-    window.setTimeout(() => {
-      if (!overflows) {
-        centreOnContent(zoom)
-        return
-      }
-      const usableW = Math.max(240, vp.clientWidth - 160)
-      const usableH = Math.max(240, vp.clientHeight - 200)
-      const fitted = Math.min(1, usableW / layout.width, usableH / layout.height)
-      const opening = Math.max(0.65, fitted)
-      setZoom(opening)
-      requestAnimationFrame(() => centreOnContent(opening))
-    }, 140)
-  }, [stageW, stageH, inset, layout, centreOnContent, zoom])
 
 
   useLayoutEffect(() => {
@@ -638,29 +465,22 @@ export function CanvasView() {
         const vp = viewportRef.current
         if (!vp) return
         event.preventDefault()
-        panRef.current = { x: event.clientX, y: event.clientY, left: vp.scrollLeft, top: vp.scrollTop }
-        setPanning(true)
+        board.pan.start(event)
         vp.setPointerCapture(event.pointerId)
       }}
       onPointerMove={(event) => {
+        // A carry wins over a pan: the two gestures start the same way.
         if (drag.move(event)) return
-        const start = panRef.current
-        const vp = viewportRef.current
-        if (!start || !vp) return
-        vp.scrollLeft = start.left - (event.clientX - start.x)
-        vp.scrollTop = start.top - (event.clientY - start.y)
+        board.pan.move(event)
       }}
       onPointerUp={(event) => {
         drag.finish()
-        if (!panRef.current) return
-        panRef.current = null
-        setPanning(false)
+        board.pan.stop()
         viewportRef.current?.releasePointerCapture(event.pointerId)
       }}
       onPointerCancel={() => {
         drag.cancel()
-        panRef.current = null
-        setPanning(false)
+        board.pan.stop()
       }}
       onWheel={(event) => {
         if (!event.ctrlKey && !event.metaKey) return

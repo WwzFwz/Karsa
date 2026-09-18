@@ -15,6 +15,8 @@ Tampilan visual ruang: simpul, relasi, kursor agen, geser, perbesar, dan seret u
 | ToolCard.tsx | Kartu voting, retro, dan matriks (D40, D59) |
 | ZoomBar.tsx | Kontrol perbesaran, di luar wadah gulir (D29) |
 | useNodeDrag.ts | Membawa kartu dengan tangan, tarikan tepi, gerbang pindah (D31, D34, D84) |
+| useBoardView.ts | Perbesaran, geser, ukuran papan, dan buka-paskan (D5, D25, D29) |
+| useChromeInsets.ts | Berapa ruang yang disisakan bilah mengambang, selalu terkini (D30) |
 | Edges.tsx | Lapisan garis: pohon, relasi, dan garis yang sedang ditarik |
 | GhostCard.tsx | Pratinjau papan yang diusulkan, sebelum disetujui (D83) |
 | viewport.ts | Fungsi biasa: mengukur chrome mengambang, menghitung gulir (D30) |
