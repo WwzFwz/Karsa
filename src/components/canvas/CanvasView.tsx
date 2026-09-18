@@ -27,12 +27,13 @@ import { useAssistant } from '../../state/room/AssistantProvider'
 import { useTreeKeyboard } from '../../a11y/useTreeKeyboard'
 import { layoutFor, NODE_H, NODE_W, sizeOf } from '../../core/shape/layout'
 import { toolOf } from '../../core/tools/registry'
-import { ToolCard } from './ToolCard'
-import { KIND_LABEL, RELATION_LABEL, SHAPE_LABEL, STATE_LABEL } from '../../core/vocabulary'
-import { KIND_HUE } from '../shared/labels'
-import { Icon, KindGlyph } from '../shared/icons'
-import { InlineTitle } from '../shared/InlineTitle'
+import { RELATION_LABEL, SHAPE_LABEL } from '../../core/vocabulary'
+import { Icon } from '../shared/icons'
 import { AgentCursor } from '../voice/AgentCursor'
+import { Edges, type Edge, type LabelledEdge } from './Edges'
+import { GhostCard } from './GhostCard'
+import { NodeCard } from './NodeCard'
+import { useFocusInView } from './useFocusInView'
 import { descendantsOf } from '../../core/tree/project'
 import type { NodeId } from '../../core/model/types'
 import type { Point } from '../../core/shape/layout'
@@ -550,115 +551,39 @@ export function CanvasView() {
   }, [])
 
   /*
-    Keep the focused node in view.
+    Where a board that does not exist yet is drawn.
 
-    Without this the canvas opens on whatever happens to be at scroll zero --
-    for a mind map that is the top edge, not the root -- and arrowing through a
-    large tree walks the focus ring straight off the screen. It scrolls the
-    minimum needed, so the diagram does not jump around under someone working
-    near an edge.
+    Beside the node it will hang from, so the attachment is visible without
+    pretending to know the arrangement the layout will settle on; out in clear
+    board when it lands as its own root, because then there is nothing to be
+    beside.
 
-    Deferred by one frame and repeated on resize, because the viewport's height
-    is not final on the first pass and scrolling against a stale height lands
-    the node just off the bottom edge.
+    It does not go through the real layout because it is a preview, not a node:
+    it is not in the document, cannot be focused, and must never be a drop
+    target. Terapkan is what turns it into something the tree knows about.
   */
-  const ensureVisible = useCallback(
-    (id: NodeId | null, smooth: boolean) => {
-      const vp = viewportRef.current
-      if (!vp || !id) return
-      /*
-        Never while a node is being carried. This scroller exists for people
-        navigating by keyboard; a hand on a card already says where the
-        attention is, and the edge pull above is what moves the board then.
-        Left in, it fought the pointer for the board on every frame.
-      */
-      if (nodeDragRef.current) return
-      const p = layout.positions.get(id)
-      if (!p) return
+  const ghost = (() => {
+    if (!draftLanding || layout.positions.has(draftLanding.id)) return null
+    const parent = draftLanding.parentId ? layout.positions.get(draftLanding.parentId) : undefined
+    const at = parent
+      ? { x: parent.x + NODE_W + 110, y: parent.y }
+      : { x: layout.width + 140, y: (layout.minY + layout.height) / 2 - NODE_H }
+    return { ...draftLanding, at }
+  })()
 
-      /*
-        The canvas runs edge to edge, so the window is not the visible area:
-        the top bar, the toolbar, the sidebar, the inspector and the dock all
-        float on top of it. Scrolling against the raw viewport parked the
-        focused node underneath one of them, half of it showing.
+  const positionOf = (id: NodeId): Point | undefined =>
+    ghost && id === ghost.id ? ghost.at : layout.positions.get(id)
 
-        The insets are measured from those elements rather than derived from the
-        layout variables. Deriving meant adding a guess for the toolbar's height,
-        and the guess was ten pixels short.
-      */
-      const box = vp.getBoundingClientRect()
-      const pad = measureChrome(box)
-
-      // If the chrome would leave less room than a node needs, showing it
-      // somewhere beats refusing to scroll at all.
-      if (box.width - pad.left - pad.right < NODE_W * zoom + 80) {
-        pad.left = 0
-        pad.right = 0
-      }
-      if (box.height - pad.top - pad.bottom < NODE_H * zoom + 80) {
-        pad.top = 0
-        pad.bottom = 0
-      }
-
-      const { top: padTop, right: padRight, bottom: padBottom, left: padLeft } = pad
-
-      const margin = 24
-      const x = offsetX + (p.x + originX) * zoom
-      const y = offsetY + (p.y + originY) * zoom
-      const nodeW = NODE_W * zoom
-      const nodeH = NODE_H * zoom
-      const left = vp.scrollLeft
-      const top = vp.scrollTop
-      const viewLeft = left + padLeft + margin
-      const viewRight = left + vp.clientWidth - padRight - margin
-      const viewTop = top + padTop + margin
-      const viewBottom = top + vp.clientHeight - padBottom - margin
-      let nextLeft = left
-      let nextTop = top
-
-      if (x < viewLeft) nextLeft = Math.max(0, x - padLeft - margin)
-      else if (x + nodeW > viewRight) {
-        nextLeft = x + nodeW + padRight + margin - vp.clientWidth
-      }
-      if (y < viewTop) nextTop = Math.max(0, y - padTop - margin)
-      else if (y + nodeH > viewBottom) {
-        nextTop = y + nodeH + padBottom + margin - vp.clientHeight
-      }
-
-      if (Math.abs(nextLeft - left) < 1 && Math.abs(nextTop - top) < 1) return
-      const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      vp.scrollTo({ left: nextLeft, top: nextTop, behavior: still || !smooth ? 'auto' : 'smooth' })
-    },
-    [layout, zoom, inset, offsetX, offsetY],
-  )
-
-  /*
-    Read through a ref, so the effect below restarts when the focus moves and at
-    no other time.
-
-    `ensureVisible` is rebuilt whenever `layout` is, and `layout` is rebuilt on
-    every frame of a hand placement -- so depending on it meant the scroll was
-    torn down and re-scheduled sixty times a second while a node was being
-    dragged, each pass cancelling the smooth scroll the pass before it had
-    started. Measured: twenty pointer moves, twenty scrolls scheduled and
-    cancelled, forty timers. The same trap as D74 and D77.
-  */
-  const ensureVisibleRef = useRef(ensureVisible)
-  ensureVisibleRef.current = ensureVisible
-
-  useEffect(() => {
-    // One pass next frame, then two more as the stylesheet and the dock settle.
-    // Measuring once is not enough: on a cold load the viewport briefly reports
-    // its unconstrained height, which makes every node look already visible.
-    const frame = requestAnimationFrame(() => ensureVisibleRef.current(focusId, true))
-    const late = [220, 600].map((delay) =>
-      window.setTimeout(() => ensureVisibleRef.current(focusId, false), delay),
-    )
-    return () => {
-      cancelAnimationFrame(frame)
-      late.forEach((id) => window.clearTimeout(id))
-    }
-  }, [focusId])
+  useFocusInView({
+    focusId,
+    viewportRef,
+    positionOf,
+    nodeSize: { w: NODE_W, h: NODE_H },
+    origin: { x: originX, y: originY },
+    offset: { x: offsetX, y: offsetY },
+    zoom,
+    dragging: () => nodeDragRef.current !== null,
+  })
 
   useEffect(() => {
     const onZoomKey = (event: Event) => {
@@ -670,14 +595,6 @@ export function CanvasView() {
     window.addEventListener('kanvas:zoom', onZoomKey)
     return () => window.removeEventListener('kanvas:zoom', onZoomKey)
   }, [zoomAt, zoom])
-
-  useEffect(() => {
-    const vp = viewportRef.current
-    if (!vp) return
-    const observer = new ResizeObserver(() => ensureVisibleRef.current(focusId, false))
-    observer.observe(vp)
-    return () => observer.disconnect()
-  }, [focusId])
 
   /** Put the diagram in the middle of the free space, not the middle of the window. */
   const centreOnContent = useCallback(
@@ -716,30 +633,6 @@ export function CanvasView() {
     requestAnimationFrame(() => centreOnContent(next))
   }, [layout, inset, centreOnContent])
 
-  /*
-    Where a board that does not exist yet is drawn.
-
-    Beside the node it will hang from, so the attachment is visible without
-    pretending to know the arrangement the layout will settle on; out in clear
-    board when it lands as its own root, because then there is nothing to be
-    beside.
-
-    It does not go through the real layout because it is a preview, not a node:
-    it is not in the document, cannot be focused, and must never be a drop
-    target. Terapkan is what turns it into something the tree knows about.
-  */
-  const ghost = (() => {
-    if (!draftLanding || layout.positions.has(draftLanding.id)) return null
-    const parent = draftLanding.parentId ? layout.positions.get(draftLanding.parentId) : undefined
-    const at = parent
-      ? { x: parent.x + NODE_W + 110, y: parent.y }
-      : { x: layout.width + 140, y: (layout.minY + layout.height) / 2 - NODE_H }
-    return { ...draftLanding, at }
-  })()
-
-  const positionOf = (id: NodeId): Point | undefined =>
-    ghost && id === ghost.id ? ghost.at : layout.positions.get(id)
-
   const centreOf = (id: NodeId) => {
     const p = positionOf(id)
     if (!p) return null
@@ -756,7 +649,7 @@ export function CanvasView() {
       if (!from || !to) return null
       return { id: `p-${id}`, from, to }
     })
-    .filter(Boolean) as { id: string; from: { x: number; y: number }; to: { x: number; y: number } }[]
+    .filter(Boolean) as Edge[]
 
   const relationEdges = Object.values(doc.relations)
     .map((r) => {
@@ -766,12 +659,7 @@ export function CanvasView() {
       if (!from || !to) return null
       return { id: r.id, from, to, label: r.label ?? RELATION_LABEL[r.kind] }
     })
-    .filter(Boolean) as {
-    id: string
-    from: { x: number; y: number }
-    to: { x: number; y: number }
-    label: string
-  }[]
+    .filter(Boolean) as LabelledEdge[]
 
   const pointersAt = (id: NodeId) =>
     participants.filter((p) => p.online && p.pointingNodeId === id && p.actorId !== selfId)
@@ -995,44 +883,13 @@ export function CanvasView() {
           setDragLink(null)
         }}
       >
-        <svg className="canvas-edges" width={stageW} height={stageH} aria-hidden="true" focusable="false">
-          <defs>
-            <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M0,0 L8,4 L0,8 z" fill="currentColor" />
-            </marker>
-          </defs>
-          {parentEdges.map((e) => (
-            <path key={e.id} className="edge edge-parent" d={curve(e.from, e.to)} />
-          ))}
-          {dragLink?.moved && (
-            <path
-              className="edge edge-drawing"
-              d={curve(dragLink.origin, dragLink.at)}
-              markerEnd="url(#arrow)"
-            />
-          )}
-          {relationEdges.map((e) => (
-            <g key={e.id}>
-              <path className="edge edge-relation" d={curve(e.from, e.to)} markerEnd="url(#arrow)" />
-              <rect
-                className="edge-label-bg"
-                x={(e.from.x + e.to.x) / 2 - (e.label.length * 5.4) / 2 - 6}
-                y={(e.from.y + e.to.y) / 2 - 16}
-                width={e.label.length * 5.4 + 12}
-                height={15}
-                rx={7.5}
-              />
-              <text
-                className="edge-label"
-                x={(e.from.x + e.to.x) / 2}
-                y={(e.from.y + e.to.y) / 2 - 5}
-                textAnchor="middle"
-              >
-                {e.label}
-              </text>
-            </g>
-          ))}
-        </svg>
+        <Edges
+          width={stageW}
+          height={stageH}
+          parents={parentEdges}
+          relations={relationEdges}
+          drawing={dragLink?.moved ? { origin: dragLink.origin, at: dragLink.at } : null}
+        />
 
         {/*
           A flat tree: aria-level, aria-posinset and aria-setsize carry the
@@ -1048,232 +905,84 @@ export function CanvasView() {
         >
           {visibleIds.map((id) => {
             const entry = tree.byId.get(id)!
-            const node = entry.node
             const pos = layout.positions.get(id)
             if (!pos) return null
             const pointing = pointersAt(id)
             const watching = focusedBy(id).filter((p) => !pointing.includes(p))
-            const comments = Object.values(doc.comments).filter(
-              (c) => c.targetId === id && !c.resolvedAt,
-            )
-            const hasChildren = entry.childIds.length > 0
-            const hue = KIND_HUE[node.kind]
-            const spec = toolOf(node.tool)
-            const size = sizeOf(tree, id)
-
             return (
-              <li
+              <NodeCard
                 key={id}
-                role="treeitem"
-                aria-level={entry.depth + 1}
-                aria-posinset={entry.posInSet}
-                aria-setsize={entry.setSize}
-                aria-expanded={hasChildren ? !collapsed.has(id) : undefined}
-                aria-selected={focusId === id}
-                aria-label={`${KIND_LABEL[node.kind]} ${node.title}${
-                  node.state ? `, ${STATE_LABEL[node.state].toLowerCase()}` : ''
-                }${comments.length ? `, ${comments.length} komentar` : ''}${
-                  pointing.length
-                    ? `, ditunjuk ${pointing.map((p) => p.displayName).join(' dan ')}`
-                    : ''
-                }${draftTargets.has(id) ? ', ada usulan menunggu persetujuan' : ''}`}
-                data-node-id={id}
-                tabIndex={focusId === id ? 0 : -1}
-                className={`node node-${node.kind} ${focusId === id ? 'is-focus' : ''} ${
-                  pointing.length ? 'is-pointed' : ''
-                } ${draftTargets.has(id) ? 'is-proposed' : ''} ${
-                  linkingFrom && linkingFrom !== id ? 'is-linktarget' : ''
-                } ${linkingFrom === id ? 'is-linksource' : ''} ${
-                  draggingNode === id ? 'is-dragging' : ''
-                } ${dropParent === id ? 'is-droptarget' : ''} ${
-                  nodeOverrides[id] ? 'is-placed' : ''
-                } ${spec ? `node-tool tool-${spec.id}` : ''}`}
-                style={{
-                  transform: `translate(${pos.x + originX}px, ${pos.y + originY}px)`,
-                  // Width is fixed by kind; height belongs to the content, and
-                  // the layout finds out what it was by measuring afterwards.
-                  width: size.w,
-                  minHeight: NODE_H,
-                  ['--kh' as string]: String(hue),
+                id={id}
+                entry={entry}
+                doc={doc}
+                tree={tree}
+                at={{ x: pos.x + originX, y: pos.y + originY }}
+                state={{
+                  focused: focusId === id,
+                  editing: editingId === id,
+                  dragging: draggingNode === id,
+                  dropTarget: dropParent === id,
+                  linkTarget: Boolean(linkingFrom && linkingFrom !== id),
+                  linkSource: linkingFrom === id,
+                  placed: Boolean(nodeOverrides[id]),
+                  proposed: draftTargets.has(id),
+                  quiet: Boolean(editingId || linkingFrom),
                 }}
-                ref={(el) => {
-                  if (el) refs.current.set(id, el)
-                  else refs.current.delete(id)
+                pointing={pointing}
+                watching={watching}
+                comments={Object.values(doc.comments).filter((c) => c.targetId === id && !c.resolvedAt)}
+                collapsed={collapsed.has(id)}
+                spec={toolOf(entry.node.tool)}
+                votesOn={votesOn}
+                votedByMe={votedByMe}
+                dropParent={dropParent}
+                on={{
+                  pointerDown: (event) => {
+                    if (linkingFrom || editingId === id || event.button !== 0) return
+                    if ((event.target as HTMLElement).closest('.node-anchor, .node-handle')) return
+                    nodeDragRef.current = {
+                      id,
+                      startX: event.clientX,
+                      startY: event.clientY,
+                      startLeft: viewportRef.current?.scrollLeft ?? 0,
+                      startTop: viewportRef.current?.scrollTop ?? 0,
+                      pointerX: event.clientX,
+                      pointerY: event.clientY,
+                      from: { x: pos.x, y: pos.y },
+                      hadPlacement: nodeOverrides[id] ?? null,
+                    }
+                  },
+                  click: () => {
+                    if (suppressClickRef.current) return
+                    if (linkingFrom) {
+                      finishLink(id)
+                      return
+                    }
+                    wantsFocus.current = true
+                    setFocus(id)
+                  },
+                  commitTitle: (title) => {
+                    run({ type: 'renameNode', id, title })
+                    setEditingId(null)
+                  },
+                  cancelEdit: () => setEditingId(null),
+                  startEdit: () => setEditingId(id),
+                  addChild: () => addChild(id),
+                  startLink: (event) => {
+                    event.stopPropagation()
+                    event.preventDefault()
+                    const origin = toStage(event.clientX, event.clientY)
+                    const start = { fromId: id, origin, at: origin, moved: false }
+                    dragRef.current = start
+                    setDragLink(start)
+                  },
+                  vote: (target) => run({ type: 'voteNode', id: target }, 'pointer'),
+                  focusNode: (target) => {
+                    wantsFocus.current = true
+                    setFocus(target)
+                  },
                 }}
-                onPointerDown={(event) => {
-                  if (linkingFrom || editingId === id || event.button !== 0) return
-                  if ((event.target as HTMLElement).closest('.node-anchor, .node-handle')) return
-                  nodeDragRef.current = {
-                    id,
-                    startX: event.clientX,
-                    startY: event.clientY,
-                    startLeft: viewportRef.current?.scrollLeft ?? 0,
-                    startTop: viewportRef.current?.scrollTop ?? 0,
-                    pointerX: event.clientX,
-                    pointerY: event.clientY,
-                    from: { x: pos.x, y: pos.y },
-                    hadPlacement: nodeOverrides[id] ?? null,
-                  }
-                }}
-                onClick={() => {
-                  if (suppressClickRef.current) return
-                  if (linkingFrom) {
-                    finishLink(id)
-                    return
-                  }
-                  wantsFocus.current = true
-                  setFocus(id)
-                }}
-                onKeyDown={onKeyDown}
-              >
-                <span
-                  className="node-bar"
-                  style={{ background: `hsl(${hue} 58% 50%)` }}
-                  aria-hidden="true"
-                />
-                <span className="node-head" aria-hidden="true">
-                  {spec ? (
-                    <>
-                      <Icon name={spec.icon} size={12} />
-                      {spec.label}
-                    </>
-                  ) : (
-                    <>
-                      <KindGlyph kind={node.kind} />
-                      {KIND_LABEL[node.kind]}
-                    </>
-                  )}
-                </span>
-                {editingId === id ? (
-                  <InlineTitle
-                    value={node.title}
-                    className="node-title"
-                    onCommit={(title) => {
-                      run({ type: 'renameNode', id, title })
-                      setEditingId(null)
-                    }}
-                    onCancel={() => setEditingId(null)}
-                  />
-                ) : (
-                  <span
-                    className="node-title"
-                    onDoubleClick={(event) => {
-                      event.stopPropagation()
-                      setEditingId(id)
-                    }}
-                  >
-                    {node.title}
-                  </span>
-                )}
-                {spec && (
-                  <ToolCard
-                    spec={spec}
-                    id={id}
-                    doc={doc}
-                    tree={tree}
-                    votesOn={votesOn}
-                    votedByMe={votedByMe}
-                    dropParent={dropParent}
-                    onVote={(target) => run({ type: 'voteNode', id: target }, 'pointer')}
-                    onFocus={(target) => {
-                      wantsFocus.current = true
-                      setFocus(target)
-                    }}
-                  />
-                )}
-                {draftTargets.has(id) && (
-                  <span className="node-proposed" aria-hidden="true">
-                    <Icon name="sparkles" size={11} />
-                    usulan menunggu
-                  </span>
-                )}
-                {(node.state || comments.length > 0 || node.note) && (
-                  <span className="node-tags" aria-hidden="true">
-                    {node.state && (
-                      <span className={`state-tag state-${node.state}`}>{STATE_LABEL[node.state]}</span>
-                    )}
-                    {comments.length > 0 && (
-                      <span className="count-tag">
-                        <Icon name="message" size={11} />
-                        {comments.length}
-                      </span>
-                    )}
-                    {node.note && (
-                      <span className="count-tag" title="Punya catatan">
-                        <Icon name="fileText" size={11} />
-                      </span>
-                    )}
-                  </span>
-                )}
-
-                {pointing.length > 0 && (
-                  <span
-                    className="node-pointer"
-                    style={{ ['--hue' as string]: String(pointing[0].hue) }}
-                    aria-hidden="true"
-                    title={`${pointing.map((p) => p.displayName).join(' dan ')} menunjuk simpul ini`}
-                  >
-                    <Icon name="pointer" size={12} />
-                  </span>
-                )}
-
-                {!editingId && !linkingFrom && (
-                  <>
-                    {focusId === id && (
-                      <span className="node-handles">
-                        <button
-                          type="button"
-                          className="node-handle"
-                          aria-label={`Tambah simpul anak di bawah ${node.title}`}
-                          title="Tambah anak (n)"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            addChild(id)
-                          }}
-                        >
-                          <Icon name="plus" size={13} />
-                        </button>
-                      </span>
-                    )}
-
-                    {/*
-                      Pointer affordance only, so it adds no tab stops. The
-                      accessible route to the same command is `r` and the Hubung
-                      button, which were there first.
-                    */}
-                    {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-                      <span
-                        key={side}
-                        className={`node-anchor anchor-${side}`}
-                        aria-hidden="true"
-                        onPointerDown={(event) => {
-                          event.stopPropagation()
-                          event.preventDefault()
-                          const origin = toStage(event.clientX, event.clientY)
-                          const start = { fromId: id, origin, at: origin, moved: false }
-                          dragRef.current = start
-                          setDragLink(start)
-                        }}
-                      />
-                    ))}
-                  </>
-                )}
-
-                {(pointing.length > 0 || watching.length > 0) && (
-                  <span className="node-people" aria-hidden="true">
-                    {[...pointing, ...watching].map((p) => (
-                      <span
-                        key={p.actorId}
-                        className={`avatar ${p.talking ? 'is-talking' : ''}`}
-                        style={{ ['--hue' as string]: String(p.hue) }}
-                        title={p.displayName}
-                      >
-                        {p.displayName.charAt(0)}
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </li>
+              />
             )
           })}
         </ul>
@@ -1289,18 +998,7 @@ export function CanvasView() {
           it -- until Terapkan, it is not part of the document at all.
         */}
         {ghost && (
-          <div
-            className="node-ghost"
-            aria-hidden="true"
-            style={{
-              transform: `translate(${ghost.at.x + originX}px, ${ghost.at.y + originY}px)`,
-              width: NODE_W * 1.4,
-            }}
-          >
-            <span className="node-ghost-kind">{ghost.label}</span>
-            <span className="node-ghost-title">{ghost.title}</span>
-            <span className="node-ghost-count">{ghost.count} simpul</span>
-          </div>
+          <GhostCard landing={ghost} at={{ x: ghost.at.x + originX, y: ghost.at.y + originY }} width={NODE_W * 1.4} />
         )}
 
         {agentPoint && (
@@ -1367,13 +1065,3 @@ export function CanvasView() {
 }
 
 /** Gentle S-curve. Straight lines cross badly once relations fan out. */
-function curve(a: { x: number; y: number }, b: { x: number; y: number }): string {
-  const dx = Math.abs(b.x - a.x)
-  const dy = Math.abs(b.y - a.y)
-  if (dx > dy) {
-    const mid = (a.x + b.x) / 2
-    return `M${a.x},${a.y} C${mid},${a.y} ${mid},${b.y} ${b.x},${b.y}`
-  }
-  const mid = (a.y + b.y) / 2
-  return `M${a.x},${a.y} C${a.x},${mid} ${b.x},${mid} ${b.x},${b.y}`
-}
