@@ -26,7 +26,7 @@ export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
   const online = participants.filter((p) => p.online)
 
   return (
-    <header className="topbar" ref={barRef}>
+    <header className="topbar" aria-label="Bilah atas" ref={barRef}>
       <button
         type="button"
         className="icon-btn"
@@ -44,7 +44,17 @@ export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
         </span>
         <div className="brand-text">
           <p className="brand-name">Karsa</p>
-          <p className="brand-sub">{doc.room.title}</p>
+          {/*
+            The room's name is the page's heading, not decoration.
+
+            An audit of the open room found exactly one heading on it, and that
+            one belonged to a panel. Headings are how somebody using a screen
+            reader finds their way around a page before reading any of it, and
+            a page whose only heading is "Jejak perubahan" has no way in. It
+            looks the same as the line it replaces; what changed is that it is
+            now announced as the heading of this room.
+          */}
+          <h1 className="brand-sub">{doc.room.title}</h1>
         </div>
       </div>
 

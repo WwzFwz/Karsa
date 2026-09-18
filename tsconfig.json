@@ -16,7 +16,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      // onnxruntime-web ships types but leaves them out of its "exports" map,
+      // so bundler resolution cannot find them. Pointing at the file directly
+      // keeps the runtime import ordinary and the types real.
+      "onnxruntime-web": ["node_modules/onnxruntime-web/types.d.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

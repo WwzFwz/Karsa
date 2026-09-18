@@ -51,11 +51,32 @@ async function bootstrap() {
 
   mountSync(app.getHttpServer() as Server, hocuspocus)
 
+  /*
+    Speech model files, when this install carries them.
+
+    Served with the same path shape the CDN uses, so one cache serves both and
+    switching a device between them re-downloads nothing. Immutable, because a
+    model file at a given revision never changes -- and a classroom that opens
+    the same room every week should pay for the download once.
+  */
+  if (config.modelDir && existsSync(config.modelDir)) {
+    app.useStaticAssets(config.modelDir, {
+      prefix: '/models/',
+      maxAge: '365d',
+      immutable: true,
+      setHeaders: (res: { setHeader(name: string, value: string): void }) => {
+        res.setHeader('Access-Control-Allow-Origin', '*')
+      },
+    })
+    console.log(`Model ucapan disajikan dari ${config.modelDir} di /models`)
+  }
+
   // The built client, when there is one. In development Vite serves it instead.
   if (existsSync(join(config.staticDir, 'index.html'))) {
     app.useStaticAssets(config.staticDir)
     app.use((req: { method: string; path: string }, res: { sendFile(path: string): void }, next: () => void) => {
-      if (req.method !== 'GET' || req.path.startsWith('/api') || req.path === SYNC_PATH) return next()
+      if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/models')) return next()
+      if (req.path === SYNC_PATH) return next()
       res.sendFile(join(config.staticDir, 'index.html'))
     })
   }

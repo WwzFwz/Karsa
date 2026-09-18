@@ -41,7 +41,7 @@ function question(): Draft {
   }
 }
 
-function room() {
+function room(options: { model?: string } = { model: 'whisper' }) {
   let clock = 0
   const timers: { at: number; fn: () => void; live: boolean }[] = []
   const log = {
@@ -57,8 +57,11 @@ function room() {
     heard: { text: 'tambahkan gagasan pelatihan dosen' } as { text: string; error?: string },
     failWith: null as Error | null,
     cancelled: false,
+    watching: false,
+    utter: null as ((text: string) => void) | null,
+    watchError: null as ((message: string) => void) | null,
   }
-  const answers: { input: unknown; resolve: (draft: Draft) => void }[] = []
+  const answers: { input: unknown; declined?: readonly string[]; resolve: (draft: Draft) => void }[] = []
 
   const deps: VoiceFlowDeps = {
     recogniser: {
@@ -78,10 +81,24 @@ function room() {
       cancel: () => {
         mic.cancelled = true
       },
+      /*
+        Mode Menyimak with no microphone and no model: the test drives the
+        detector by hand, calling `heard` when a sentence would have finished.
+        What is under test is the rule about who was addressed, not the audio.
+      */
+      watch: async (handlers) => {
+        mic.watching = true
+        mic.utter = handlers.onUtterance
+        mic.watchError = handlers.onError
+      },
+      unwatch: () => {
+        mic.watching = false
+        mic.utter = null
+      },
     },
-    asrModel: () => 'whisper',
+    asrModel: () => options.model,
     nextCannedUtterance: () => ({ transcript: 'kalimat contoh', build: () => ({ operations: [] }) }),
-    understand: (input) => new Promise((resolve) => answers.push({ input, resolve })),
+    understand: (input, _pending, declined) => new Promise((resolve) => answers.push({ input, declined, resolve })),
     runCommand: (command, via) => void log.commands.push({ command, via }),
     runBatch: (commands, via) => {
       log.batches.push({ commands, via })
@@ -299,5 +316,158 @@ describe('leaving the room', () => {
     const r = room()
     r.flow.dispose()
     assert.equal(r.mic.cancelled, true)
+  })
+})
+
+describe('a refused board is not offered again (D63)', () => {
+  const offered = (transcript: string, id: string): Draft => ({
+    ...emptyDraft(),
+    status: 'ready',
+    transcript,
+    intent: 'alat-diusulkan',
+    operations: [
+      {
+        id: 'op_0',
+        command: addIdea,
+        preview: 'Siapkan papan retro',
+        confidence: 0.58,
+        accepted: true,
+        source: { kind: 'templat', id, label: 'Papan retro' },
+      },
+    ],
+  })
+
+  /** Speak once, take whatever the fake model is told to answer, then decide. */
+  const offerThenDecide = async (r: ReturnType<typeof room>, draft: Draft, decide: 'discard' | 'apply') => {
+    r.mic.heard = { text: draft.transcript }
+    r.flow.press()
+    await r.advance(LATCH_MS + 1)
+    r.flow.release()
+    await r.settle()
+    r.answers.at(-1)!.resolve(draft)
+    await r.settle()
+    if (decide === 'discard') r.flow.discard()
+    else r.flow.apply()
+    await r.settle()
+  }
+
+  /** Say something else, and report what the planner was told had been refused. */
+  const askAgain = async (r: ReturnType<typeof room>, text: string) => {
+    r.mic.heard = { text }
+    r.flow.press()
+    await r.advance(LATCH_MS + 1)
+    r.flow.release()
+    await r.settle()
+    return r.answers.at(-1)!.declined ?? []
+  }
+
+  it('carries the refusal into the next sentence', async () => {
+    const r = room()
+    await offerThenDecide(r, offered('apa yang jalan sprint ini', 'retro'), 'discard')
+    assert.deepEqual([...(await askAgain(r, 'apa lagi yang belum kelar'))], ['retro'])
+  })
+
+  it('keeps quiet about a board that was named out loud', async () => {
+    const r = room()
+    await offerThenDecide(r, offered('tolong buka papan retro', 'retro'), 'discard')
+    // Refusing this retro answers this sentence; it is not a ban on the word.
+    assert.deepEqual([...(await askAgain(r, 'apa lagi yang belum kelar'))], [])
+  })
+
+  it('counts a refused option in a question too', async () => {
+    const r = room()
+    const asked: Draft = {
+      ...emptyDraft(),
+      status: 'ready',
+      transcript: 'mana yang duluan dikerjakan',
+      intent: 'tanya',
+      ambiguities: [
+        {
+          id: 'amb_0',
+          question: 'Mau pakai alat?',
+          choices: [
+            { id: 'voting', label: 'Pakai alat pemungutan suara', commands: [addIdea] },
+            { id: 'pilihan_1', label: 'Catat sebagai gagasan', commands: [addIdea] },
+          ],
+        },
+      ],
+    }
+    await offerThenDecide(r, asked, 'discard')
+    // Only the tool is remembered; `pilihan_1` is not a board anybody can refuse.
+    assert.deepEqual([...(await askAgain(r, 'lanjut ke hal lain'))], ['voting'])
+  })
+
+  it('forgets nothing when the offer was accepted', async () => {
+    const r = room()
+    await offerThenDecide(r, offered('apa yang jalan sprint ini', 'retro'), 'apply')
+    assert.deepEqual([...(await askAgain(r, 'apa lagi yang belum kelar'))], [])
+  })
+})
+
+describe('Mode Menyimak (D4, deliberate always-on)', () => {
+  /** Speak a whole sentence into the open microphone. */
+  const say = async (r: ReturnType<typeof room>, text: string) => {
+    r.mic.utter?.(text)
+    await r.settle()
+  }
+
+  it('opens the microphone only when switched on, and closes it again', async () => {
+    const r = room()
+    assert.equal(r.flow.getState().watching, false)
+    r.flow.startWatching()
+    await r.settle()
+    assert.equal(r.flow.getState().watching, true)
+    assert.equal(r.mic.watching, true)
+
+    r.flow.stopWatching()
+    await r.settle()
+    assert.equal(r.flow.getState().watching, false)
+    assert.equal(r.mic.watching, false)
+  })
+
+  it('acts only on sentences addressed by name', async () => {
+    const r = room()
+    r.flow.startWatching()
+    await r.settle()
+
+    // Ordinary meeting talk. The room must not edit itself because of this.
+    await say(r, 'kita hapus saja bagian anggaran itu ya')
+    assert.equal(r.answers.length, 0)
+    assert.equal(r.flow.getState().overheard, 'kita hapus saja bagian anggaran itu ya')
+    assert.equal(r.status(), 'idle')
+
+    // Addressed: the name is stripped and only the request is understood.
+    await say(r, 'Karsa, tambahkan gagasan pelatihan dosen')
+    assert.equal(r.answers.length, 1)
+    assert.equal(r.answers[0].input, 'tambahkan gagasan pelatihan dosen')
+    assert.equal(r.flow.getState().overheard, null)
+  })
+
+  it('reports what it overheard rather than hiding it', async () => {
+    // Dropping it silently would make the mode look broken; acting on it would
+    // make the room unusable. Showing it is the only honest third option.
+    const r = room()
+    r.flow.startWatching()
+    await r.settle()
+    await say(r, 'menurut saya anggarannya kurang')
+    assert.equal(r.flow.getState().overheard, 'menurut saya anggarannya kurang')
+    await say(r, 'Karsa, buat papan retro')
+    assert.equal(r.flow.getState().overheard, null)
+  })
+
+  it('refuses to start when this device plays canned lines', async () => {
+    const r = room({ model: undefined })
+    r.flow.startWatching()
+    await r.settle()
+    assert.equal(r.flow.getState().watching, false)
+    assert.equal(r.log.errors.length, 1)
+  })
+
+  it('closes the microphone when the room is left mid-sentence', async () => {
+    const r = room()
+    r.flow.startWatching()
+    await r.settle()
+    r.flow.dispose()
+    assert.equal(r.mic.watching, false)
   })
 })

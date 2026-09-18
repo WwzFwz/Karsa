@@ -48,7 +48,32 @@ export const CONFIG = {
   syncUrl: text('VITE_SYNC_URL', '/sync'),
   /** The room service. A path means the server this page came from. */
   apiUrl: text('VITE_API_URL', '/api'),
+  /**
+   * Where the speech model files are fetched from.
+   *
+   * Empty means the Hugging Face CDN, which is right for a laptop with
+   * internet and wrong for the promise in section 7. Mode kelas is "one
+   * container on the teacher's laptop, local network, no internet at all", and
+   * a first sentence that needs an 80 MB download from the other side of the
+   * world is not that. Point this at the server the page came from and the
+   * room works on a network with no way out.
+   */
+  modelUrl: text('VITE_MODEL_URL', ''),
 } as const
+
+/**
+ * Where speech model files come from, without a trailing slash, or null for
+ * the public CDN. A path is resolved against the page, so `/models` means the
+ * server that served the app -- the same reasoning as `syncUrl`.
+ */
+export function modelUrl(): string | null {
+  const value = CONFIG.modelUrl.trim()
+  if (!value) return null
+  const trimmed = value.endsWith('/') ? value.slice(0, -1) : value
+  if (/^https?:/i.test(trimmed)) return trimmed
+  const origin = (globalThis as unknown as { location?: { origin?: string } }).location?.origin
+  return origin ? `${origin}${trimmed.startsWith('/') ? '' : '/'}${trimmed}` : trimmed
+}
 
 /** Where room service calls go, without a trailing slash. */
 export function apiUrl(): string {

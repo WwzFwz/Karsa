@@ -10,6 +10,8 @@ export default defineConfig({
     proxy: {
       '/sync': { target: 'ws://localhost:3000', ws: true },
       '/api': 'http://localhost:3000',
+      // Speech model files, when this install serves its own (VITE_MODEL_URL).
+      '/models': 'http://localhost:3000',
     },
   },
 })

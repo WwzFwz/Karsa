@@ -71,6 +71,16 @@ export interface AssistantApi {
   talking: boolean
   /** True when the microphone is latched on after a tap rather than a hold. */
   talkLatched: boolean
+  /**
+   * Mode Menyimak: the microphone stays open and the voice detector decides
+   * where sentences begin, so speaking needs no hand at all (D4). Off unless
+   * somebody switches it on, and visible everywhere while it runs.
+   */
+  watching: boolean
+  startWatching: () => void
+  stopWatching: () => void
+  /** The last sentence heard that was not addressed to Karsa. Shown, never acted on. */
+  overheard: string | null
   startTalking: () => void
   stopTalking: () => void
   /** Release of the talk switch. Short press latches, long press ends. */
@@ -88,8 +98,20 @@ export interface AssistantApi {
   draftTargets: ReadonlySet<NodeId>
   /** Where the agent is standing right now. Drives the cursor on the canvas. */
   agentTargetId: NodeId | null
+  /** A whole board about to land, which has no node to stand on yet. */
+  draftLanding: Landing | null
   /** Set while accepted operations are landing one at a time. */
   agentAction: string | null
+}
+
+export interface Landing {
+  id: NodeId
+  /** The node it will hang from, or null when it lands as its own root. */
+  parentId: NodeId | null
+  title: string
+  label: string
+  /** How many nodes it brings, so the ghost can say so without guessing. */
+  count: number
 }
 
 const AssistantContext = createContext<AssistantApi | null>(null)
@@ -176,13 +198,15 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
         start: (onPartial) => recogniser.start(onPartial),
         stop: () => recogniser.stop(),
         cancel: () => recogniser.cancel(),
+        watch: (handlers) => recogniser.watch(handlers),
+        unwatch: () => recogniser.unwatch(),
       },
       asrModel: () => ASR_MODES.find((m) => m.id === latest.current.asrMode)?.model,
       nextCannedUtterance: () => UTTERANCES[cannedIndex++ % UTTERANCES.length],
-      understand: (input, pending) => {
+      understand: (input, pending, declined) => {
         const current = store.getDoc()
         const { focusId: focus, provider: engine } = latest.current
-        return buildDraft(input, current, projectTree(current), focus, engine, pending)
+        return buildDraft(input, current, projectTree(current), focus, engine, pending, declined)
       },
       runCommand: (command, via) => latest.current.run(command, via),
       runBatch: (commands, via) => {
@@ -209,10 +233,11 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     })
   }, [store, self.id])
 
-  // Leaving the room mid-sentence must close the microphone (D4).
+  // Leaving the room mid-sentence must close the microphone (D4). That now
+  // includes Mode Menyimak, where nobody is holding anything to let go of.
   useEffect(() => () => flow.dispose(), [flow])
 
-  const { draft, talking, latched, performing } = useSyncExternalStore(
+  const { draft, talking, latched, performing, watching, overheard } = useSyncExternalStore(
     flow.subscribe,
     flow.getState,
     flow.getState,
@@ -250,18 +275,52 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     return ids
   }, [draft])
 
+  /**
+   * Where a whole board is about to land, when that is what was proposed.
+   *
+   * A template arrives as nodes that do not exist yet, so the agent had nothing
+   * to stand on and D18 -- the thing about to change is marked where it will
+   * land -- was empty for the largest change the assistant can propose. The ids
+   * are minted when the plan is built, not when it is applied, so the root
+   * already has one and the canvas can draw it as a card that is clearly not
+   * there yet.
+   *
+   * Shown for every template, not only a parentless one. Standing on the
+   * parent would mark the one node that is *not* changing while saying nothing
+   * about the twelve that are, and "Siapkan papan retro: 12 simpul" is a
+   * sentence, not a place.
+   */
+  const draftLanding = useMemo<Landing | null>(() => {
+    const op =
+      performing && performing.index < performing.ops.length
+        ? performing.ops[performing.index]
+        : draft.status === 'ready'
+          ? draft.operations.find((step) => step.accepted && step.source)
+          : undefined
+    if (!op?.source) return null
+    const root = op.command
+    if (root.type !== 'createNode' || !root.id) return null
+    return {
+      id: root.id,
+      parentId: root.parentId,
+      title: root.title,
+      label: op.source.label,
+      count: 1 + (op.extraCommands?.length ?? 0),
+    }
+  }, [performing, draft])
+
   const agentTargetId = useMemo<NodeId | null>(() => {
     if (performing && performing.index < performing.ops.length) {
-      return commandTarget(performing.ops[performing.index].command)
+      return draftLanding?.id ?? commandTarget(performing.ops[performing.index].command) ?? focusId
     }
     if (draft.status === 'ready') {
       const first = draft.operations.find((op) => op.accepted)
-      if (first) return commandTarget(first.command)
+      if (first) return draftLanding?.id ?? commandTarget(first.command) ?? focusId
       const amb = draft.ambiguities[0]
       if (amb) return amb.choices[0]?.targetId ?? focusId
     }
     return focusId
-  }, [performing, draft, focusId])
+  }, [performing, draft, focusId, draftLanding])
 
   const agentAction =
     performing && performing.index < performing.ops.length ? performing.ops[performing.index].preview : null
@@ -280,6 +339,10 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     setDraft: flow.editDraft,
     talking,
     talkLatched: latched,
+    watching,
+    startWatching: flow.startWatching,
+    stopWatching: flow.stopWatching,
+    overheard,
     startTalking: flow.press,
     stopTalking: flow.stop,
     endTalkHold: flow.release,
@@ -290,6 +353,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     thinkingSeconds,
     draftTargets,
     agentTargetId,
+    draftLanding,
     agentAction,
   }
 

@@ -23,6 +23,14 @@ export interface ServerConfig {
   port: number
   dataFile: string
   staticDir: string
+  /**
+   * Speech model files, served at /models.
+   *
+   * Empty means devices fetch them from the Hugging Face CDN. Filled, this
+   * server hands them out itself -- which is what makes mode kelas true rather
+   * than nearly true: a room on a network with no way out can still hear.
+   */
+  modelDir: string
   /** Signs join tokens. Anyone who knows it can mint a token for any room. */
   secret: string
   /** How long a join token lasts: one teaching period (decided 17 September 2026). */
@@ -34,6 +42,7 @@ export function readConfig(): ServerConfig {
     port: Number(process.env.PORT ?? 3000),
     dataFile: resolve(process.env.KARSA_DATA ?? 'data/karsa.sqlite'),
     staticDir: resolve(process.env.KARSA_STATIC ?? '../dist'),
+    modelDir: process.env.KARSA_MODELS ? resolve(process.env.KARSA_MODELS) : '',
     secret: secret(),
     tokenDays: Number(process.env.KARSA_TOKEN_DAYS ?? 30),
   }

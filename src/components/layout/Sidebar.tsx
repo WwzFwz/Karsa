@@ -34,7 +34,7 @@ export function Sidebar({ base }: { base: string }) {
   const badgeFor = (label: string): number => (label === 'Ruang' ? pendingOps + openComments : 0)
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" aria-label="Navigasi dan setelan">
       <nav aria-label="Tampilan ruang">
         {TABS.map((tab) => {
           const badge = badgeFor(tab.label)

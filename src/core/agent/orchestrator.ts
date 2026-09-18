@@ -218,7 +218,7 @@ export function plan(input: PlanInput): Plan {
   const implied = IMPLIED.find((rule) =>
     rule.phrases.some((phrase) => text.includes(normalise(phrase))),
   )
-  if (implied) {
+  if (implied && !input.declined?.includes(implied.templateId)) {
     const step = stepFor(implied.templateId, parentId, 0.58)
     if (step) {
       return {

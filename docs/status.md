@@ -1,7 +1,7 @@
 # Status
 
-**Sudah sampai mana, per 8 September 2026.** Diperiksa langsung ke kodenya:
-68 berkas, ~12.900 baris, 34 commit.
+**Sudah sampai mana, per 18 September 2026.** Diperiksa langsung ke kodenya,
+bukan diingat dari rencana.
 
 Yang menjawab "apa saja yang harus dibangun" adalah dokumen lain:
 **`docs/rencana-implementasi.md`**. Pemisahan ini disengaja — rencana yang ikut
@@ -16,14 +16,15 @@ bisa dikerjakan.
 
 ## Ringkasan satu paragraf
 
-Yang sudah jadi adalah **produknya, dijalankan dengan data palsu**: model data
-dan penegak aturannya nyata, lima bentuk tata letak nyata, tiga alat nyata,
-orchestrator dengan model lokal sungguhan nyata. Yang belum ada adalah
-**semua yang menghubungkan satu orang dengan orang lain** — sinkronisasi,
-kehadiran, penyimpanan. Suara sungguhan kini ada — Whisper di perangkat sampai
-draf yang bisa dijawab dengan suara — kecuali VAD. Ditambah satu lubang yang tidak enak: **belum ada satu pun
-uji otomatis untuk `core/`**, padahal bagian 9 menyebut pemulihan siklus sebagai
-risiko yang harus benar sejak awal.
+Produknya jalan sungguhan sekarang, bukan dengan data palsu: dokumen Yjs di
+server, kehadiran lewat Awareness, token dan ruang tunggu, suara dari mikrofon
+sampai draf — termasuk Mode Menyimak yang tidak menuntut tangan sama sekali. Dua
+perangkat sungguhan sudah pernah berada di satu ruang dan sepakat.
+
+Yang tersisa terbagi dua, dan keduanya jujur disebut di bawah. Yang **paling
+terlihat**: antarmuka Inggris baru separuh jalan. Yang **paling menentukan**:
+klaim aksesibilitasnya sudah diperiksa mesin dan belum pernah sekali pun
+didengar manusia.
 
 ---
 
@@ -58,8 +59,11 @@ risiko yang harus benar sejak awal.
 
 ### 2.1 Uji otomatis untuk `core/` — **sudah dimulai (D73)**
 
-97 uji, `npm test`, ditambah 12 uji server (`npm run test:server`): aturan 1, 4, 5, satu pintu data, hitungan suara, alur
-suara per perangkat (D74), dokumen Yjs dua perangkat (D75), dan kehadiran (D78). Belum: tata letak, dan orchestrator selain set uji eval.
+115 uji (`npm test`), 12 uji server (`npm run test:server`), 7 uji dua perangkat
+(`npm run test:people`), dan 27 kasus eval. Mencakup aturan 1, 4, 5, satu pintu
+data, hitungan suara, alur suara per perangkat (D74), dokumen Yjs (D75),
+kehadiran (D78), kata pemicu Mode Menyimak (D80), dan peredaman tawaran alat
+(D82). Belum: tata letak, dan orchestrator selain set uji eval.
 
 ### 2.2 Isi ruang hilang saat halaman dimuat ulang — **selesai (D75)**
 
@@ -78,15 +82,18 @@ pertama menuju kerja luring.
 
 | Bagian | Status |
 | ------ | ------ |
-| AudioWorklet | Ada, hanya selama sakelar bicara menyala |
-| Silero VAD (ONNX Runtime Web) | Belum |
+| AudioWorklet | Ada; selama sakelar bicara, atau selama Mode Menyimak |
+| Silero VAD (ONNX Runtime Web) | Ada, Worker sendiri (D80) |
 | ASR lokal (transformers.js WebGPU) | Ada (D65) |
 | Kalimat kalengan | Masih tersedia sebagai pilihan "Ucapan contoh" |
-| Model disajikan lokal | Belum — unduhan pertama butuh internet, mode kelas belum bisa |
+| Model disajikan lokal | Ada — `npm run models`, server di `/models` (D81) |
+| Runtime ONNX disajikan lokal | Ada — disalin ke `public/ort/` saat dev dan build (D81) |
 
-Yang tersisa: VAD, dan menyajikan berkas model dari server sendiri supaya mode
-kelas tanpa internet benar-benar jalan. Akurasi Bahasa Indonesia `whisper-base`
-belum diukur dengan ucapan manusia; bila kurang, `whisper-small` tinggal dipilih.
+Yang tersisa: akurasi Bahasa Indonesia `whisper-base` belum diukur dengan ucapan
+manusia; bila kurang, `whisper-small` tinggal dipilih. Mode Menyimak sudah diuji
+logikanya di Node, **belum dengan mikrofon sungguhan** — pane uji memblokir
+mikrofon, jadi pemuatan model VAD dan pemenggalan kalimatnya belum pernah
+terlihat berjalan.
 
 ### 2.4 Kolaborasi sungguhan
 
@@ -98,18 +105,30 @@ Semua yang menghubungkan satu orang dengan orang lain belum ada:
 - ~~**Kehadiran sungguhan**~~ — lewat Awareness, dengan chip sambungan (D78)
 - ~~**Permintaan masuk sungguhan**~~ — ketukan dan jawaban lewat server (D79)
 
-Konsekuensi yang jarang disebut: **belum pernah ada dua orang di satu ruang.**
-Semua keputusan soal gabungan bersilangan (D9, D10) benar secara rancangan dan
-belum pernah diuji oleh kenyataan.
+~~Konsekuensi yang jarang disebut: belum pernah ada dua orang di satu ruang.~~
+Sudah: `npm run test:people`, tujuh uji dengan dua perangkat sungguhan terhadap
+server sungguhan — dua dokumen, dua store, dua id aktor, dua soket. Termasuk
+ganti nama dan pindah bersamaan (D9), pindah bersilangan (D10), hapus sambil
+orang lain menambah anak, perangkat yang pergi lalu kembali, dan undo yang hanya
+menarik kembali miliknya sendiri.
 
-### 2.5 Aksesibilitas belum diuji dengan pembaca layar sungguhan
+**Yang belum: dua manusia di dua mesin.** Yang sudah diuji adalah dua klien, dan
+keduanya berperilaku persis seperti yang dirancang — bukan seperti orang.
+
+### 2.5 Aksesibilitas: markup sudah diperiksa mesin, bunyinya belum
 
 Ini yang paling tidak nyaman di seluruh dokumen.
 
-Markup-nya benar: pola ARIA tree, roving tabindex, `aria-activedescendant`,
-antrean narasi sendiri, live region. Tapi **belum pernah dijalankan dengan NVDA,
-JAWS, atau VoiceOver.** Produk yang klaim intinya aksesibilitas tidak boleh
-menganggap ARIA yang ditulis benar sama dengan ARIA yang terdengar benar.
+Markup-nya kini diperiksa, bukan cuma diyakini: pola ARIA tree, roving tabindex,
+nama pada setiap kontrol, live region — semuanya lulus, dan pemeriksaannya
+menemukan dua yang gagal dan sudah diperbaiki (seluruh halaman ruang cuma punya
+satu heading, dan landmark-nya tidak bernama). Rinciannya di
+`docs/uji-pembaca-layar.md`.
+
+Tapi **belum pernah dijalankan dengan NVDA, JAWS, atau VoiceOver.** Produk yang
+klaim intinya aksesibilitas tidak boleh menganggap ARIA yang ditulis benar sama
+dengan ARIA yang terdengar benar. Naskah satu putaran NVDA sudah ditulis; yang
+belum ada adalah telinga yang menjalankannya.
 
 Yang perlu:
 
@@ -121,9 +140,14 @@ Yang perlu:
 
 Nomor 3 yang paling menentukan dan paling sering dilewati.
 
-### 2.6 Rasa cepat belum diukur
+### 2.6 Rasa cepat: sebagian sudah diukur
 
-Bagian 10 menyebut tiga hal yang menentukan rasa cepat. Tidak satu pun diukur:
+Kanvas dengan 200 simpul sudah dicoba dan tidak bermasalah: proyeksi dan tata
+letak 0,25 ms (0,46 ms di 500 simpul, lima bentuk), dan **nol long task** baik
+saat menyeret 30 frame maupun saat berganti bentuk. Ruang ujinya dibuat lewat
+server dengan `npm run big-room`, angkanya dari `npm run bench:layout`.
+
+Yang masih belum diukur dari bagian 10:
 
 | Yang dijanjikan | Cara memeriksanya |
 | --------------- | ----------------- |
@@ -131,21 +155,28 @@ Bagian 10 menyebut tiga hal yang menentukan rasa cepat. Tidak satu pun diukur:
 | Penanda kehadiran ~10/detik | Belum ada penanda sungguhan untuk diukur |
 | Transkrip mengalir | Sudah, tapi ASR-nya palsu |
 
-Ditambah satu yang belum pernah dilihat: **kanvas dengan 200 simpul.** Data
-contoh punya 20. Tata letak, pengukuran tinggi, dan `useSyncExternalStore`
-semuanya bisa berperilaku lain di 200.
+Yang sudah tidak jadi kekhawatiran: 200 simpul. Yang belum pernah dicoba
+sekarang 2.000, dan itu bukan angka rapat.
 
 ### 2.7 Hal-hal kecil yang berbohong
 
-- **Kursor agen tidak punya tempat berdiri untuk langkah templat** — belum ada
-  simpulnya sebelum mendarat. Lubang D18 yang tersisa.
-- **Tawaran alat belum diredam** — ditolak sekali harusnya berarti tidak
-  ditawarkan lagi di sesi itu.
+- ~~**Kursor agen tidak punya tempat berdiri untuk langkah templat.**~~ Selesai:
+  kartu bayangan di tempat papan akan mendarat, kursornya berdiri di situ (D83).
+- ~~**Tawaran alat belum diredam.**~~ Selesai (D82).
+- **Antarmuka Inggris baru separuh.** Dari 47 berkas komponen dan halaman, 4
+  memakai `tr()`. Sakelar EN ada di sidebar dan sebagian besar layar tidak
+  berubah saat ditekan. Ini yang paling terlihat dari daftar ini.
+- **D53 dan kodenya tidak sepakat.** D53 menyatakan templat selalu mendarat
+  berdiri sendiri; `orchestrator.ts` menempelkannya ke simpul terfokus, dan
+  pratinjaunya berbunyi "di bawah induk terpilih". Salah satunya harus mengalah.
 
 ### 2.8 Ketahanan
 
 - **Tidak ada error boundary.** Satu galat render membuat layar putih.
 - **Tidak ada CI.** `tsc`, `vite build`, dan `npm run eval` dijalankan manual.
+- **Latensi model 6-12 detik.** Terukur: prefill 82 ms, decode 23 tok/detik, dan
+  jawabannya 146-270 token karena tiap field di skema JSON `required`. Tanpa
+  skema: 31 token, 1,6 detik.
 - **Tidak ada Dockerfile.** Padahal mode kelas dijanjikan sebagai satu kontainer.
 - **Belum diuji di jendela sempit sungguhan** — tata letaknya responsif, tapi
   yang diperiksa selama ini jendela lebar.

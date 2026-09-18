@@ -6,13 +6,42 @@
  * samples never go anywhere else. The model files are fetched once and kept in
  * the browser cache, so the second session starts without the network.
  *
+ * Where they are fetched *from* is configuration, because it is the difference
+ * between the two installs section 7 describes. Unset, they come from the
+ * Hugging Face CDN, which suits a laptop with internet. Set `VITE_MODEL_URL`
+ * to the server the page came from and the first session works too on a
+ * network with no way out -- which is the whole of mode kelas.
+ *
  * The canvas must not stutter while this thinks, which is the whole reason it
  * is a worker and not a function.
  */
 
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers'
+import { modelUrl } from '../../core/config'
 
 env.allowLocalModels = false
+
+/*
+  The runtime comes from this app, never from a CDN.
+
+  transformers.js otherwise points `wasmPaths` at cdn.jsdelivr.net, and that one
+  default quietly undid the whole of mode kelas: a room could hold every model
+  file on its own server and still hear nothing, because the thing that reads
+  them was fetched from the other side of the internet. `scripts/prepare-ort.mjs`
+  copies the two files into `public/`, so they ship with the build.
+*/
+const wasm = env.backends.onnx.wasm
+if (wasm) wasm.wasmPaths = new URL('/ort/', self.location.origin).href
+
+const host = modelUrl()
+if (host) {
+  // Flat: <host>/<model>/<file>, which is what `npm run models` writes to disk.
+  // The CDN's own path carries a revision segment; keeping it here would mean
+  // an institution had to mirror a directory named after a git ref for no
+  // benefit, since a self-hosted copy is whatever revision they downloaded.
+  env.remoteHost = host
+  env.remotePathTemplate = '{model}/'
+}
 
 type Request =
   | { type: 'load'; model: string }

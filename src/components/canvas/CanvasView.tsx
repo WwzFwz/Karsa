@@ -76,7 +76,7 @@ export function CanvasView() {
   const { doc, tree, votedByMe, votesOn, run } = useDocument()
   const { participants, selfId } = usePresence()
   const { canvasIds: visibleIds, focusId, setFocus, collapsed, setCanvasMounted, editingId, setEditingId, linkingFrom, startLinking, cancelLinking, nodeOverrides, setNodeOverride, panelHidden, focusMode } = useView()
-  const { draftTargets, agentTargetId } = useAssistant()
+  const { draftTargets, agentTargetId, draftLanding } = useAssistant()
   const onKeyDown = useTreeKeyboard()
   const dialogs = useDialogs()
   const { announce } = useAnnouncer()
@@ -306,18 +306,34 @@ export function CanvasView() {
   */
   const layout = useMemo(() => {
     const keys = Object.keys(nodeOverrides)
-    if (keys.length === 0) return computed
+    if (keys.length === 0) return { ...computed, minX: 0, minY: 0 }
     const positions = new Map(computed.positions)
     for (const id of keys) {
       if (positions.has(id)) positions.set(id, nodeOverrides[id])
     }
     let width = 0
     let height = 0
+    /*
+      How far a hand placement has reached past the layout's own origin. Auto
+      layout never goes negative, so this is zero until somebody carries a node
+      up or to the left -- and then it is what keeps the board growing that way
+      too, exactly as `width` and `height` grow the other two.
+    */
+    let minX = 0
+    let minY = 0
     for (const p of positions.values()) {
       width = Math.max(width, p.x + NODE_W)
       height = Math.max(height, p.y + NODE_H)
+      minX = Math.min(minX, p.x)
+      minY = Math.min(minY, p.y)
     }
-    return { positions, width: Math.max(width, computed.width), height: Math.max(height, computed.height) }
+    return {
+      positions,
+      width: Math.max(width, computed.width),
+      height: Math.max(height, computed.height),
+      minX,
+      minY,
+    }
   }, [computed, nodeOverrides])
 
   const BOARD_SLACK = 320
@@ -330,8 +346,17 @@ export function CanvasView() {
     happened to put the first one. If every node has a coordinate, every
     coordinate on the board should be available to it. ORIGIN is how much room
     exists on the negative side of the layout's own origin.
+
+    It is a floor, not a ceiling. A fixed ORIGIN made the board grow in two
+    directions and stop dead in the other two: rightwards and downwards the
+    stage follows `layout.width` and `layout.height`, so it never runs out,
+    while leftwards and upwards there was exactly ORIGIN and then a wall. The
+    room on the negative side now follows the furthest placement the same way,
+    which leaves ORIGIN of clear board past it whichever way somebody goes.
   */
   const ORIGIN = 800
+  const originX = ORIGIN - layout.minX
+  const originY = ORIGIN - layout.minY
 
   /*
     The board is always larger than the window by at least the chrome it hides
@@ -351,13 +376,43 @@ export function CanvasView() {
     [viewBox, inset],
   )
 
-  const stageW = layout.width + ORIGIN * 2
-  const stageH = layout.height + ORIGIN * 2
+  const stageW = layout.width + originX + ORIGIN
+  const stageH = layout.height + originY + ORIGIN
   const board = boardSize(zoom, stageW, stageH)
   const sizerW = board.w
   const sizerH = board.h
   const offsetX = (sizerW - stageW * zoom) / 2
   const offsetY = (sizerH - stageH * zoom) / 2
+
+  /*
+    Growing the board leftwards moves every node's stage coordinate right by the
+    same amount, so without this the whole diagram would jump sideways the
+    instant a placement crossed the old edge. Board coordinate zero is pinned to
+    the screen instead: measure where it sits, and when the origin moves, give
+    the scroll the difference back.
+
+    A drag in flight is measured from the scroll position it started at, so that
+    has to shift too, or the node would lurch away from the hand carrying it.
+  */
+  const stageOriginX = offsetX + originX * zoom
+  const stageOriginY = offsetY + originY * zoom
+  const anchorRef = useRef({ originX, originY, stageOriginX, stageOriginY })
+  useLayoutEffect(() => {
+    const vp = viewportRef.current
+    const prev = anchorRef.current
+    anchorRef.current = { originX, originY, stageOriginX, stageOriginY }
+    if (!vp) return
+    const dx = prev.originX === originX ? 0 : stageOriginX - prev.stageOriginX
+    const dy = prev.originY === originY ? 0 : stageOriginY - prev.stageOriginY
+    if (!dx && !dy) return
+    vp.scrollLeft += dx
+    vp.scrollTop += dy
+    const drag = nodeDragRef.current
+    if (drag) {
+      drag.startLeft += dx
+      drag.startTop += dy
+    }
+  }, [originX, originY, stageOriginX, stageOriginY])
 
   /*
     Dragging a node moves it on this screen only. Nothing is dispatched, no
@@ -369,6 +424,17 @@ export function CanvasView() {
     id: NodeId
     startX: number
     startY: number
+    /*
+      Where the board was scrolled to when the node was picked up, and where the
+      pointer is now. Both exist for the same reason: the board may scroll under
+      a drag (see the edge pull below), and a node placed from the pointer's
+      screen delta alone would slide out from under the finger by exactly the
+      distance scrolled. The placement is computed in board space instead.
+    */
+    startLeft: number
+    startTop: number
+    pointerX: number
+    pointerY: number
     from: Point
     /** What the node's placement was before the drag, so a cancel can restore it. */
     hadPlacement: Point | null
@@ -404,6 +470,85 @@ export function CanvasView() {
     [tree, doc],
   )
 
+  /** Put the dragged node where the pointer is, in board space. */
+  const placeDragged = useCallback(() => {
+    const drag = nodeDragRef.current
+    const vp = viewportRef.current
+    if (!drag || !vp) return
+    const dx = (drag.pointerX - drag.startX + vp.scrollLeft - drag.startLeft) / zoom
+    const dy = (drag.pointerY - drag.startY + vp.scrollTop - drag.startTop) / zoom
+    /*
+      Bounded by the board, not by the layout's origin -- and the board keeps
+      ORIGIN of clear ground past the furthest thing on it in every direction.
+      Going right and down `extent` already grows with the node; going left and
+      up `origin` now does the same, so neither end is a wall somebody can be
+      stopped by while still carrying something.
+    */
+    const limit = (value: number, extent: number, origin: number) =>
+      Math.min(extent + ORIGIN - NODE_W, Math.max(-origin + 12, value))
+    setNodeOverride(drag.id, {
+      x: limit(drag.from.x + dx, layout.width, originX),
+      y: limit(drag.from.y + dy, layout.height, originY),
+    })
+    const over = parentUnder(drag.pointerX, drag.pointerY, drag.id)
+    if (over !== dropRef.current) {
+      dropRef.current = over
+      setDropParent(over)
+    }
+  }, [zoom, layout.width, layout.height, originX, originY, setNodeOverride, parentUnder])
+
+  /*
+    Carrying a node to the edge pulls the board along, the way every board tool
+    does it.
+
+    Without this the only way to reach somewhere off-screen was to drop the node,
+    pan, and pick it up again -- and the reparent gesture (D34) is worth nothing
+    if the intended parent cannot be reached while holding the child.
+
+    The speed ramps with depth into the zone rather than switching on, so easing
+    up to the rim slows the board down instead of stopping it dead. The zone is
+    measured inside the floating chrome (D30): the rim that matters is where the
+    board stops being visible, not where the window ends.
+  */
+  const EDGE_ZONE = 72
+  const EDGE_SPEED = 22
+  const edgePullRef = useRef<number | null>(null)
+  /* Read imperatively from the frame loop: `placeDragged` changes identity on
+     every frame of a drag, and a loop that restarted with it would be the very
+     bug this file already learned once (D74, D77). */
+  const placeRef = useRef(placeDragged)
+  placeRef.current = placeDragged
+
+  const stopEdgePull = useCallback(() => {
+    if (edgePullRef.current === null) return
+    cancelAnimationFrame(edgePullRef.current)
+    edgePullRef.current = null
+  }, [])
+
+  const edgePull = useCallback(() => {
+    edgePullRef.current = null
+    const drag = nodeDragRef.current
+    const vp = viewportRef.current
+    if (!drag || !vp) return
+    const box = vp.getBoundingClientRect()
+    const pad = measureChrome(box)
+    // Zero at the inner lip of the zone, full speed at the rim and beyond it.
+    const pull = (gap: number) => (gap >= EDGE_ZONE ? 0 : EDGE_SPEED * (1 - Math.max(0, gap) / EDGE_ZONE))
+    const dx =
+      pull(box.right - pad.right - drag.pointerX) - pull(drag.pointerX - (box.left + pad.left))
+    const dy =
+      pull(box.bottom - pad.bottom - drag.pointerY) - pull(drag.pointerY - (box.top + pad.top))
+    if (dx || dy) {
+      const was = { left: vp.scrollLeft, top: vp.scrollTop }
+      vp.scrollLeft += dx
+      vp.scrollTop += dy
+      // Only when the board actually moved: at the end of the scroll range it
+      // does not, and re-placing then would drift the node away from the pointer.
+      if (vp.scrollLeft !== was.left || vp.scrollTop !== was.top) placeRef.current()
+    }
+    edgePullRef.current = requestAnimationFrame(edgePull)
+  }, [])
+
   /*
     Keep the focused node in view.
 
@@ -421,6 +566,13 @@ export function CanvasView() {
     (id: NodeId | null, smooth: boolean) => {
       const vp = viewportRef.current
       if (!vp || !id) return
+      /*
+        Never while a node is being carried. This scroller exists for people
+        navigating by keyboard; a hand on a card already says where the
+        attention is, and the edge pull above is what moves the board then.
+        Left in, it fought the pointer for the board on every frame.
+      */
+      if (nodeDragRef.current) return
       const p = layout.positions.get(id)
       if (!p) return
 
@@ -451,8 +603,8 @@ export function CanvasView() {
       const { top: padTop, right: padRight, bottom: padBottom, left: padLeft } = pad
 
       const margin = 24
-      const x = offsetX + (p.x + ORIGIN) * zoom
-      const y = offsetY + (p.y + ORIGIN) * zoom
+      const x = offsetX + (p.x + originX) * zoom
+      const y = offsetY + (p.y + originY) * zoom
       const nodeW = NODE_W * zoom
       const nodeH = NODE_H * zoom
       const left = vp.scrollLeft
@@ -480,19 +632,33 @@ export function CanvasView() {
     [layout, zoom, inset, offsetX, offsetY],
   )
 
+  /*
+    Read through a ref, so the effect below restarts when the focus moves and at
+    no other time.
+
+    `ensureVisible` is rebuilt whenever `layout` is, and `layout` is rebuilt on
+    every frame of a hand placement -- so depending on it meant the scroll was
+    torn down and re-scheduled sixty times a second while a node was being
+    dragged, each pass cancelling the smooth scroll the pass before it had
+    started. Measured: twenty pointer moves, twenty scrolls scheduled and
+    cancelled, forty timers. The same trap as D74 and D77.
+  */
+  const ensureVisibleRef = useRef(ensureVisible)
+  ensureVisibleRef.current = ensureVisible
+
   useEffect(() => {
     // One pass next frame, then two more as the stylesheet and the dock settle.
     // Measuring once is not enough: on a cold load the viewport briefly reports
     // its unconstrained height, which makes every node look already visible.
-    const frame = requestAnimationFrame(() => ensureVisible(focusId, true))
+    const frame = requestAnimationFrame(() => ensureVisibleRef.current(focusId, true))
     const late = [220, 600].map((delay) =>
-      window.setTimeout(() => ensureVisible(focusId, false), delay),
+      window.setTimeout(() => ensureVisibleRef.current(focusId, false), delay),
     )
     return () => {
       cancelAnimationFrame(frame)
       late.forEach((id) => window.clearTimeout(id))
     }
-  }, [focusId, ensureVisible])
+  }, [focusId])
 
   useEffect(() => {
     const onZoomKey = (event: Event) => {
@@ -508,10 +674,10 @@ export function CanvasView() {
   useEffect(() => {
     const vp = viewportRef.current
     if (!vp) return
-    const observer = new ResizeObserver(() => ensureVisible(focusId, false))
+    const observer = new ResizeObserver(() => ensureVisibleRef.current(focusId, false))
     observer.observe(vp)
     return () => observer.disconnect()
-  }, [focusId, ensureVisible])
+  }, [focusId])
 
   /** Put the diagram in the middle of the free space, not the middle of the window. */
   const centreOnContent = useCallback(
@@ -520,14 +686,17 @@ export function CanvasView() {
       if (!vp) return
       const freeCentreX = inset.left + (vp.clientWidth - inset.left - inset.right) / 2
       const freeCentreY = inset.top + (vp.clientHeight - inset.top - inset.bottom) / 2
-      const stagedW = layout.width + ORIGIN * 2
-      const stagedH = layout.height + ORIGIN * 2
+      const stagedW = layout.width + originX + ORIGIN
+      const stagedH = layout.height + originY + ORIGIN
       const { w, h } = boardSize(atZoom, stagedW, stagedH)
-      // Centre the diagram, not the padding around it.
-      vp.scrollLeft = (w - stagedW * atZoom) / 2 + (ORIGIN + layout.width / 2) * atZoom - freeCentreX
-      vp.scrollTop = (h - stagedH * atZoom) / 2 + (ORIGIN + layout.height / 2) * atZoom - freeCentreY
+      // Centre the diagram, not the padding around it. The diagram now starts
+      // at `minX`, not at zero, so its middle has to be read from both ends.
+      const midX = originX + (layout.minX + layout.width) / 2
+      const midY = originY + (layout.minY + layout.height) / 2
+      vp.scrollLeft = (w - stagedW * atZoom) / 2 + midX * atZoom - freeCentreX
+      vp.scrollTop = (h - stagedH * atZoom) / 2 + midY * atZoom - freeCentreY
     },
-    [inset, layout, boardSize],
+    [inset, layout, boardSize, originX, originY],
   )
 
   /** Shrink until the whole diagram fits the space the chrome leaves free. */
@@ -547,11 +716,35 @@ export function CanvasView() {
     requestAnimationFrame(() => centreOnContent(next))
   }, [layout, inset, centreOnContent])
 
+  /*
+    Where a board that does not exist yet is drawn.
+
+    Beside the node it will hang from, so the attachment is visible without
+    pretending to know the arrangement the layout will settle on; out in clear
+    board when it lands as its own root, because then there is nothing to be
+    beside.
+
+    It does not go through the real layout because it is a preview, not a node:
+    it is not in the document, cannot be focused, and must never be a drop
+    target. Terapkan is what turns it into something the tree knows about.
+  */
+  const ghost = (() => {
+    if (!draftLanding || layout.positions.has(draftLanding.id)) return null
+    const parent = draftLanding.parentId ? layout.positions.get(draftLanding.parentId) : undefined
+    const at = parent
+      ? { x: parent.x + NODE_W + 110, y: parent.y }
+      : { x: layout.width + 140, y: (layout.minY + layout.height) / 2 - NODE_H }
+    return { ...draftLanding, at }
+  })()
+
+  const positionOf = (id: NodeId): Point | undefined =>
+    ghost && id === ghost.id ? ghost.at : layout.positions.get(id)
+
   const centreOf = (id: NodeId) => {
-    const p = layout.positions.get(id)
+    const p = positionOf(id)
     if (!p) return null
     const size = sizeOf(tree, id)
-    return { x: p.x + ORIGIN + size.w / 2, y: p.y + ORIGIN + size.h / 2 }
+    return { x: p.x + originX + size.w / 2, y: p.y + originY + size.h / 2 }
   }
 
   const parentEdges = visibleIds
@@ -604,9 +797,9 @@ export function CanvasView() {
   */
 
   // Where the agent stands: just off the corner of the node it is talking about.
-  const agentAnchor = agentTargetId ? layout.positions.get(agentTargetId) : undefined
+  const agentAnchor = agentTargetId ? positionOf(agentTargetId) : undefined
   const agentPoint = agentAnchor
-    ? { x: agentAnchor.x + ORIGIN + NODE_W - 18, y: agentAnchor.y + ORIGIN + NODE_H - 10 }
+    ? { x: agentAnchor.x + originX + NODE_W - 18, y: agentAnchor.y + originY + NODE_H - 10 }
     : null
 
   /*
@@ -680,23 +873,21 @@ export function CanvasView() {
       onPointerMove={(event) => {
         const node = nodeDragRef.current
         if (node) {
-          const dx = (event.clientX - node.startX) / zoom
-          const dy = (event.clientY - node.startY) / zoom
-          if (!suppressClickRef.current && Math.hypot(dx, dy) < 4) return
-          suppressClickRef.current = true
-          setDraggingNode(node.id)
-          // Bounded by the board, not by the layout's origin.
-          const limit = (value: number, extent: number) =>
-            Math.min(extent + ORIGIN - NODE_W, Math.max(-ORIGIN + 12, value))
-          setNodeOverride(node.id, {
-            x: limit(node.from.x + dx, layout.width),
-            y: limit(node.from.y + dy, layout.height),
-          })
-          const over = parentUnder(event.clientX, event.clientY, node.id)
-          if (over !== dropRef.current) {
-            dropRef.current = over
-            setDropParent(over)
+          if (
+            !suppressClickRef.current &&
+            Math.hypot(event.clientX - node.startX, event.clientY - node.startY) < 4 * zoom
+          ) {
+            return
           }
+          const starting = !suppressClickRef.current
+          suppressClickRef.current = true
+          node.pointerX = event.clientX
+          node.pointerY = event.clientY
+          setDraggingNode(node.id)
+          placeDragged()
+          // The board only follows a node that is actually being carried, so the
+          // pull starts here rather than at pointerdown.
+          if (starting) edgePullRef.current = requestAnimationFrame(edgePull)
           return
         }
         const start = panRef.current
@@ -708,6 +899,7 @@ export function CanvasView() {
       onPointerUp={(event) => {
         const dragged = nodeDragRef.current
         if (dragged) {
+          stopEdgePull()
           const parent = dropRef.current
           dropRef.current = null
           setDropParent(null)
@@ -732,6 +924,15 @@ export function CanvasView() {
         viewportRef.current?.releasePointerCapture(event.pointerId)
       }}
       onPointerCancel={() => {
+        stopEdgePull()
+        if (nodeDragRef.current) {
+          // A cancelled carry is not a drop: put the node back where it was.
+          setNodeOverride(nodeDragRef.current.id, nodeDragRef.current.hadPlacement)
+          nodeDragRef.current = null
+          setDraggingNode(null)
+          dropRef.current = null
+          setDropParent(null)
+        }
         panRef.current = null
         setPanning(false)
       }}
@@ -888,7 +1089,7 @@ export function CanvasView() {
                   nodeOverrides[id] ? 'is-placed' : ''
                 } ${spec ? `node-tool tool-${spec.id}` : ''}`}
                 style={{
-                  transform: `translate(${pos.x + ORIGIN}px, ${pos.y + ORIGIN}px)`,
+                  transform: `translate(${pos.x + originX}px, ${pos.y + originY}px)`,
                   // Width is fixed by kind; height belongs to the content, and
                   // the layout finds out what it was by measuring afterwards.
                   width: size.w,
@@ -906,6 +1107,10 @@ export function CanvasView() {
                     id,
                     startX: event.clientX,
                     startY: event.clientY,
+                    startLeft: viewportRef.current?.scrollLeft ?? 0,
+                    startTop: viewportRef.current?.scrollTop ?? 0,
+                    pointerX: event.clientX,
+                    pointerY: event.clientY,
                     from: { x: pos.x, y: pos.y },
                     hadPlacement: nodeOverrides[id] ?? null,
                   }
@@ -1073,10 +1278,35 @@ export function CanvasView() {
           })}
         </ul>
 
+        {/*
+          The board the assistant is offering, drawn where it would land.
+
+          Dashed and unlabelled by any role: it is a picture of a sentence the
+          draft panel already says in words ("Siapkan papan retro: 12 simpul"),
+          so a screen reader reads the sentence and not a card that is not there
+          (D32 uses the same rule for the dashboard thumbnails). It carries no
+          `data-node-id`, so nothing can be dropped on it and nothing can focus
+          it -- until Terapkan, it is not part of the document at all.
+        */}
+        {ghost && (
+          <div
+            className="node-ghost"
+            aria-hidden="true"
+            style={{
+              transform: `translate(${ghost.at.x + originX}px, ${ghost.at.y + originY}px)`,
+              width: NODE_W * 1.4,
+            }}
+          >
+            <span className="node-ghost-kind">{ghost.label}</span>
+            <span className="node-ghost-title">{ghost.title}</span>
+            <span className="node-ghost-count">{ghost.count} simpul</span>
+          </div>
+        )}
+
         {agentPoint && (
           <AgentCursor
             at={agentPoint}
-            targetTitle={agentTargetId ? (doc.nodes[agentTargetId]?.title ?? null) : null}
+            targetTitle={agentTargetId ? (doc.nodes[agentTargetId]?.title ?? ghost?.title ?? null) : null}
             flipX={agentPoint.x > stageW - 400}
             flipY={agentPoint.y > stageH - 330}
           />

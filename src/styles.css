@@ -458,8 +458,11 @@ kbd {
 .topbar-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-text { min-width: 0; }
 .brand-name { font-size: 14.5px; font-weight: 700; letter-spacing: -0.015em; }
+/* An h1 so the room has a heading; sized to the bar, not to the tag. */
 .brand-sub {
+  margin: 0;
   font-size: 11.5px;
+  font-weight: 400;
   color: var(--ink-3);
   white-space: nowrap;
   overflow: hidden;
@@ -3170,3 +3173,106 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
 /* Short one-word choices: narrower columns so a row of three still fits. */
 .option-row.is-compact { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 .option-row.is-compact .option { padding: 9px 12px; align-items: center; }
+
+/*
+  The board the assistant is offering, before anybody has agreed to it.
+
+  Same dashed warning border as a node with a proposal waiting on it
+  (.node.is-proposed), because it is the same fact: this will change if you say
+  yes. It is deliberately not a .node -- it has no id, takes no focus, and is
+  hidden from the screen reader, which reads the draft panel's sentence instead.
+*/
+.node-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1.5px dashed var(--warn);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 14%, transparent);
+  pointer-events: none;
+}
+
+.node-ghost-kind {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+
+.node-ghost-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.node-ghost-count {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/*
+  Mode Menyimak, said out loud.
+
+  An open microphone that nobody is holding is the one state in this app that
+  has to announce itself. The switch in the dock is a single icon among four;
+  this line is the promise, and it carries the rule as well, so the reason
+  nothing happened when somebody spoke is never a mystery.
+*/
+.dock-watching {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+  max-width: min(560px, 92vw);
+  margin-bottom: 8px;
+  padding: 7px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  box-shadow: var(--e1);
+  font-size: 12.5px;
+}
+
+.dock-watching-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: karsa-listening 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-watching-dot { animation: none; }
+}
+
+@keyframes karsa-listening {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.dock-watching-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.dock-watching-note {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* The switch itself, lit while the microphone is open. */
+.icon-btn.is-listening {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}

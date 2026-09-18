@@ -13,7 +13,7 @@
  */
 
 import { lang } from '../../core/i18n'
-import { CONFIG } from '../../core/config'
+import { CONFIG, modelUrl } from '../../core/config'
 
 export type AsrModelId = string
 export type AsrMode = 'whisper-base' | 'whisper-small' | 'contoh'
@@ -116,6 +116,54 @@ const SAMPLE_RATE = 16000
 const PARTIAL_EVERY_MS = 1200
 const MIN_SAMPLES = SAMPLE_RATE * 0.4
 
+/** Where the voice detector's model comes from. Local when this install has one. */
+const VAD_MODEL = 'onnx-community/silero-vad/onnx/model.onnx'
+
+/*
+  How long the silence after a sentence has to last before it counts as the end
+  of one. Short enough that the room does not wait, long enough to survive the
+  pause in the middle of "tambahkan ... pelatihan dosen".
+*/
+const QUIET_MS = 700
+
+/*
+  Audio kept from before the detector noticed anybody, so the first word is not
+  clipped. Silero needs a window or two to be sure, and those windows contain
+  the beginning of the sentence.
+*/
+const PREROLL_SAMPLES = SAMPLE_RATE * 0.5
+
+/*
+  The longest single utterance that will be transcribed.
+
+  An open microphone in a meeting will eventually hear somebody talk for two
+  minutes straight, and the buffer would grow the whole time for a sentence
+  nobody addressed to Karsa anyway.
+*/
+const MAX_SAMPLES = SAMPLE_RATE * 20
+
+/** Several captured frames as one run of samples. */
+function join(chunks: Float32Array[]): Float32Array {
+  const length = chunks.reduce((n, c) => n + c.length, 0)
+  const out = new Float32Array(length)
+  let at = 0
+  for (const chunk of chunks) {
+    out.set(chunk, at)
+    at += chunk.length
+  }
+  return out
+}
+
+/**
+ * Where a model file lives: this install's own server when it has one, and the
+ * public CDN when it does not. Same reasoning as the transcriber (see
+ * `core/config.ts`), and the same reason mode kelas can work with no internet.
+ */
+function modelFile(path: string): string {
+  const host = modelUrl()
+  return host ? `${host}/${path}` : `https://huggingface.co/${path.replace('/onnx/', '/resolve/main/onnx/')}`
+}
+
 /*
   The worklet is inline so it ships in the same bundle: mode kelas runs with no
   network, and a separate file is one more thing to fail to load.
@@ -206,24 +254,22 @@ export class SpeechRecogniser {
   }
 
   private collected(): Float32Array {
-    const length = this.chunks.reduce((n, c) => n + c.length, 0)
-    const out = new Float32Array(length)
-    let at = 0
-    for (const chunk of this.chunks) {
-      out.set(chunk, at)
-      at += chunk.length
-    }
-    return out
+    return join(this.chunks)
   }
 
   get listening(): boolean {
     return this.stream !== null
   }
 
-  /** Opens the microphone. Throws with a sentence a person can act on. */
-  async start(onPartial: (text: string) => void): Promise<void> {
-    if (this.stream) return
-    this.chunks = []
+  /**
+   * Opens the microphone and sends every frame to `onFrame`.
+   *
+   * One place, because the switch and Mode Menyimak must not drift apart in how
+   * they ask for the microphone or what they do with the audio. The promise is
+   * the same either way: the samples go to a worker on this device and nowhere
+   * else.
+   */
+  private async openMic(onFrame: (frame: Float32Array) => void): Promise<void> {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
@@ -246,8 +292,15 @@ export class SpeechRecogniser {
     URL.revokeObjectURL(url)
     const source = context.createMediaStreamSource(this.stream)
     const node = new AudioWorkletNode(context, 'karsa-capture')
-    node.port.onmessage = (event: MessageEvent<Float32Array>) => this.chunks.push(event.data)
+    node.port.onmessage = (event: MessageEvent<Float32Array>) => onFrame(event.data)
     source.connect(node)
+  }
+
+  /** Opens the microphone. Throws with a sentence a person can act on. */
+  async start(onPartial: (text: string) => void): Promise<void> {
+    if (this.stream) return
+    this.chunks = []
+    await this.openMic((frame) => this.chunks.push(frame))
 
     this.partialTimer = window.setInterval(() => {
       if (this.busy || this.status.phase !== 'ready') return
@@ -287,8 +340,127 @@ export class SpeechRecogniser {
     return this.transcribe(audio, true)
   }
 
+  /*
+    ---- Mode Menyimak -------------------------------------------------------
+
+    The microphone stays open and the voice detector decides where one sentence
+    ends and the next begins. D4 kept "is speaking" on the talk switch and said
+    an always-listening mode would arrive later as a deliberate choice; this is
+    it, and it is a choice, not a default.
+
+    The privacy promise does not change and is still one sentence: the audio
+    goes to two workers on this device and nowhere else. What changes is who
+    decides when a sentence started -- a model instead of a thumb -- which is
+    the difference between speaking and having a hand free to press something.
+  */
+  private vad: Worker | null = null
+  private watching = false
+  private heard: Float32Array[] = []
+  private recent: Float32Array[] = []
+  private recentLength = 0
+  private capturing = false
+
+  get listeningMode(): boolean {
+    return this.watching
+  }
+
+  private ensureVad(onError: (message: string) => void): Worker {
+    if (this.vad) return this.vad
+    const worker = new Worker(new URL('./vad.worker.ts', import.meta.url), { type: 'module' })
+    worker.onmessage = (event) => {
+      const m = event.data
+      if (m.type === 'speech') this.onSpeech(m.active)
+      else if (m.type === 'error') onError(m.detail ?? m.message)
+    }
+    this.vad = worker
+    return worker
+  }
+
+  private onSpeechStart: (() => void) | null = null
+  private onUtterance: ((text: string) => void) | null = null
+
+  private onSpeech(active: boolean): void {
+    if (!this.watching) return
+    if (active) {
+      // Start from the pre-roll, so the word that woke the detector is in it.
+      this.heard = [...this.recent]
+      this.capturing = true
+      this.onSpeechStart?.()
+      return
+    }
+    if (!this.capturing) return
+    this.capturing = false
+    const audio = join(this.heard)
+    this.heard = []
+    if (audio.length < MIN_SAMPLES) return
+    if (this.status.phase !== 'ready') return
+    void this.transcribe(audio, true).then(({ text }) => {
+      if (this.watching && text.trim()) this.onUtterance?.(text.trim())
+    })
+  }
+
+  /**
+   * Opens the microphone and reports whole sentences as they finish.
+   *
+   * Nothing is acted on here. What comes back is words; whether those words
+   * were meant for the board is decided by `trigger.ts`, away from the audio.
+   */
+  async watch(handlers: {
+    onUtterance: (text: string) => void
+    onSpeechStart?: () => void
+    onError: (message: string) => void
+  }): Promise<void> {
+    if (this.watching || this.stream) return
+    this.onUtterance = handlers.onUtterance
+    this.onSpeechStart = handlers.onSpeechStart ?? null
+    this.heard = []
+    this.recent = []
+    this.recentLength = 0
+    this.capturing = false
+
+    const vad = this.ensureVad(handlers.onError)
+    vad.postMessage({ type: 'reset' })
+    vad.postMessage({ type: 'load', model: modelFile(VAD_MODEL), quietMs: QUIET_MS })
+
+    await this.openMic((frame) => {
+      vad.postMessage({ type: 'audio', samples: frame })
+      if (this.capturing) {
+        this.heard.push(frame)
+        // A monologue must not grow without end; drop the oldest instead.
+        let total = this.heard.reduce((n, c) => n + c.length, 0)
+        while (total > MAX_SAMPLES && this.heard.length > 1) {
+          total -= (this.heard.shift() as Float32Array).length
+        }
+        return
+      }
+      this.recent.push(frame)
+      this.recentLength += frame.length
+      while (this.recentLength > PREROLL_SAMPLES && this.recent.length > 1) {
+        this.recentLength -= (this.recent.shift() as Float32Array).length
+      }
+    })
+    this.watching = true
+  }
+
+  /** Closes the microphone and stops listening. */
+  unwatch(): void {
+    this.watching = false
+    this.capturing = false
+    this.heard = []
+    this.recent = []
+    this.recentLength = 0
+    this.onUtterance = null
+    this.onSpeechStart = null
+    this.vad?.postMessage({ type: 'reset' })
+    this.stream?.getTracks().forEach((track) => track.stop())
+    this.stream = null
+    void this.context?.close().catch(() => undefined)
+    this.context = null
+  }
+
   /** Turned off without a result, e.g. when leaving the room mid-sentence. */
   cancel(): void {
+    this.unwatch()
     if (this.partialTimer !== null) window.clearInterval(this.partialTimer)
     this.partialTimer = null
     this.stream?.getTracks().forEach((track) => track.stop())

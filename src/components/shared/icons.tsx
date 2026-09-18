@@ -22,7 +22,7 @@ export type IconName =
   | 'sparkles' | 'shield' | 'target' | 'lightbulb' | 'list' | 'diamond'
   | 'fileText' | 'checkSquare' | 'folder' | 'pointer' | 'eye' | 'presentation'
   | 'play' | 'stop' | 'alert' | 'clock' | 'activity' | 'search' | 'send'
-  | 'wifi' | 'wifiOff' | 'copy' | 'zap' | 'more' | 'panelRight' | 'logIn' | 'dot'
+  | 'wifi' | 'wifiOff' | 'ear' | 'earOff' | 'copy' | 'zap' | 'more' | 'panelRight' | 'logIn' | 'dot'
   | 'sun' | 'moon' | 'maximize' | 'minimize' | 'panelRightOpen' | 'undo' | 'settings' | 'lock' | 'menu' | 'minus' | 'share' | 'home'
 
 const PATHS: Record<IconName, JSX.Element> = {
@@ -224,6 +224,21 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M5 12.9a10 10 0 0 1 14 0" />
       <path d="M2 8.8a15 15 0 0 1 20 0" />
       <path d="M12 20h.01" />
+    </>
+  ),
+  /* Mode Menyimak: an ear, and an ear with the line through it for off. */
+  ear: (
+    <>
+      <path d="M6 8.5a6 6 0 1 1 12 0c0 2.5-1.5 3.5-2.5 4.5S14 15 14 16.5a2.5 2.5 0 0 1-5 0" />
+      <path d="M9.5 8.5a2.5 2.5 0 0 1 5 0" />
+    </>
+  ),
+  earOff: (
+    <>
+      <path d="m2 2 20 20" />
+      <path d="M6.2 6.2A6 6 0 0 1 18 8.5c0 2.5-1.5 3.5-2.5 4.5" />
+      <path d="M6 12.5c0 1.6.8 2.6 1.6 3.4" />
+      <path d="M9 16.5a2.5 2.5 0 0 0 5 0v-.6" />
     </>
   ),
   wifiOff: (

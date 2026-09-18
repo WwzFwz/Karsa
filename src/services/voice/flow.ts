@@ -26,6 +26,9 @@
 import type { Command } from '../../core/commands/types'
 import { tr } from '../../core/i18n'
 import type { InputPath } from '../../core/model/types'
+import { namedIn } from '../../core/agent/orchestrator'
+import { templateById } from '../../core/templates/registry'
+import { addressed } from './trigger'
 import { pickChoice, readAnswer } from './answers'
 import { CONFIRM_UTTERANCE, emptyDraft, type Utterance } from './pipeline'
 import type { Draft, DraftOperation } from './types'
@@ -48,6 +51,13 @@ export interface RecogniserPort {
   start(onPartial: (text: string) => void): Promise<void>
   stop(): Promise<{ text: string; error?: string }>
   cancel(): void
+  /** Mode Menyimak: the microphone stays open and sentences arrive on their own. */
+  watch(handlers: {
+    onUtterance: (text: string) => void
+    onSpeechStart?: () => void
+    onError: (message: string) => void
+  }): Promise<void>
+  unwatch(): void
 }
 
 export interface VoiceFlowDeps {
@@ -56,7 +66,7 @@ export interface VoiceFlowDeps {
   asrModel(): string | undefined
   nextCannedUtterance(): Utterance
   /** Words, or a canned line, into a proposal -- reading the room as it is now. */
-  understand(input: string | Utterance, pending?: Pending): Promise<Draft>
+  understand(input: string | Utterance, pending?: Pending, declined?: readonly string[]): Promise<Draft>
   runCommand(command: Command, via: InputPath): void
   runBatch(commands: Command[], via: InputPath): { ok: true } | { ok: false; message: string }
   announce(text: string, politeness?: 'polite' | 'assertive'): void
@@ -75,10 +85,25 @@ export interface VoiceState {
   latched: boolean
   /** Accepted operations landing one at a time (D23). */
   performing: { index: number; ops: DraftOperation[] } | null
+  /**
+   * Mode Menyimak is on: the microphone is open and the detector decides where
+   * sentences begin. Drawn everywhere it is true, because a microphone nobody
+   * is holding has to be visible to be honest.
+   */
+  watching: boolean
+  /** The last thing heard that was not addressed to Karsa, so the rule is visible. */
+  overheard: string | null
 }
 
 export class VoiceFlow {
-  private state: VoiceState = { draft: emptyDraft(), talking: false, latched: false, performing: null }
+  private state: VoiceState = {
+    draft: emptyDraft(),
+    talking: false,
+    latched: false,
+    performing: null,
+    watching: false,
+    overheard: null,
+  }
   private readonly listeners = new Set<() => void>()
 
   private turn = 0
@@ -86,6 +111,14 @@ export class VoiceFlow {
   /** Set when the talk switch went on while a proposal was waiting. */
   private answering = false
   private cannedLine: Utterance | null = null
+  /**
+   * Boards this person has already turned down, this session only.
+   *
+   * Kept on the flow rather than in the document: refusing a suggestion is a
+   * fact about one conversation on one device, not something anybody else in
+   * the room needs to carry, and a new session deserves a fresh offer.
+   */
+  private readonly declined = new Set<string>()
   private cancelTimer: (() => void) | null = null
 
   constructor(private readonly deps: VoiceFlowDeps) {}
@@ -101,8 +134,82 @@ export class VoiceFlow {
 
   dispose(): void {
     this.clearTimer()
+    this.deps.recogniser.unwatch()
     this.deps.recogniser.cancel()
     this.listeners.clear()
+  }
+
+  // --- Mode Menyimak ------------------------------------------------------------
+
+  /**
+   * Opens the microphone and leaves it open, with the voice detector deciding
+   * where one sentence ends.
+   *
+   * D4 put "is speaking" on the talk switch and said an always-listening mode
+   * would come later as a deliberate choice. This is that choice: nothing turns
+   * it on by itself, and while it runs the dock says so, because a microphone
+   * nobody is holding is only honest if it is visible.
+   *
+   * What protects the shared canvas is not the switch but the name. Every
+   * sentence in the room arrives here; only the ones addressed to Karsa become
+   * a request, and the rest are reported as overheard and dropped.
+   */
+  startWatching = (): void => {
+    if (this.state.watching) return
+    const model = this.deps.asrModel()
+    if (!model) {
+      this.deps.reportError(
+        tr(
+          'Mode Menyimak butuh pengenalan suara sungguhan. Pilih model di Pengaturan.',
+          'Listening mode needs real speech recognition. Pick a model in Settings.',
+        ),
+      )
+      return
+    }
+    if (!this.deps.recogniser.isReady()) this.deps.recogniser.load(model)
+    this.update({ watching: true, overheard: null })
+    void this.deps.recogniser
+      .watch({
+        onUtterance: (text) => this.overheard(text),
+        onSpeechStart: () => this.deps.setSpeaking(true),
+        onError: (message) => {
+          this.stopWatching()
+          this.deps.reportError(message)
+        },
+      })
+      .catch((error: Error) => {
+        this.update({ watching: false })
+        this.deps.reportError(error.message)
+        this.deps.announce(error.message, 'assertive')
+      })
+    this.deps.announce(
+      tr(
+        'Mode Menyimak menyala. Sebut "Karsa" lebih dulu supaya didengarkan.',
+        'Listening mode is on. Say "Karsa" first to be heard.',
+      ),
+    )
+  }
+
+  stopWatching = (): void => {
+    if (!this.state.watching) return
+    this.deps.recogniser.unwatch()
+    this.deps.setSpeaking(false)
+    this.update({ watching: false, overheard: null })
+    this.deps.announce(tr('Mode Menyimak mati. Mikrofon ditutup.', 'Listening mode off. Microphone closed.'))
+  }
+
+  /** A finished sentence from the open microphone: a request only if addressed. */
+  private overheard(text: string): void {
+    this.deps.setSpeaking(false)
+    const call = addressed(text)
+    if (!call) {
+      // Shown, never acted on. Silently dropping it would make the mode look
+      // broken; acting on it would make the room unusable.
+      this.update({ overheard: text })
+      return
+    }
+    this.update({ overheard: null })
+    void this.hear(call.request, this.state.draft.status === 'ready', 'voice')
   }
 
   // --- the talk switch --------------------------------------------------------
@@ -180,8 +287,28 @@ export class VoiceFlow {
   discard = (): void => {
     // Anything still thinking belongs to the proposal being thrown away.
     this.turn += 1
+    this.rememberDeclined(this.state.draft)
     this.update({ draft: { ...this.state.draft, status: 'discarded' } })
     this.deps.announce(tr('Draf dibatalkan. Kanvas tidak berubah.', 'Draft discarded. The canvas did not change.'))
+  }
+
+  /**
+   * A board that was offered and refused is not offered again unasked.
+   *
+   * Only the unasked offer is silenced. If the words named the tool, refusing
+   * this one is an answer about this sentence, not a standing instruction --
+   * somebody who says "bikin voting" a minute later still gets voting.
+   */
+  private rememberDeclined(draft: Draft): void {
+    const named = namedIn(draft.transcript)
+    const consider = (id: string | undefined): void => {
+      if (!id || named.includes(id) || !templateById(id)) return
+      this.declined.add(id)
+    }
+    for (const op of draft.operations) consider(op.source?.id)
+    for (const question of draft.ambiguities) {
+      for (const choice of question.choices) consider(choice.id)
+    }
   }
 
   /** Picking an option is the confirmation; it applies straight away and can be undone (D71). */
@@ -273,7 +400,7 @@ export class VoiceFlow {
     const shown = pending ? `${pending.transcript} → ${text}` : text
     this.editDraft({ ...emptyDraft(), status: 'thinking', transcript: shown })
 
-    const next = await this.deps.understand(text, pending)
+    const next = await this.deps.understand(text, pending, [...this.declined])
     // A newer request started while this one was thinking. Its answer wins.
     if (turn !== this.turn) return
     this.present({ ...next, transcript: shown, via })
@@ -308,7 +435,7 @@ export class VoiceFlow {
 
     const turn = this.turn
     this.editDraft({ ...this.state.draft, status: 'thinking', transcript: line.transcript })
-    void this.deps.understand(line).then((next) => {
+    void this.deps.understand(line, undefined, [...this.declined]).then((next) => {
       if (turn === this.turn) this.present(next)
     })
   }

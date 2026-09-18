@@ -416,6 +416,14 @@ export async function planWithOllama(input: PlanInput): Promise<Plan> {
     const step = templateStep(answer.templat, answer.judul_alat ?? '', answer.disebut_langsung, input)
     const named = namedIn(input.transcript).includes(answer.templat)
     const shaped = plan(input).intent === 'alat-diusulkan'
+    // Turned down once already, and not asked for by name this time: the offer
+    // is dropped rather than repeated, and the sentence falls through to what
+    // else it might mean.
+    if (step && !named && input.declined?.includes(answer.templat)) {
+      const others = buildSteps(answer.operasi, input, said)
+      if (others.length > 0) return { intent: 'susun', reason: why, steps: others }
+      return { intent: 'tak-dikenali', reason: why, steps: [], rawText: input.transcript }
+    }
     if (step && (named || shaped)) {
       return { intent: named && answer.disebut_langsung ? 'alat-diminta' : 'alat-diusulkan', reason: why, steps: [step] }
     }
@@ -466,8 +474,11 @@ export async function planWithOllama(input: PlanInput): Promise<Plan> {
   if (answer.maksud === 'tanya') {
     const choices: PlanQuestion['choices'] = []
     const implied = plan(input)
+    // Same rule as the tool route, plus: a board turned down earlier does not
+    // come back as an option either. Naming it still does.
     const toolAllowed = (id: string) =>
-      namedIn(input.transcript).includes(id) || implied.steps[0]?.source?.id === id
+      namedIn(input.transcript).includes(id) ||
+      (!input.declined?.includes(id) && implied.steps[0]?.source?.id === id)
     for (const [i, option] of (answer.opsi ?? []).entries()) {
       // A filled-in operation wins over a template: the model fills required
       // fields it has no use for, and an option labelled "as an idea" with a

@@ -40,7 +40,7 @@ export function VoiceDock() {
   const { undo, canUndo } = useDocument()
   const { visibleIds, canvasMounted, linkingFrom } = useView()
   const { traversing, toggleTraversal, traversalIndex, soundProfile, setSoundProfile, mode, setMode } = useSession()
-  const { draft, thinkingSeconds, talking, startTalking, applyDraft, discardDraft, setDraft, talkLatched, endTalkHold, asrStatus, asrMode } = useAssistant()
+  const { draft, thinkingSeconds, talking, startTalking, applyDraft, discardDraft, setDraft, talkLatched, endTalkHold, asrStatus, asrMode, watching, startWatching, stopWatching, overheard } = useAssistant()
 
   // Folded away by choice, not by state: somebody who trusts the capture
   // should not have to keep reading it.
@@ -192,6 +192,24 @@ export function VoiceDock() {
         </div>
       )}
 
+      {/*
+        An open microphone has to be visible to be honest.
+
+        The switch alone is not enough: it is one icon among four, and the
+        promise being made here -- the microphone is open and nobody is holding
+        anything -- deserves a line of its own. It also carries the rule, so the
+        reason nothing happened when somebody spoke is never a mystery.
+      */}
+      {watching && (
+        <div className="dock-watching" role="status">
+          <span className="dock-watching-dot" aria-hidden="true" />
+          <span className="dock-watching-text">
+            {overheard ? `Terdengar: "${overheard}"` : 'Menyimak. Sebut "Karsa" dulu.'}
+          </span>
+          {overheard && <span className="dock-watching-note">tidak dikerjakan</span>}
+        </div>
+      )}
+
       <div className="dock">
         <div className={`dock-status ${status.tone}`}>
           <span className="dock-dot" aria-hidden="true" />
@@ -248,6 +266,27 @@ export function VoiceDock() {
 
         <span className="dock-sep" aria-hidden="true" />
 
+        {/*
+          Mode Menyimak sits here, not beside Bicara: the two primary buttons
+          are the same size side by side on purpose (section 14), and this is a
+          mode, not a way to contribute. `role="switch"` for the same reason the
+          theme control uses one (D36) -- the shape says what will happen.
+        */}
+        <button
+          type="button"
+          role="switch"
+          className={`icon-btn ${watching ? 'is-listening' : ''}`}
+          aria-checked={watching}
+          aria-label={watching ? 'Matikan Mode Menyimak' : 'Nyalakan Mode Menyimak'}
+          title={
+            watching
+              ? 'Mode Menyimak hidup — mikrofon terbuka, sebut "Karsa" dulu'
+              : 'Mode Menyimak — mikrofon tetap terbuka, tanpa menekan apa pun'
+          }
+          onClick={watching ? stopWatching : startWatching}
+        >
+          <Icon name={watching ? 'ear' : 'earOff'} size={18} />
+        </button>
         <button
           type="button"
           className="icon-btn"

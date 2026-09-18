@@ -30,6 +30,16 @@ export interface PlanInput {
    * the model decides again with the question and the first sentence in view.
    */
   pending?: { question: string; transcript: string }
+  /**
+   * Tools this person already turned down in this session, and did not ask for
+   * by name when they did.
+   *
+   * Offering the same board again after it has been refused is the assistant
+   * arguing, and an interruption is paid for by everyone in the meeting (D63).
+   * It only silences the *unasked* offer: naming a tool outright still gets it,
+   * because a refusal is an answer to a suggestion, not a ban on a word.
+   */
+  declined?: readonly string[]
 }
 
 export interface PlanProvider {

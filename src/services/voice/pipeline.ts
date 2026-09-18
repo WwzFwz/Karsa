@@ -198,10 +198,12 @@ export async function buildDraft(
   focusId: NodeId | null,
   provider: ProviderId,
   pending?: { question: string; transcript: string },
+  declined?: readonly string[],
 ): Promise<Draft> {
   const transcript = typeof utterance === 'string' ? utterance : utterance.transcript
   const routed = await planWith(provider, {
     pending,
+    declined,
     transcript,
     doc,
     tree,

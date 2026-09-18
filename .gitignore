@@ -42,3 +42,9 @@ desktop.ini
 
 # sync server data (SQLite)
 server/data/
+
+# Downloaded speech models; run `npm run models` to fetch them.
+server/models/
+
+# ONNX runtime copied from node_modules by scripts/prepare-ort.mjs.
+public/ort/
