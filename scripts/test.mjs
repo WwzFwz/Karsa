@@ -20,7 +20,19 @@ const walk = (dir) => {
 }
 walk('src')
 
-const outdir = 'node_modules/.cache/karsa-test'
+/*
+  Outside node_modules, and that is not a matter of taste.
+
+  Node's test runner skips node_modules when it resolves the files it is given
+  -- which is right for a project's own tests, and fatal for bundles parked
+  there. Older Node took an explicit path as an explicit path and ran it
+  anyway; from 22.2x the argument is matched, node_modules is filtered out
+  first, and every file "could not be found". It passed on the laptop and died
+  on the runner, which is the whole reason CI exists.
+
+  `.cache/` is already ignored by git.
+*/
+const outdir = '.cache/karsa-test'
 rmSync(outdir, { recursive: true, force: true })
 await build({
   entryPoints: tests,

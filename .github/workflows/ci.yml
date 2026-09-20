@@ -27,7 +27,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # 22 and not 20: the server stores rooms in node:sqlite, which does
-          # not exist before 22.6 (D76).
+          # not exist before 22.6 (D76). Floating rather than pinned, on
+          # purpose -- the newest 22.x is what caught the test runner change
+          # that a pinned version would have hidden for months.
           node-version: '22'
           cache: npm
           cache-dependency-path: |

@@ -12,6 +12,7 @@ dist
 server/dist
 server/data
 public/ort
+.cache
 
 # Roughly 700 MB of speech models. They are mounted, never baked in.
 server/models
