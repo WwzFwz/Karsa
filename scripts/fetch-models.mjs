@@ -46,6 +46,7 @@ const FILES = [
   'tokenizer_config.json',
   'onnx/encoder_model.onnx',
   'onnx/encoder_model_quantized.onnx',
+  'onnx/decoder_model_merged_fp16.onnx',
   'onnx/decoder_model_merged_q4.onnx',
   'onnx/decoder_model_merged_quantized.onnx',
 ]

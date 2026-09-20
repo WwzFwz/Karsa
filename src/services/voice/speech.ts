@@ -134,8 +134,6 @@ export class SpeechRecogniser {
   retune = (): void => this.asr.retune()
   load = (model: AsrModelId): void => this.asr.load(model)
 
-  /** Nothing to reload: the language is read per request. Here to notify React. */
-  /** Starts the download early, so the first sentence does not wait for it. */
   private collected(): Float32Array {
     return join(this.chunks)
   }
@@ -185,14 +183,32 @@ export class SpeechRecogniser {
     this.chunks = []
     await this.openMic((frame) => this.chunks.push(frame))
 
+    /*
+      The transcript only ever grows.
+
+      Each pass re-reads the whole buffer from the start, so the words it
+      streams begin again from nothing every time. Showing that raw would wipe
+      the line and retype it once a second, which reads as broken rather than
+      as fast. So the settled text from the last finished pass stays on screen
+      until the running pass has caught up with it, and after that the live
+      words take over -- the line only ever moves forwards.
+    */
+    let settled = ''
+    const show = (live: string) => {
+      if (!this.stream) return
+      const text = live.length >= settled.length ? live : settled
+      if (text) onPartial(text)
+    }
+
     this.partialTimer = window.setInterval(() => {
       if (this.busy || this.asr.getStatus().phase !== 'ready') return
       const audio = this.collected()
       if (audio.length < MIN_SAMPLES) return
       this.busy = true
-      void this.asr.transcribe(audio, false).then(({ text }) => {
+      void this.asr.transcribe(audio, false, show).then(({ text }) => {
         this.busy = false
-        if (this.stream && text) onPartial(text)
+        if (text) settled = text
+        show(text)
       })
     }, PARTIAL_EVERY_MS)
   }

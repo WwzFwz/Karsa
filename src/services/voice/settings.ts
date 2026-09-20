@@ -16,7 +16,7 @@ import { CONFIG } from '../../core/config'
 import { lang } from '../../core/i18n'
 
 export type AsrModelId = string
-export type AsrMode = 'whisper-base' | 'whisper-small' | 'contoh'
+export type AsrMode = 'whisper-base' | 'whisper-small' | 'whisper-turbo' | 'contoh'
 
 export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: AsrModelId }[] = [
   {
@@ -28,8 +28,23 @@ export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: As
   {
     id: 'whisper-small',
     label: 'Whisper small',
-    detail: '±250 MB · lebih teliti',
+    detail: '±460 MB · jauh lebih teliti untuk Bahasa Indonesia',
     model: CONFIG.asrModelAccurate,
+  },
+  {
+    /*
+      The size where a browser stops sounding like a compromise.
+
+      Whisper's multilingual quality is mostly a function of parameters, and
+      Indonesian is one of the languages that suffers first when there are few
+      of them -- `base` has 74 million and mangles ordinary sentences, this has
+      809 million. It is the honest answer to "why is this worse than the cloud
+      products": they are not running a 74M model either.
+    */
+    id: 'whisper-turbo',
+    label: 'Whisper large turbo',
+    detail: '±700 MB · setara layanan awan · butuh WebGPU',
+    model: CONFIG.asrModelBest,
   },
   {
     // No model at all: a room with no microphone still gets to see the whole

@@ -40,6 +40,8 @@ export const CONFIG = {
   /** Speech recognition model, downloaded once and cached by the browser. */
   asrModel: text('VITE_ASR_MODEL', 'onnx-community/whisper-base'),
   asrModelAccurate: text('VITE_ASR_MODEL_ACCURATE', 'onnx-community/whisper-small'),
+  /** The one that competes with a cloud service, at the price of a big download. */
+  asrModelBest: text('VITE_ASR_MODEL_BEST', 'onnx-community/whisper-large-v3-turbo'),
   /**
    * The sync server. A path means "the server this page came from", which is
    * right for the one-container install and for Vite's dev proxy alike.

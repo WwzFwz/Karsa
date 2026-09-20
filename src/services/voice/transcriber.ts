@@ -30,6 +30,8 @@ export class Transcriber {
   private model: AsrModelId = CONFIG.asrModel
   private nextId = 1
   private pending = new Map<number, (text: string, error?: string) => void>()
+  /** Called with the text so far, while a request is still decoding. */
+  private streaming = new Map<number, (text: string) => void>()
 
   getStatus(): AsrStatus {
     return this.status
@@ -60,10 +62,19 @@ export class Transcriber {
    * stream while somebody is still talking -- and streaming partials is most of
    * why three seconds feels like none (section 10).
    */
-  transcribe(audio: Float32Array, final: boolean): Promise<{ text: string; error?: string }> {
+  transcribe(
+    audio: Float32Array,
+    final: boolean,
+    /** Called as words are decoded, before the sentence is finished. */
+    onPartial?: (text: string) => void,
+  ): Promise<{ text: string; error?: string }> {
     const id = this.nextId++
     return new Promise((resolve) => {
-      this.pending.set(id, (text, error) => resolve({ text, error }))
+      if (onPartial) this.streaming.set(id, onPartial)
+      this.pending.set(id, (text, error) => {
+        this.streaming.delete(id)
+        resolve({ text, error })
+      })
       this.ensure().postMessage({ type: 'transcribe', id, audio, final, language: readSpeechLang() })
     })
   }
@@ -102,6 +113,8 @@ export class Transcriber {
         })
       } else if (m.type === 'error') {
         this.setStatus({ phase: 'error', percent: 0, detail: `Model suara gagal dimuat: ${m.message}` })
+      } else if (m.type === 'partial') {
+        this.streaming.get(m.id)?.(m.text)
       } else if (m.type === 'result') {
         const resolve = this.pending.get(m.id)
         this.pending.delete(m.id)
