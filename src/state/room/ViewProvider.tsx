@@ -23,6 +23,7 @@ import type { Point } from '../../core/shape/layout'
 import { visibleOrder } from '../../core/tree/project'
 import { useDocument } from './DocumentProvider'
 import { usePresence } from './PresenceProvider'
+import { tr } from '../../core/i18n'
 
 export type ViewMode = 'canvas' | 'outline'
 
@@ -166,13 +167,19 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const startLinking = useCallback(
     (id: NodeId) => {
       setLinkingFrom(id)
-      announcer.announce('Pilih simpul tujuan untuk dihubungkan. Escape untuk membatalkan.', 'assertive')
+      announcer.announce(
+        tr(
+          'Pilih simpul tujuan untuk dihubungkan. Escape untuk membatalkan.',
+          'Choose the node to relate to. Escape to cancel.',
+        ),
+        'assertive',
+      )
     },
     [announcer],
   )
   const cancelLinking = useCallback(() => {
     setLinkingFrom((current) => {
-      if (current) announcer.announce('Penghubungan dibatalkan.')
+      if (current) announcer.announce(tr('Penghubungan dibatalkan.', 'The link was cancelled.'))
       return null
     })
   }, [announcer])

@@ -19,8 +19,12 @@ import { audioBus } from '../../audio/bus'
 import { Icon } from '../shared/icons'
 import { agoLabel, type RoomAccess } from '../../services/rooms/rooms'
 import { useJoinRequests } from '../../state/rooms/useJoinRequests'
+import { bilingual, tr } from '../../core/i18n'
 
-const STATUS_WORD = { diterima: 'Diterima', ditolak: 'Ditolak' } as const
+const STATUS_WORD: Record<'diterima' | 'ditolak', string> = bilingual(
+  { diterima: 'Diterima', ditolak: 'Ditolak' },
+  { diterima: 'Accepted', ditolak: 'Declined' },
+)
 
 export function WaitingRoom({ access }: { access: RoomAccess }) {
   const { waiting, answered, answer } = useJoinRequests()
@@ -41,8 +45,8 @@ export function WaitingRoom({ access }: { access: RoomAccess }) {
       if (!done) return
       announce(
         status === 'diterima'
-          ? `${done.name} diterima masuk ruang.`
-          : `${done.name} ditolak masuk ruang.`,
+          ? tr(`${done.name} diterima masuk ruang.`, `${done.name} was let into the room.`)
+          : tr(`${done.name} ditolak masuk ruang.`, `${done.name} was refused entry.`),
       )
       audioBus.emit({
         earcon: status === 'diterima' ? 'joinAccepted' : 'joinDeclined',
@@ -60,8 +64,8 @@ export function WaitingRoom({ access }: { access: RoomAccess }) {
     if (done.length === 0) return
     announce(
       status === 'diterima'
-        ? `${done.length} orang diterima masuk ruang.`
-        : `${done.length} permintaan masuk ditolak.`,
+        ? tr(`${done.length} orang diterima masuk ruang.`, `${done.length} people were let into the room.`)
+        : tr(`${done.length} permintaan masuk ditolak.`, `${done.length} requests were refused.`),
     )
     audioBus.emit({
       earcon: status === 'diterima' ? 'joinAccepted' : 'joinDeclined',
@@ -74,7 +78,10 @@ export function WaitingRoom({ access }: { access: RoomAccess }) {
     return (
       <p className="panel-note">
         <Icon name="link" size={14} />
-        Ruang ini terbuka: siapa pun yang punya kodenya langsung masuk, tanpa ruang tunggu.
+        {tr(
+          'Ruang ini terbuka: siapa pun yang punya kodenya langsung masuk, tanpa ruang tunggu.',
+          'This room is open: anyone with the code walks straight in, with no waiting room.',
+        )}
       </p>
     )
   }
@@ -83,7 +90,10 @@ export function WaitingRoom({ access }: { access: RoomAccess }) {
     return (
       <p className="panel-note">
         <Icon name="lock" size={14} />
-        Ruang ini terkunci. Orang yang memakai kodenya menunggu di sini sampai kamu terima.
+        {tr(
+          'Ruang ini terkunci. Orang yang memakai kodenya menunggu di sini sampai kamu terima.',
+          'This room is locked. Whoever uses the code waits here until you let them in.',
+        )}
       </p>
     )
   }
@@ -92,14 +102,12 @@ export function WaitingRoom({ access }: { access: RoomAccess }) {
     <section className="waiting" aria-labelledby="waiting-heading">
       <header className="panel-head">
         <h3 id="waiting-heading" className="panel-sub">
-          <Icon name="lock" size={14} />
-          Menunggu diterima
-        </h3>
+          <Icon name="lock" size={14} />{tr('Menunggu diterima', 'Waiting to be let in')}</h3>
         {waiting.length > 0 && <span className="pill pill-warn">{waiting.length} orang</span>}
       </header>
 
       {waiting.length === 0 ? (
-        <p className="panel-note">Tidak ada yang sedang menunggu.</p>
+        <p className="panel-note">{tr('Tidak ada yang sedang menunggu.', 'Nobody is waiting.')}</p>
       ) : (
         <>
           <ul className="people">
@@ -124,16 +132,12 @@ export function WaitingRoom({ access }: { access: RoomAccess }) {
                     type="button"
                     className="btn btn-small btn-primary"
                     onClick={() => void respond(request.id, 'diterima')}
-                  >
-                    Terima
-                  </button>
+                  >{tr('Terima', 'Accept')}</button>
                   <button
                     type="button"
                     className="btn btn-small"
                     onClick={() => void respond(request.id, 'ditolak')}
-                  >
-                    Tolak
-                  </button>
+                  >{tr('Tolak', 'Decline')}</button>
                 </div>
               </li>
             ))}
@@ -146,13 +150,9 @@ export function WaitingRoom({ access }: { access: RoomAccess }) {
                 className="btn btn-small"
                 onClick={() => void respondAll('diterima')}
               >
-                <Icon name="check" size={15} />
-                Terima semua
-              </button>
+                <Icon name="check" size={15} />{tr('Terima semua', 'Accept all')}</button>
               <button type="button" className="btn btn-small" onClick={() => void respondAll('ditolak')}>
-                <Icon name="x" size={15} />
-                Tolak semua
-              </button>
+                <Icon name="x" size={15} />{tr('Tolak semua', 'Decline all')}</button>
             </div>
           )}
         </>

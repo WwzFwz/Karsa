@@ -15,23 +15,26 @@ import { PROVIDERS, SELECTABLE } from '../../services/ai/providers'
 import { ASR_MODES } from '../../services/voice/speech'
 import { ollamaModel, ollamaUrl, setOllamaModel, setOllamaUrl } from '../../core/config'
 import { useState } from 'react'
-import { setLang, tr } from '../../core/i18n'
+import { bilingual, setLang, tr } from '../../core/i18n'
 import { useLang } from '../../state/useLang'
 import { MODE_HINT, MODE_LABEL } from '../../components/shared/labels'
 import { Icon } from '../../components/shared/icons'
 import type { SoundProfile } from '../../audio/earcons'
 
-const SOUND_LABEL: Record<SoundProfile, { name: string; hint: string }> = {
-  silent: { name: 'Diam', hint: 'Tanpa bunyi' },
-  sparse: { name: 'Hemat', hint: 'Yang penting saja' },
-  full: { name: 'Penuh', hint: 'Termasuk perpindahan fokus' },
-}
+const SOUND_NAME: Record<SoundProfile, string> = bilingual(
+  { silent: 'Diam', sparse: 'Hemat', full: 'Penuh' },
+  { silent: 'Silent', sparse: 'Sparing', full: 'Full' },
+)
 
-const THEME_LABEL: Record<ThemeChoice, string> = {
-  system: 'Ikut sistem',
-  light: 'Terang',
-  dark: 'Gelap',
-}
+const SOUND_HINT: Record<SoundProfile, string> = bilingual(
+  { silent: 'Tanpa bunyi', sparse: 'Yang penting saja', full: 'Termasuk perpindahan fokus' },
+  { silent: 'No sound at all', sparse: 'Only what matters', full: 'Every focus move too' },
+)
+
+const THEME_LABEL: Record<ThemeChoice, string> = bilingual(
+  { system: 'Ikut sistem', light: 'Terang', dark: 'Gelap' },
+  { system: 'Follow the system', light: 'Light', dark: 'Dark' },
+)
 
 export function SettingsPage() {
   const { mode, setMode, soundProfile, setSoundProfile } = useSession()
@@ -100,13 +103,9 @@ export function SettingsPage() {
         <section className="panel" aria-labelledby="provider-heading">
           <header className="panel-head">
             <h2 id="provider-heading">
-              <Icon name="sparkles" size={15} />
-              Penyedia model
-            </h2>
+              <Icon name="sparkles" size={15} />{tr('Penyedia model', 'Model provider')}</h2>
             <span className="pill pill-ok">
-              <Icon name="shield" size={12} />
-              Lokal
-            </span>
+              <Icon name="shield" size={12} />{tr('Lokal', 'Local')}</span>
           </header>
 
           {/*
@@ -136,14 +135,14 @@ export function SettingsPage() {
                         {p.name}
                         {active ? (
                           <span className={`pill ${providerState.ready ? 'pill-ok' : 'pill-warn'}`}>
-                            {providerState.ready ? 'aktif' : 'dipilih, belum siap'}
+                            {providerState.ready ? tr('aktif', 'active') : tr('dipilih, belum siap', 'chosen, not ready')}
                           </span>
                         ) : selectable ? (
-                          <span className="pill">tersedia</span>
+                          <span className="pill">{tr('tersedia', 'available')}</span>
                         ) : (
                           <span className="pill">
                             <Icon name="lock" size={11} />
-                            fase lanjut
+                            {tr('fase lanjut', 'a later phase')}
                           </span>
                         )}
                       </span>
@@ -157,7 +156,7 @@ export function SettingsPage() {
                       )}
                       <span
                         className={`provider-path ${
-                          p.dataPath.startsWith('Tidak') ? '' : 'is-warn'
+                          p.staysLocal ? '' : 'is-warn'
                         }`}
                       >
                         <Icon name={p.id === 'cloud' || p.id === 'vllm' ? 'alert' : 'shield'} size={12} />
@@ -212,7 +211,11 @@ export function SettingsPage() {
               </div>
               <details className="field-more">
                 <summary>{tr('Halaman ini dari server?', 'Page served from a server?')}</summary>
-                <code>OLLAMA_ORIGINS={'{'}alamat halaman{'}'}</code>
+                <code>
+                  OLLAMA_ORIGINS={'{'}
+                  {tr('alamat halaman', 'page origin')}
+                  {'}'}
+                </code>
               </details>
             </form>
           )}
@@ -222,13 +225,9 @@ export function SettingsPage() {
         <section className="panel" aria-labelledby="asr-heading">
           <header className="panel-head">
             <h2 id="asr-heading">
-              <Icon name="mic" size={15} />
-              Pengenalan suara
-            </h2>
+              <Icon name="mic" size={15} />{tr('Pengenalan suara', 'Speech recognition')}</h2>
             <span className="pill pill-ok">
-              <Icon name="shield" size={12} />
-              Di perangkat
-            </span>
+              <Icon name="shield" size={12} />{tr('Di perangkat', 'On this device')}</span>
           </header>
           <ul className="provider-list" role="radiogroup" aria-labelledby="asr-heading">
             {ASR_MODES.map((m) => {
@@ -245,22 +244,22 @@ export function SettingsPage() {
                     <span className="provider-mark" aria-hidden="true" />
                     <span className="provider-body">
                       <span className="provider-name">
-                        {m.label}
+                        {m.label()}
                         {active && m.model && (
                           <span
                             className={`pill ${asrStatus.phase === 'ready' ? 'pill-ok' : 'pill-warn'}`}
                           >
                             {asrStatus.phase === 'ready'
-                              ? 'siap'
+                              ? tr('siap', 'ready')
                               : asrStatus.phase === 'loading'
-                                ? `mengunduh ${asrStatus.percent}%`
+                                ? `${tr('mengunduh', 'downloading')} ${asrStatus.percent}%`
                                 : asrStatus.phase === 'error'
-                                  ? 'gagal'
-                                  : 'dimuat saat pertama bicara'}
+                                  ? tr('gagal', 'failed')
+                                  : tr('dimuat saat pertama bicara', 'downloads on the first sentence')}
                           </span>
                         )}
                       </span>
-                      <span className="provider-detail">{m.detail}</span>
+                      <span className="provider-detail">{m.detail()}</span>
                       {active && m.model && asrStatus.phase !== 'idle' && (
                         <span className="provider-detail" aria-live="polite">
                           <strong>{asrStatus.detail}</strong>
@@ -277,9 +276,7 @@ export function SettingsPage() {
         <section className="panel" aria-labelledby="mode-heading">
           <header className="panel-head">
             <h2 id="mode-heading">
-              <Icon name="presentation" size={15} />
-              Mode sesi
-            </h2>
+              <Icon name="presentation" size={15} />{tr('Mode sesi', 'Session mode')}</h2>
           </header>
           <div className="option-row">
             {(['meeting', 'review'] as const).map((m) => (
@@ -297,9 +294,7 @@ export function SettingsPage() {
         <section className="panel" aria-labelledby="sound-heading">
           <header className="panel-head">
             <h2 id="sound-heading">
-              <Icon name="volume" size={15} />
-              Profil bunyi
-            </h2>
+              <Icon name="volume" size={15} />{tr('Profil bunyi', 'Sound profile')}</h2>
           </header>
           <div className="option-row">
             {(['silent', 'sparse', 'full'] as const).map((p) => (
@@ -311,8 +306,8 @@ export function SettingsPage() {
                   onChange={() => setSoundProfile(p)}
                 />
                 <span>
-                  <strong>{SOUND_LABEL[p].name}</strong>
-                  <span className="option-hint">{SOUND_LABEL[p].hint}</span>
+                  <strong>{SOUND_NAME[p]}</strong>
+                  <span className="option-hint">{SOUND_HINT[p]}</span>
                 </span>
               </label>
             ))}
@@ -322,9 +317,7 @@ export function SettingsPage() {
         <section className="panel" aria-labelledby="theme-heading">
           <header className="panel-head">
             <h2 id="theme-heading">
-              <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={15} />
-              Tampilan
-            </h2>
+              <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={15} />{tr('Tampilan', 'Appearance')}</h2>
           </header>
           <div className="option-row">
             {(['system', 'light', 'dark'] as const).map((choice) => (
@@ -344,38 +337,28 @@ export function SettingsPage() {
         </section>
       </section>
 
-      <aside className="side-column" aria-label="Catatan">
+      <aside className="side-column" aria-label={tr('Catatan', 'Note')}>
         <section className="panel" aria-labelledby="promise-heading">
           <header className="panel-head">
             <h2 id="promise-heading">
-              <Icon name="shield" size={15} />
-              Yang melintasi jaringan
-            </h2>
+              <Icon name="shield" size={15} />{tr('Yang melintasi jaringan', 'What crosses the network')}</h2>
           </header>
           <ul className="loose-list">
             <li>
-              <Icon name="check" size={14} />
-              Perubahan dokumen
-            </li>
+              <Icon name="check" size={14} />{tr('Perubahan dokumen', 'Document changes')}</li>
             <li>
-              <Icon name="check" size={14} />
-              Penanda kehadiran
-            </li>
+              <Icon name="check" size={14} />{tr('Penanda kehadiran', 'Presence markers')}</li>
           </ul>
-          <h3 className="panel-sub">Tidak pernah</h3>
+          <h3 className="panel-sub">{tr('Tidak pernah', 'Never')}</h3>
           <ul className="loose-list">
             <li>
               <Icon name="x" size={14} />
               Audio
             </li>
             <li>
-              <Icon name="x" size={14} />
-              Gambar atau tangkapan layar
-            </li>
+              <Icon name="x" size={14} />{tr('Gambar atau tangkapan layar', 'Images or screenshots')}</li>
             <li>
-              <Icon name="x" size={14} />
-              Koordinat
-            </li>
+              <Icon name="x" size={14} />{tr('Koordinat', 'Coordinates')}</li>
           </ul>
         </section>
       </aside>

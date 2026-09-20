@@ -21,6 +21,7 @@ import { NODE_KINDS } from '../../core/rules/invariants'
 import { TEMPLATES } from '../../core/templates/registry'
 import { KIND_LABEL, SHAPE_LABEL } from '../../core/vocabulary'
 import { MODE_LABEL } from '../shared/labels'
+import { tr } from '../../core/i18n'
 import type { IconName } from '../shared/icons'
 import type { RoomShape } from '../../core/model/types'
 import type { SoundProfile } from '../../audio/earcons'
@@ -75,27 +76,44 @@ export function buildEntries(
   navigate: NavigateFunction,
   base: string,
 ): CommandEntry[] {
-  const needsFocus = room.focusId ? undefined : 'Pilih simpul dulu.'
-  const on = room.focusTitle ? ` pada "${room.focusTitle}"` : ''
+  const needsFocus = room.focusId ? undefined : tr('Pilih simpul dulu.', 'Select a node first.')
+  /*
+    The clause that names what a command would act on.
+
+    It is built here rather than inside each label because the two languages
+    put it in the same place but spell it differently, and a dozen labels each
+    doing that by hand is a dozen chances to get one wrong.
+  */
+  const on = room.focusTitle ? tr(` pada "${room.focusTitle}"`, ` on "${room.focusTitle}"`) : ''
+
+  // Group headings, named once: the palette groups by this exact string, so
+  // a heading spelled twice would split one group into two.
+  const FOCUSED = tr('Simpul terfokus', 'Focused node')
+  const ROOM = tr('Ruang', 'Room')
+  const GO = tr('Pindah', 'Go to')
+  const VOICE = tr('Suara', 'Voice')
+  const VIEW = tr('Tampilan', 'View')
 
   const entries: CommandEntry[] = [
     // --- making things ---
     ...NODE_KINDS.filter((kind) => kind !== 'root').map((kind) => ({
       id: `tambah-${kind}`,
-      label: `Tambah ${KIND_LABEL[kind]}`,
-      group: 'Buat',
+      label: tr(`Tambah ${KIND_LABEL[kind]}`, `Add ${KIND_LABEL[kind].toLowerCase()}`),
+      group: tr('Buat', 'Create'),
       icon: 'plus' as IconName,
-      keywords: `baru simpul node ${KIND_LABEL[kind]}`,
+      // Both languages, always: the words are never shown, and somebody
+      // searching "node" should find this whether or not they switched.
+      keywords: `baru simpul node new add ${KIND_LABEL[kind]}`,
       keys: kind === 'idea' ? 'n' : undefined,
       mutates: true,
       run: () => room.addNode(kind),
     })),
     ...TEMPLATES.map((template) => ({
       id: `templat-${template.id}`,
-      label: `Sisipkan ${template.label}`,
-      group: 'Alat & templat',
+      label: tr(`Sisipkan ${template.label}`, `Insert ${template.label.toLowerCase()}`),
+      group: tr('Alat & templat', 'Tools & templates'),
       icon: template.icon,
-      keywords: `templat alat ${template.hint}`,
+      keywords: `templat alat template tool ${template.hint}`,
       mutates: true,
       run: () => room.insertTemplate(template.id),
     })),
@@ -103,8 +121,8 @@ export function buildEntries(
     // --- acting on the focused node ---
     {
       id: 'hubungkan',
-      label: `Hubungkan simpul${on}`,
-      group: 'Simpul terfokus',
+      label: tr(`Hubungkan simpul${on}`, `Relate node${on}`),
+      group: FOCUSED,
       icon: 'link',
       keys: 'r',
       mutates: true,
@@ -113,8 +131,8 @@ export function buildEntries(
     },
     {
       id: 'pindah',
-      label: `Pindahkan ke induk lain${on}`,
-      group: 'Simpul terfokus',
+      label: tr(`Pindahkan ke induk lain${on}`, `Move to another parent${on}`),
+      group: FOCUSED,
       icon: 'move',
       keys: 'm',
       mutates: true,
@@ -123,10 +141,10 @@ export function buildEntries(
     },
     {
       id: 'alat',
-      label: `Jadikan alat${on}`,
-      group: 'Simpul terfokus',
+      label: tr(`Jadikan alat${on}`, `Turn into a tool${on}`),
+      group: FOCUSED,
       icon: 'checkSquare',
-      keywords: 'voting tool',
+      keywords: 'voting tool alat',
       keys: 'l',
       mutates: true,
       disabledReason: needsFocus,
@@ -134,10 +152,10 @@ export function buildEntries(
     },
     {
       id: 'pilih',
-      label: `Pilih atau tarik pilihan${on}`,
-      group: 'Simpul terfokus',
+      label: tr(`Pilih atau tarik pilihan${on}`, `Vote or take the vote back${on}`),
+      group: FOCUSED,
       icon: 'check',
-      keywords: 'vote voting suara',
+      keywords: 'vote voting suara pilih',
       keys: 'v',
       mutates: true,
       disabledReason: needsFocus,
@@ -145,8 +163,8 @@ export function buildEntries(
     },
     {
       id: 'komentar',
-      label: `Tulis komentar${on}`,
-      group: 'Simpul terfokus',
+      label: tr(`Tulis komentar${on}`, `Write a comment${on}`),
+      group: FOCUSED,
       icon: 'message',
       keys: 'c',
       mutates: true,
@@ -155,8 +173,8 @@ export function buildEntries(
     },
     {
       id: 'hapus',
-      label: `Hapus simpul${on}`,
-      group: 'Simpul terfokus',
+      label: tr(`Hapus simpul${on}`, `Delete node${on}`),
+      group: FOCUSED,
       icon: 'trash',
       keys: 'Delete',
       mutates: true,
@@ -167,78 +185,87 @@ export function buildEntries(
     // --- the room ---
     ...(['mindmap', 'hierarchy', 'flow', 'timeline', 'columns'] as RoomShape[]).map((shape) => ({
       id: `bentuk-${shape}`,
-      label: `Bentuk: ${SHAPE_LABEL[shape]}`,
-      group: 'Bentuk kanvas',
+      label: tr(`Bentuk: ${SHAPE_LABEL[shape]}`, `Shape: ${SHAPE_LABEL[shape]}`),
+      group: tr('Bentuk kanvas', 'Canvas shape'),
       icon: 'layout' as IconName,
-      keywords: 'tata letak layout ganti bentuk',
+      keywords: 'tata letak layout ganti bentuk shape',
       mutates: true,
-      disabledReason: shape === room.shape ? 'Sudah memakai bentuk ini.' : undefined,
+      disabledReason:
+        shape === room.shape ? tr('Sudah memakai bentuk ini.', 'Already using this shape.') : undefined,
       run: () => room.setShape(shape),
     })),
     {
       id: 'bagikan',
-      label: 'Bagikan ruang',
-      group: 'Ruang',
+      label: tr('Bagikan ruang', 'Share room'),
+      group: ROOM,
       icon: 'share',
-      keywords: 'kode tautan undang',
+      keywords: 'kode tautan undang code link invite share',
       run: () => room.openDialog('share'),
     },
     {
       id: 'urung',
-      label: 'Batalkan perubahan terakhir',
-      group: 'Ruang',
+      label: tr('Batalkan perubahan terakhir', 'Undo the last change'),
+      group: ROOM,
       icon: 'undo',
       keys: 'Ctrl Z',
       mutates: true,
-      disabledReason: room.canUndo ? undefined : 'Belum ada yang bisa dibatalkan.',
+      disabledReason: room.canUndo
+        ? undefined
+        : tr('Belum ada yang bisa dibatalkan.', 'There is nothing to undo yet.'),
       run: room.undo,
     },
     {
       id: 'tata-letak',
-      label: 'Kembalikan ke tata letak otomatis',
-      group: 'Ruang',
+      label: tr('Kembalikan ke tata letak otomatis', 'Back to the automatic layout'),
+      group: ROOM,
       icon: 'undo',
-      keywords: 'reset posisi penempatan',
-      disabledReason: room.hasOverrides ? undefined : 'Belum ada simpul yang digeser tangan.',
+      keywords: 'reset posisi penempatan layout placement',
+      disabledReason: room.hasOverrides
+        ? undefined
+        : tr('Belum ada simpul yang digeser tangan.', 'No node has been moved by hand yet.'),
       run: room.clearOverrides,
     },
 
     // --- getting around ---
-    { id: 'ke-kanvas', label: 'Buka kanvas', group: 'Pindah', icon: 'layout', keys: '1', run: () => navigate(base) },
-    { id: 'ke-outline', label: 'Buka outline', group: 'Pindah', icon: 'list', keys: '2', run: () => navigate(`${base}/outline`) },
-    { id: 'ke-perintah', label: 'Buka panel perintah', group: 'Pindah', icon: 'sparkles', keys: '3', run: () => navigate(`${base}/perintah`) },
-    { id: 'ke-peserta', label: 'Buka panel peserta', group: 'Pindah', icon: 'users', run: () => navigate(`${base}/peserta`) },
-    { id: 'ke-komentar', label: 'Buka panel komentar', group: 'Pindah', icon: 'message', run: () => navigate(`${base}/komentar`) },
-    { id: 'ke-ringkasan', label: 'Buka ringkasan sesi', group: 'Pindah', icon: 'activity', keywords: 'kontribusi porsi', run: () => navigate(`${base}/ringkasan`) },
-    { id: 'ke-pengaturan', label: 'Buka pengaturan', group: 'Pindah', icon: 'settings', keywords: 'model penyedia ollama bunyi tema', run: () => navigate(`${base}/pengaturan`) },
-    { id: 'ke-dasbor', label: 'Buka daftar ruang', group: 'Pindah', icon: 'home', keywords: 'dasbor keluar', run: () => navigate('/ruang') },
+    { id: 'ke-kanvas', label: tr('Buka kanvas', 'Open the canvas'), group: GO, icon: 'layout', keys: '1', run: () => navigate(base) },
+    { id: 'ke-outline', label: tr('Buka outline', 'Open the outline'), group: GO, icon: 'list', keys: '2', run: () => navigate(`${base}/outline`) },
+    { id: 'ke-perintah', label: tr('Buka panel perintah', 'Open the command panel'), group: GO, icon: 'sparkles', keys: '3', run: () => navigate(`${base}/perintah`) },
+    { id: 'ke-peserta', label: tr('Buka panel peserta', 'Open the people panel'), group: GO, icon: 'users', run: () => navigate(`${base}/peserta`) },
+    { id: 'ke-komentar', label: tr('Buka panel komentar', 'Open the comments panel'), group: GO, icon: 'message', run: () => navigate(`${base}/komentar`) },
+    { id: 'ke-ringkasan', label: tr('Buka ringkasan sesi', 'Open the session summary'), group: GO, icon: 'activity', keywords: 'kontribusi porsi contribution share summary', run: () => navigate(`${base}/ringkasan`) },
+    { id: 'ke-pengaturan', label: tr('Buka pengaturan', 'Open settings'), group: GO, icon: 'settings', keywords: 'model penyedia ollama bunyi tema provider sound theme language bahasa', run: () => navigate(`${base}/pengaturan`) },
+    { id: 'ke-dasbor', label: tr('Buka daftar ruang', 'Open the room list'), group: GO, icon: 'home', keywords: 'dasbor keluar dashboard leave', run: () => navigate('/ruang') },
 
     // --- voice and sound ---
-    { id: 'bicara', label: 'Mulai bicara', group: 'Suara', icon: 'mic', keys: 'Spasi', keywords: 'rekam mikrofon perintah suara', run: room.startTalking },
-    { id: 'telusur', label: 'Mulai atau hentikan telusur audio', group: 'Suara', icon: 'headphones', keys: '.', run: room.toggleTraversal },
+    { id: 'bicara', label: tr('Mulai bicara', 'Start talking'), group: VOICE, icon: 'mic', keys: 'Spasi', keywords: 'rekam mikrofon perintah suara record microphone talk', run: room.startTalking },
+    { id: 'telusur', label: tr('Mulai atau hentikan telusur audio', 'Start or stop the audio walk'), group: VOICE, icon: 'headphones', keys: '.', run: room.toggleTraversal },
     ...(['silent', 'sparse', 'full'] as SoundProfile[]).map((profile) => ({
       id: `bunyi-${profile}`,
-      label: `Profil bunyi: ${profile === 'silent' ? 'Diam' : profile === 'sparse' ? 'Hemat' : 'Penuh'}`,
-      group: 'Suara',
+      label: tr(
+        `Profil bunyi: ${profile === 'silent' ? 'Diam' : profile === 'sparse' ? 'Hemat' : 'Penuh'}`,
+        `Sound profile: ${profile === 'silent' ? 'Silent' : profile === 'sparse' ? 'Sparing' : 'Full'}`,
+      ),
+      group: VOICE,
       icon: 'volume' as IconName,
-      disabledReason: profile === room.soundProfile ? 'Sudah memakai profil ini.' : undefined,
+      disabledReason:
+        profile === room.soundProfile ? tr('Sudah memakai profil ini.', 'Already using this profile.') : undefined,
       run: () => room.setSoundProfile(profile),
     })),
     ...(['meeting', 'review'] as const).map((mode) => ({
       id: `mode-${mode}`,
-      label: `Mode: ${MODE_LABEL[mode]}`,
-      group: 'Suara',
+      label: `${tr('Mode', 'Mode')}: ${MODE_LABEL[mode]}`,
+      group: VOICE,
       icon: (mode === 'meeting' ? 'presentation' : 'eye') as IconName,
       keys: mode === 'review' ? 'Ctrl M' : undefined,
-      disabledReason: mode === room.mode ? 'Sudah di mode ini.' : undefined,
+      disabledReason: mode === room.mode ? tr('Sudah di mode ini.', 'Already in this mode.') : undefined,
       run: () => room.setMode(mode),
     })),
 
     // --- the view ---
-    { id: 'panel', label: room.panelHidden ? 'Tampilkan panel kanan' : 'Sembunyikan panel kanan', group: 'Tampilan', icon: 'panelRight', keys: '\\', run: room.togglePanel },
-    { id: 'sidebar', label: room.sidebarHidden ? 'Tampilkan navigasi kiri' : 'Sembunyikan navigasi kiri', group: 'Tampilan', icon: 'menu', keys: '[', run: room.toggleSidebar },
-    { id: 'layar-penuh', label: room.focusMode ? 'Keluar dari layar penuh' : 'Kanvas layar penuh', group: 'Tampilan', icon: room.focusMode ? 'minimize' : 'maximize', keys: 'f', run: room.toggleFocusMode },
-    { id: 'pintasan', label: 'Lihat semua pintasan papan ketik', group: 'Tampilan', icon: 'keyboard', keys: '?', run: () => room.openDialog('help') },
+    { id: 'panel', label: room.panelHidden ? tr('Tampilkan panel kanan', 'Show the right panel') : tr('Sembunyikan panel kanan', 'Hide the right panel'), group: VIEW, icon: 'panelRight', keys: '\\', run: room.togglePanel },
+    { id: 'sidebar', label: room.sidebarHidden ? tr('Tampilkan navigasi kiri', 'Show the left navigation') : tr('Sembunyikan navigasi kiri', 'Hide the left navigation'), group: VIEW, icon: 'menu', keys: '[', run: room.toggleSidebar },
+    { id: 'layar-penuh', label: room.focusMode ? tr('Keluar dari layar penuh', 'Leave full screen') : tr('Kanvas layar penuh', 'Full-screen canvas'), group: VIEW, icon: room.focusMode ? 'minimize' : 'maximize', keys: 'f', run: room.toggleFocusMode },
+    { id: 'pintasan', label: tr('Lihat semua pintasan papan ketik', 'See every keyboard shortcut'), group: VIEW, icon: 'keyboard', keys: '?', run: () => room.openDialog('help') },
   ]
 
   return entries

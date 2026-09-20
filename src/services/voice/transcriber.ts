@@ -13,6 +13,7 @@
  */
 
 import { CONFIG } from '../../core/config'
+import { tr } from '../../core/i18n'
 import { readSpeechLang, type AsrModelId } from './settings'
 
 export interface AsrStatus {
@@ -25,7 +26,7 @@ type Listener = (status: AsrStatus) => void
 
 export class Transcriber {
   private worker: Worker | null = null
-  private status: AsrStatus = { phase: 'idle', percent: 0, detail: 'Belum dimuat.' }
+  private status: AsrStatus = { phase: 'idle', percent: 0, detail: tr('Belum dimuat.', 'Not loaded yet.') }
   private listeners = new Set<Listener>()
   private model: AsrModelId = CONFIG.asrModel
   private nextId = 1
@@ -51,7 +52,7 @@ export class Transcriber {
   load(model: AsrModelId): void {
     if (this.model === model && (this.status.phase === 'ready' || this.status.phase === 'loading')) return
     this.model = model
-    this.setStatus({ phase: 'loading', percent: 0, detail: 'Menyiapkan model suara.' })
+    this.setStatus({ phase: 'loading', percent: 0, detail: tr('Menyiapkan model suara.', 'Preparing the speech model.') })
     this.ensure().postMessage({ type: 'load', model })
   }
 
@@ -104,15 +105,26 @@ export class Transcriber {
     worker.onmessage = (event) => {
       const m = event.data
       if (m.type === 'progress') {
-        this.setStatus({ phase: 'loading', percent: m.percent, detail: `Mengunduh model suara ${m.percent}%.` })
+        this.setStatus({
+          phase: 'loading',
+          percent: m.percent,
+          detail: tr(`Mengunduh model suara ${m.percent}%.`, `Downloading the speech model ${m.percent}%.`),
+        })
       } else if (m.type === 'ready') {
         this.setStatus({
           phase: 'ready',
           percent: 100,
-          detail: `${m.model.split('/')[1]} lewat ${m.device === 'webgpu' ? 'WebGPU' : 'WASM'}, di perangkat ini.`,
+          detail: tr(
+            `${m.model.split('/')[1]} lewat ${m.device === 'webgpu' ? 'WebGPU' : 'WASM'}, di perangkat ini.`,
+            `${m.model.split('/')[1]} through ${m.device === 'webgpu' ? 'WebGPU' : 'WASM'}, on this device.`,
+          ),
         })
       } else if (m.type === 'error') {
-        this.setStatus({ phase: 'error', percent: 0, detail: `Model suara gagal dimuat: ${m.message}` })
+        this.setStatus({
+          phase: 'error',
+          percent: 0,
+          detail: tr(`Model suara gagal dimuat: ${m.message}`, `The speech model failed to load: ${m.message}`),
+        })
       } else if (m.type === 'partial') {
         this.streaming.get(m.id)?.(m.text)
       } else if (m.type === 'result') {

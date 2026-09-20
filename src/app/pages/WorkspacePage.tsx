@@ -29,6 +29,7 @@ import { useDialogs } from '../../state/dialogs/DialogProvider'
 import { SHAPE_LABEL } from '../../core/vocabulary'
 import { Icon, type IconName } from '../../components/shared/icons'
 import { useJoinRequests } from '../../state/rooms/useJoinRequests'
+import { tr } from '../../core/i18n'
 
 type ViewId = 'canvas' | 'outline'
 type InspectorId = 'jejak' | 'perintah' | 'peserta' | 'komentar'
@@ -38,16 +39,16 @@ type InspectorId = 'jejak' | 'perintah' | 'peserta' | 'komentar'
   for a benefit the outline panel already gives, and every extra choice in a
   toolbar is paid for by everyone who has to read past it.
 */
-const VIEWS: { id: ViewId; slug: string; label: string; icon: IconName }[] = [
-  { id: 'canvas', slug: '', label: 'Kanvas', icon: 'layout' },
-  { id: 'outline', slug: 'outline', label: 'Outline', icon: 'list' },
+const VIEWS: { id: ViewId; slug: string; label: () => string; icon: IconName }[] = [
+  { id: 'canvas', slug: '', label: () => tr('Kanvas', 'Canvas'), icon: 'layout' },
+  { id: 'outline', slug: 'outline', label: () => 'Outline', icon: 'list' },
 ]
 
-const INSPECTORS: { id: InspectorId; label: string; icon: IconName }[] = [
-  { id: 'jejak', label: 'Jejak', icon: 'clock' },
-  { id: 'perintah', label: 'Perintah', icon: 'sparkles' },
-  { id: 'peserta', label: 'Peserta', icon: 'users' },
-  { id: 'komentar', label: 'Komentar', icon: 'message' },
+const INSPECTORS: { id: InspectorId; label: () => string; icon: IconName }[] = [
+  { id: 'jejak', label: () => tr('Jejak', 'Trail'), icon: 'clock' },
+  { id: 'perintah', label: () => tr('Perintah', 'Commands'), icon: 'sparkles' },
+  { id: 'peserta', label: () => tr('Peserta', 'People'), icon: 'users' },
+  { id: 'komentar', label: () => tr('Komentar', 'Comments'), icon: 'message' },
 ]
 
 function viewFromPath(pathname: string): ViewId {
@@ -85,9 +86,9 @@ export function WorkspacePage() {
 
   return (
     <div className={`workspace ${panelHidden ? 'is-solo' : ''}`}>
-      <section className="workspace-main" aria-label="Ruang kerja">
+      <section className="workspace-main" aria-label={tr('Ruang kerja', 'Workspace')}>
         <div className="canvas-toolbar">
-          <div className="seg" role="group" aria-label="Susunan tampilan">
+          <div className="seg" role="group" aria-label={tr('Susunan tampilan', 'Arrangement')}>
             {VIEWS.map((v) => (
               <button
                 key={v.id}
@@ -97,7 +98,7 @@ export function WorkspacePage() {
                 onClick={() => navigate(v.slug ? `${base}/${v.slug}` : base)}
               >
                 <Icon name={v.icon} size={15} />
-                {v.label}
+                {v.label()}
               </button>
             ))}
           </div>
@@ -122,7 +123,7 @@ export function WorkspacePage() {
             <button
               type="button"
               className="icon-btn is-danger"
-              aria-label={`Hapus ${focused.node.title}`}
+              aria-label={`${tr('Hapus', 'Delete')} ${focused.node.title}`}
               title="Hapus simpul (Delete)"
               onClick={() => dialogs.open({ kind: 'delete', nodeId: focused.node.id })}
             >
@@ -141,10 +142,13 @@ export function WorkspacePage() {
               type="button"
               className="btn btn-small"
               onClick={clearOverrides}
-              title="Buang penempatan manual, kembali ke tata letak otomatis"
+              title={tr(
+                'Buang penempatan manual, kembali ke tata letak otomatis',
+                'Drop the hand placements and go back to the automatic layout',
+              )}
             >
               <Icon name="undo" size={15} />
-              <span className="hide-narrow">Tata letak otomatis</span>
+              <span className="hide-narrow">{tr('Tata letak otomatis', 'Automatic layout')}</span>
             </button>
           )}
 
@@ -154,9 +158,11 @@ export function WorkspacePage() {
             type="button"
             className="icon-btn"
             aria-pressed={focusMode}
-            aria-label={focusMode ? 'Keluar dari layar penuh' : 'Kanvas layar penuh'}
+            aria-label={
+              focusMode ? tr('Keluar dari layar penuh', 'Leave full screen') : tr('Kanvas layar penuh', 'Full-screen canvas')
+            }
             onClick={() => toggleFocusMode()}
-            title="Layar penuh (f), keluar dengan Escape"
+            title={tr('Layar penuh (f), keluar dengan Escape', 'Full screen (f), leave with Escape')}
           >
             <Icon name={focusMode ? 'minimize' : 'maximize'} size={17} />
           </button>
@@ -181,8 +187,8 @@ export function WorkspacePage() {
         makes a separate "hide panel" button redundant, and one control that
         does both is easier to find than two that each do half.
       */}
-      <aside className={`inspector ${panelHidden ? 'is-collapsed' : ''}`} aria-label="Panel pemeriksa">
-        <div className="seg seg-wide" role="group" aria-label="Isi panel">
+      <aside className={`inspector ${panelHidden ? 'is-collapsed' : ''}`} aria-label={tr('Panel pemeriksa', 'Inspector panel')}>
+        <div className="seg seg-wide" role="group" aria-label={tr('Isi panel', 'Panel contents')}>
           {INSPECTORS.map((item) => {
             const badge = badgeFor(item.id)
             const open = !panelHidden && inspector === item.id
@@ -193,7 +199,11 @@ export function WorkspacePage() {
                 className={`seg-btn ${open ? 'is-on' : ''}`}
                 aria-pressed={open}
                 aria-expanded={open}
-                title={open ? `Tutup panel ${item.label}` : `Buka panel ${item.label}`}
+                title={
+                  open
+                    ? tr(`Tutup panel ${item.label()}`, `Close the ${item.label()} panel`)
+                    : tr(`Buka panel ${item.label()}`, `Open the ${item.label()} panel`)
+                }
                 onClick={() => {
                   if (open) {
                     togglePanel()
@@ -204,7 +214,7 @@ export function WorkspacePage() {
                 }}
               >
                 <Icon name={item.icon} size={15} />
-                <span className="seg-label">{item.label}</span>
+                <span className="seg-label">{item.label()}</span>
                 {badge > 0 && <span className="seg-badge">{badge}</span>}
               </button>
             )
@@ -220,15 +230,14 @@ export function WorkspacePage() {
                 <p className="suggestion">
                   <Icon name="sparkles" size={16} />
                   <span>
-                    Bentuk sekarang <strong>{SHAPE_LABEL[doc.room.shape]}</strong>. Sistem
-                    mengusulkan <strong>{SHAPE_LABEL[suggestion.shape]}</strong>.{' '}
+                    {tr('Bentuk sekarang', 'Current shape')} <strong>{SHAPE_LABEL[doc.room.shape]}</strong>.{' '}
+                    {tr('Sistem mengusulkan', 'The system suggests')}{' '}
+                    <strong>{SHAPE_LABEL[suggestion.shape]}</strong>.{' '}
                     <button
                       type="button"
                       className="link"
                       onClick={() => dialogs.open({ kind: 'shape' })}
-                    >
-                      Tinjau
-                    </button>
+                    >{tr('Tinjau', 'Review')}</button>
                   </span>
                 </p>
               )}

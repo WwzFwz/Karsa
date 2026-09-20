@@ -9,6 +9,7 @@
 import { Link } from 'react-router-dom'
 import type { EntryState } from '../../state/rooms/useRoomEntry'
 import { Icon } from '../shared/icons'
+import { tr } from '../../core/i18n'
 
 export function RoomDoor({
   roomId,
@@ -33,26 +34,20 @@ export function RoomDoor({
           {state.status === 'memeriksa' && (
             <>
               <Icon name="dot" size={14} />
-              Memeriksa ruang…
+              {tr('Memeriksa ruang…', 'Checking the room…')}
             </>
           )}
           {state.status === 'menunggu' && (
             <>
-              <Icon name="lock" size={14} />
-              Menunggu diterima
-            </>
+              <Icon name="lock" size={14} />{tr('Menunggu diterima', 'Waiting to be let in')}</>
           )}
           {state.status === 'ditolak' && (
             <>
-              <Icon name="x" size={14} />
-              Permintaan masuk ditolak
-            </>
+              <Icon name="x" size={14} />{tr('Permintaan masuk ditolak', 'Request to join declined')}</>
           )}
           {state.status === 'tidak-ada' && (
             <>
-              <Icon name="alert" size={14} />
-              Kode ruang tidak ditemukan
-            </>
+              <Icon name="alert" size={14} />{tr('Kode ruang tidak ditemukan', 'Room code not found')}</>
           )}
           {state.status === 'galat' && (
             <>
@@ -64,19 +59,13 @@ export function RoomDoor({
 
         <div className="door-actions">
           {state.status === 'menunggu' && (
-            <Link className="btn" to="/ruang" onClick={onGiveUp}>
-              Batal menunggu
-            </Link>
+            <Link className="btn" to="/ruang" onClick={onGiveUp}>{tr('Batal menunggu', 'Stop waiting')}</Link>
           )}
           {state.status === 'galat' && (
-            <button type="button" className="btn btn-primary" onClick={onRetry}>
-              Coba lagi
-            </button>
+            <button type="button" className="btn btn-primary" onClick={onRetry}>{tr('Coba lagi', 'Try again')}</button>
           )}
           {(state.status === 'ditolak' || state.status === 'tidak-ada' || state.status === 'galat') && (
-            <Link className="btn" to="/ruang">
-              Ke dasbor
-            </Link>
+            <Link className="btn" to="/ruang">{tr('Ke dasbor', 'To the dashboard')}</Link>
           )}
         </div>
       </main>

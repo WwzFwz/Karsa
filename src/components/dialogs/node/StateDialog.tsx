@@ -3,6 +3,7 @@ import { Dialog } from '../../shared/Dialog'
 import { STATE_LABEL } from '../../../core/vocabulary'
 import { useDocument } from '../../../state/room/DocumentProvider'
 import type { NodeId, NodeState } from '../../../core/model/types'
+import { tr } from '../../../core/i18n'
 
 export function StateDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () => void }) {
   const { run, doc } = useDocument()
@@ -10,26 +11,22 @@ export function StateDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () =
   const states: NodeState[] = ['open', 'doing', 'done', 'blocked']
   return (
     <Dialog
-      title="Ubah status"
+      title={tr('Ubah status', 'Change status')}
       description={doc.nodes[nodeId]?.title}
       onClose={onClose}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
-            Batal
-          </button>
+          <button type="button" className="btn" onClick={onClose}>{tr('Batal', 'Cancel')}</button>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => run({ type: 'setNodeState', id: nodeId, state }).ok && onClose()}
-          >
-            Simpan
-          </button>
+          >{tr('Simpan', 'Save')}</button>
         </>
       }
     >
       <fieldset className="chips">
-        <legend className="field-label">Status</legend>
+        <legend className="field-label">{tr('Status', 'Status')}</legend>
         {states.map((s) => (
           <label key={s} className={`chip ${state === s ? 'is-on' : ''}`}>
             <input type="radio" name="state" checked={state === s} onChange={() => setState(s)} />

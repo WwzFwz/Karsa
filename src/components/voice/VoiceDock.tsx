@@ -29,6 +29,7 @@ import { useSession } from '../../state/room/SessionProvider'
 import { useAssistant } from '../../state/room/AssistantProvider'
 import { tr } from '../../core/i18n'
 import { Icon } from '../shared/icons'
+import { MODE_LABEL } from '../shared/labels'
 
 function pace(seconds: number): { label: string; tone: string } {
   if (seconds > 12) return { label: 'agak lambat', tone: 'is-slow' }
@@ -97,14 +98,16 @@ export function VoiceDock() {
         <div className={`floater transcript-float ${quietTranscript ? 'is-quiet' : ''}`}>
           <div className="floater-bar">
             <p className="floater-label">
-              <Icon name="mic" size={12} />
-              Transkripsi
-            </p>
+              <Icon name="mic" size={12} />{tr('Transkripsi', 'Transcript')}</p>
             <button
               type="button"
               className="floater-fold"
               aria-expanded={!quietTranscript}
-              aria-label={quietTranscript ? 'Tampilkan transkripsi' : 'Sembunyikan transkripsi'}
+              aria-label={
+                quietTranscript
+                  ? tr('Tampilkan transkripsi', 'Show the transcript')
+                  : tr('Sembunyikan transkripsi', 'Hide the transcript')
+              }
               onClick={() => setQuietTranscript((current) => !current)}
             >
               <Icon name={quietTranscript ? 'chevronRight' : 'chevronDown'} size={15} />
@@ -126,9 +129,12 @@ export function VoiceDock() {
               <Icon name="sparkles" size={15} />
             </span>
             <div>
-              <p className="proposal-title">Usulan sudah disiapkan</p>
+              <p className="proposal-title">{tr('Usulan sudah disiapkan', 'A suggestion is ready')}</p>
               <p className="proposal-sub">
-                Kanvas bersama belum berubah. Anda yang memutuskan.
+                {tr(
+                  'Kanvas bersama belum berubah. Anda yang memutuskan.',
+                  'The shared canvas has not changed. You decide.',
+                )}
               </p>
             </div>
           </div>
@@ -176,9 +182,7 @@ export function VoiceDock() {
 
           <div className="proposal-actions">
             <button type="button" className="btn btn-small" onClick={discardDraft}>
-              <Icon name="x" size={14} />
-              Batalkan
-            </button>
+              <Icon name="x" size={14} />{tr('Batalkan', 'Undo')}</button>
             <button
               type="button"
               className="btn btn-small btn-primary"
@@ -204,9 +208,11 @@ export function VoiceDock() {
         <div className="dock-watching" role="status">
           <span className="dock-watching-dot" aria-hidden="true" />
           <span className="dock-watching-text">
-            {overheard ? `Terdengar: "${overheard}"` : 'Menyimak. Sebut "Karsa" dulu.'}
+            {overheard
+              ? `${tr('Terdengar', 'Heard')}: "${overheard}"`
+              : tr('Menyimak. Sebut "Karsa" dulu.', 'Listening. Say "Karsa" first.')}
           </span>
-          {overheard && <span className="dock-watching-note">tidak dikerjakan</span>}
+          {overheard && <span className="dock-watching-note">{tr('tidak dikerjakan', 'not acted on')}</span>}
         </div>
       )}
 
@@ -241,10 +247,14 @@ export function VoiceDock() {
           </span>
           <span>
             <span className="dock-prime-label">
-              {talking ? (talkLatched ? 'Terkunci' : 'Mendengarkan') : 'Bicara'}
+              {talking
+                ? talkLatched
+                  ? tr('Terkunci', 'Locked on')
+                  : tr('Mendengarkan', 'Listening')
+                : tr('Bicara', 'Talk')}
             </span>
             <span className="dock-prime-hint">
-              {talking ? 'ketuk untuk berhenti' : 'ketuk atau tahan'}
+              {talking ? tr('ketuk untuk berhenti', 'tap to stop') : tr('ketuk atau tahan', 'tap or hold')}
             </span>
           </span>
         </button>
@@ -259,8 +269,10 @@ export function VoiceDock() {
             <Icon name={traversing ? 'stop' : 'headphones'} size={19} />
           </span>
           <span>
-            <span className="dock-prime-label">{traversing ? 'Hentikan' : 'Telusur audio'}</span>
-            <span className="dock-prime-hint">titik untuk mulai</span>
+            <span className="dock-prime-label">
+              {traversing ? tr('Hentikan', 'Stop') : tr('Telusur audio', 'Audio walk')}
+            </span>
+            <span className="dock-prime-hint">{tr('titik untuk mulai', 'full stop to start')}</span>
           </span>
         </button>
 
@@ -277,11 +289,21 @@ export function VoiceDock() {
           role="switch"
           className={`icon-btn ${watching ? 'is-listening' : ''}`}
           aria-checked={watching}
-          aria-label={watching ? 'Matikan Mode Menyimak' : 'Nyalakan Mode Menyimak'}
+          aria-label={
+            watching
+              ? tr('Matikan Mode Menyimak', 'Turn off Listening Mode')
+              : tr('Nyalakan Mode Menyimak', 'Turn on Listening Mode')
+          }
           title={
             watching
-              ? 'Mode Menyimak hidup — mikrofon terbuka, sebut "Karsa" dulu'
-              : 'Mode Menyimak — mikrofon tetap terbuka, tanpa menekan apa pun'
+              ? tr(
+                  'Mode Menyimak hidup — mikrofon terbuka, sebut "Karsa" dulu',
+                  'Listening Mode on — the microphone is open, say "Karsa" first',
+                )
+              : tr(
+                  'Mode Menyimak — mikrofon tetap terbuka, tanpa menekan apa pun',
+                  'Listening Mode — the microphone stays open, nothing to hold',
+                )
           }
           onClick={watching ? stopWatching : startWatching}
         >
@@ -291,8 +313,8 @@ export function VoiceDock() {
           type="button"
           className="icon-btn"
           disabled={!canUndo}
-          aria-label="Batalkan perubahan terakhir"
-          title="Batalkan perubahan terakhir (Ctrl+Z)"
+          aria-label={tr('Batalkan perubahan terakhir', 'Undo the last change')}
+          title={`${tr('Batalkan perubahan terakhir', 'Undo the last change')} (Ctrl+Z)`}
           onClick={undo}
         >
           <Icon name="undo" size={18} />
@@ -301,8 +323,14 @@ export function VoiceDock() {
           type="button"
           className={`icon-btn ${soundProfile !== 'silent' ? 'is-on' : ''}`}
           aria-pressed={soundProfile !== 'silent'}
-          aria-label={soundProfile === 'silent' ? 'Nyalakan bunyi peristiwa' : 'Matikan bunyi peristiwa'}
-          title={`Bunyi peristiwa (Ctrl+B) — ${soundProfile === 'silent' ? 'mati' : 'hidup'}`}
+          aria-label={
+            soundProfile === 'silent'
+              ? tr('Nyalakan bunyi peristiwa', 'Turn event sounds on')
+              : tr('Matikan bunyi peristiwa', 'Turn event sounds off')
+          }
+          title={`${tr('Bunyi peristiwa', 'Event sounds')} (Ctrl+B) — ${
+            soundProfile === 'silent' ? tr('mati', 'off') : tr('hidup', 'on')
+          }`}
           onClick={() => setSoundProfile(soundProfile === 'silent' ? 'sparse' : 'silent')}
         >
           <Icon name={soundProfile === 'silent' ? 'volumeOff' : 'volume'} size={18} />
@@ -311,8 +339,12 @@ export function VoiceDock() {
           type="button"
           className={`icon-btn ${mode === 'review' ? 'is-on' : ''}`}
           aria-pressed={mode === 'review'}
-          aria-label={mode === 'meeting' ? 'Beralih ke mode telaah' : 'Beralih ke mode rapat'}
-          title={`${mode === 'meeting' ? 'Mode rapat' : 'Mode telaah'} (Ctrl+M)`}
+          aria-label={
+            mode === 'meeting'
+              ? tr('Beralih ke mode telaah', 'Switch to review mode')
+              : tr('Beralih ke mode rapat', 'Switch to meeting mode')
+          }
+          title={`${MODE_LABEL[mode]} (Ctrl+M)`}
           onClick={() => setMode(mode === 'meeting' ? 'review' : 'meeting')}
         >
           <Icon name={mode === 'meeting' ? 'presentation' : 'eye'} size={18} />

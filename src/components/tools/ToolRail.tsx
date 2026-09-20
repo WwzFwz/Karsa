@@ -28,6 +28,7 @@ import { KIND_LABEL } from '../../core/vocabulary'
 import { NODE_KINDS } from '../../core/rules/invariants'
 import { TEMPLATES } from '../../core/templates/registry'
 import type { NodeKind } from '../../core/model/types'
+import { tr } from '../../core/i18n'
 
 type Sheet = 'simpul' | 'templat' | null
 
@@ -78,7 +79,7 @@ export function ToolRail() {
   const parentTitle = focused?.title ?? doc.room.title
 
   const addNode = (kind: NodeKind) => {
-    run({ type: 'createNode', parentId, kind, title: `${KIND_LABEL[kind]} baru` }, 'pointer')
+    run({ type: 'createNode', parentId, kind, title: tr(`${KIND_LABEL[kind]} baru`, `New ${KIND_LABEL[kind].toLowerCase()}`) }, 'pointer')
     setSheet(null)
   }
 
@@ -93,8 +94,8 @@ export function ToolRail() {
           className={`icon-btn ${sheet === 'simpul' ? 'is-on' : ''}`}
           aria-expanded={sheet === 'simpul'}
           aria-haspopup="true"
-          aria-label="Tambah simpul"
-          title="Tambah simpul (n)"
+          aria-label={tr('Tambah simpul', 'Add node')}
+          title={tr('Tambah simpul (n)', 'Add node (n)')}
           ref={sheet === 'simpul' ? anchor : undefined}
           onClick={() => toggle('simpul')}
         >
@@ -104,8 +105,8 @@ export function ToolRail() {
         <button
           type="button"
           className="icon-btn"
-          aria-label="Hubungkan simpul terfokus"
-          title="Hubungkan simpul terfokus (r)"
+          aria-label={tr('Hubungkan simpul terfokus', 'Relate the focused node')}
+          title={tr('Hubungkan simpul terfokus (r)', 'Relate the focused node (r)')}
           disabled={!focusId}
           onClick={() => focusId && dialogs.open({ kind: 'relate', nodeId: focusId })}
         >
@@ -115,8 +116,8 @@ export function ToolRail() {
         <button
           type="button"
           className="icon-btn"
-          aria-label="Tulis komentar pada simpul terfokus"
-          title="Tulis komentar (c)"
+          aria-label={tr('Tulis komentar pada simpul terfokus', 'Comment on the focused node')}
+          title={tr('Tulis komentar (c)', 'Write a comment (c)')}
           disabled={!focusId}
           onClick={() => focusId && dialogs.open({ kind: 'comment', nodeId: focusId })}
         >
@@ -128,8 +129,8 @@ export function ToolRail() {
           className={`icon-btn ${sheet === 'templat' ? 'is-on' : ''}`}
           aria-expanded={sheet === 'templat'}
           aria-haspopup="true"
-          aria-label="Alat dan templat"
-          title="Alat dan templat (a)"
+          aria-label={tr('Alat dan templat', 'Tools and templates')}
+          title={tr('Alat dan templat (a)', 'Tools and templates (a)')}
           ref={sheet === 'templat' ? anchor : undefined}
           onClick={() => toggle('templat')}
         >
@@ -143,11 +144,15 @@ export function ToolRail() {
             className={`rail-sheet ${sheet === 'simpul' ? 'rail-sheet-narrow' : ''}`}
             style={{ left: at.left, top: at.top }}
             role="group"
-            aria-label={sheet === 'simpul' ? 'Tipe simpul baru' : 'Alat dan templat'}
+            aria-label={
+              sheet === 'simpul' ? tr('Tipe simpul baru', 'New node type') : tr('Alat dan templat', 'Tools and templates')
+            }
           >
             {sheet === 'simpul' ? (
               <>
-                <p className="rail-sheet-head">Tambah di bawah {parentTitle}</p>
+                <p className="rail-sheet-head">
+                  {tr(`Tambah di bawah ${parentTitle}`, `Add under ${parentTitle}`)}
+                </p>
                 <ul className="rail-kinds">
                   {NODE_KINDS.filter((kind) => kind !== 'root').map((kind) => (
                     <li key={kind}>
@@ -161,7 +166,7 @@ export function ToolRail() {
               </>
             ) : (
               <>
-                <p className="rail-sheet-head">Alat &amp; templat</p>
+                <p className="rail-sheet-head">{tr('Alat & templat', 'Tools & templates')}</p>
                 <ul className="rail-grid">
                   {TEMPLATES.map((template) => (
                     <li key={template.id}>
@@ -189,8 +194,10 @@ export function ToolRail() {
                   ))}
                 </ul>
                 <p className="rail-note">
-                  Berdiri sendiri di ruang. Seret kartunya ke sebuah simpul kalau memang mau
-                  menempel di situ. Bisa dibatalkan sekali tekan.
+                  {tr(
+                    'Berdiri sendiri di ruang. Seret kartunya ke sebuah simpul kalau memang mau menempel di situ. Bisa dibatalkan sekali tekan.',
+                    'It lands on its own in the room. Drag the card onto a node if you want it attached there. One press undoes it.',
+                  )}
                 </p>
               </>
             )}

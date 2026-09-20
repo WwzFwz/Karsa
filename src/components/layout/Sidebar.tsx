@@ -10,6 +10,7 @@ import { useDocument } from '../../state/room/DocumentProvider'
 import { Icon, type IconName } from '../shared/icons'
 import { LangSwitch } from '../shared/LangSwitch'
 import { ThemeSwitch } from '../shared/ThemeSwitch'
+import { tr } from '../../core/i18n'
 
 /*
   Three places, not six. The room is one workspace whose arrangement and side
@@ -17,11 +18,11 @@ import { ThemeSwitch } from '../shared/ThemeSwitch'
   genuinely different pages. Six tabs, two of which repeated the contents of the
   others, made a person guess which copy was real.
 */
-const TABS: { to: string; label: string; icon: IconName }[] = [
-  { to: '..', label: 'Dasbor', icon: 'home' },
-  { to: '', label: 'Ruang', icon: 'layout' },
-  { to: 'ringkasan', label: 'Ringkasan', icon: 'activity' },
-  { to: 'pengaturan', label: 'Pengaturan', icon: 'settings' },
+const TABS: { to: string; label: () => string; icon: IconName }[] = [
+  { to: '..', label: () => tr('Dasbor', 'Dashboard'), icon: 'home' },
+  { to: '', label: () => tr('Ruang', 'Room'), icon: 'layout' },
+  { to: 'ringkasan', label: () => tr('Ringkasan', 'Summary'), icon: 'activity' },
+  { to: 'pengaturan', label: () => tr('Pengaturan', 'Settings'), icon: 'settings' },
 ]
 
 export function Sidebar({ base }: { base: string }) {
@@ -31,16 +32,18 @@ export function Sidebar({ base }: { base: string }) {
 
   const pendingOps = draft.status === 'ready' ? draft.operations.filter((o) => o.accepted).length : 0
   const openComments = Object.values(doc.comments).filter((c) => !c.resolvedAt).length
-  const badgeFor = (label: string): number => (label === 'Ruang' ? pendingOps + openComments : 0)
+  // Keyed on the route, not the label: the label is a sentence now and would
+  // stop matching the moment somebody switches language.
+  const badgeFor = (to: string): number => (to === '' ? pendingOps + openComments : 0)
 
   return (
-    <aside className="sidebar" aria-label="Navigasi dan setelan">
-      <nav aria-label="Tampilan ruang">
+    <aside className="sidebar" aria-label={tr('Navigasi dan setelan', 'Navigation and settings')}>
+      <nav aria-label={tr('Tampilan ruang', 'Room views')}>
         {TABS.map((tab) => {
-          const badge = badgeFor(tab.label)
+          const badge = badgeFor(tab.to)
           return (
             <NavLink
-              key={tab.label}
+              key={tab.to}
               to={tab.to === '..' ? '/ruang' : tab.to ? `${base}/${tab.to}` : base}
               className={({ isActive }) => {
                 // "Ruang" covers every arrangement of the workspace, so it
@@ -55,7 +58,7 @@ export function Sidebar({ base }: { base: string }) {
               }}
             >
               <Icon name={tab.icon} size={19} />
-              <span className="nav-label">{tab.label}</span>
+              <span className="nav-label">{tab.label()}</span>
               {badge > 0 && <span className="nav-badge">{badge}</span>}
             </NavLink>
           )
@@ -71,13 +74,15 @@ export function Sidebar({ base }: { base: string }) {
         <ThemeSwitch />
 
         <div className="side-card">
-          <p className="side-card-label">Kode ruang</p>
+          <p className="side-card-label">{tr('Kode ruang', 'Room code')}</p>
           <p className="side-card-value">{doc.room.id}</p>
-          <p className="side-card-sub">{Object.keys(doc.nodes).length} simpul</p>
+          <p className="side-card-sub">
+            {Object.keys(doc.nodes).length} {tr('simpul', 'nodes')}
+          </p>
           {tree.repairs.length > 0 && (
             <p className="side-card-alert">
               <Icon name="alert" size={12} />
-              {tree.repairs.length} pemulihan bentrok
+              {tree.repairs.length} {tr('pemulihan bentrok', 'conflict repairs')}
             </p>
           )}
         </div>

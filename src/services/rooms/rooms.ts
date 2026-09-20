@@ -11,6 +11,7 @@ import { syncUrl } from '../../core/config'
 import type { RoomShape } from '../../core/model/types'
 import { api } from './api'
 import { myRooms, readToken, rememberRoom, writeToken } from './membership'
+import { tr } from '../../core/i18n'
 
 /**
  * Who gets in. "terbuka": anyone with the code. "terkunci": the code gets you to
@@ -118,12 +119,12 @@ const MINUTE = 60_000
 /** "12 menit lalu", in the one place that needs it. */
 export function agoLabel(at: number, now = Date.now()): string {
   const minutes = Math.max(0, Math.round((now - at) / MINUTE))
-  if (minutes < 1) return 'baru saja'
-  if (minutes < 60) return `${minutes} menit lalu`
+  if (minutes < 1) return tr('baru saja', 'just now')
+  if (minutes < 60) return tr(`${minutes} menit lalu`, `${minutes} min ago`)
   const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours} jam lalu`
+  if (hours < 24) return tr(`${hours} jam lalu`, `${hours} h ago`)
   const days = Math.round(hours / 24)
-  return days === 1 ? 'kemarin' : `${days} hari lalu`
+  return days === 1 ? tr('kemarin', 'yesterday') : tr(`${days} hari lalu`, `${days} days ago`)
 }
 
 /* --- without a server: rooms on this device only --------------------------- */

@@ -39,6 +39,7 @@ import { useFocusInView } from './useFocusInView'
 import { useNodeDrag } from './useNodeDrag'
 import type { NodeId } from '../../core/model/types'
 import type { Point } from '../../core/shape/layout'
+import { tr } from '../../core/i18n'
 
 export function CanvasView() {
   const { doc, tree, votedByMe, votesOn, run } = useDocument()
@@ -56,7 +57,7 @@ export function CanvasView() {
   */
   const addChild = useCallback(
     (parentId: NodeId) => {
-      const result = run({ type: 'createNode', parentId, kind: 'idea', title: 'Gagasan baru' })
+      const result = run({ type: 'createNode', parentId, kind: 'idea', title: tr('Gagasan baru', 'New idea') })
       if (!result.ok) return
       const created = result.events.find((e) => e.type === 'createNode')?.payload.nodeId
       if (created) setEditingId(created as NodeId)
@@ -533,7 +534,12 @@ export function CanvasView() {
             dialogs.open({ kind: 'relate', nodeId: fromId, presetTarget: targetId })
           } else {
             // Never fail silently. A line that vanishes with no word looks broken.
-            announce('Tidak ada simpul di titik itu. Penghubungan dibatalkan.')
+            announce(
+            tr(
+              'Tidak ada simpul di titik itu. Penghubungan dibatalkan.',
+              'No node at that point. The link was cancelled.',
+            ),
+          )
           }
         }}
         onPointerCancel={() => {
@@ -556,7 +562,10 @@ export function CanvasView() {
         */}
         <ul
           role="tree"
-          aria-label={`Kanvas ruang ${doc.room.title}, bentuk ${SHAPE_LABEL[doc.room.shape].toLowerCase()}`}
+          aria-label={tr(
+            `Kanvas ruang ${doc.room.title}, bentuk ${SHAPE_LABEL[doc.room.shape].toLowerCase()}`,
+            `Canvas of room ${doc.room.title}, ${SHAPE_LABEL[doc.room.shape].toLowerCase()} shape`,
+          )}
           aria-multiselectable={false}
           className="canvas-nodes"
           onKeyDown={onKeyDown}

@@ -3,6 +3,7 @@ import { Dialog } from '../shared/Dialog'
 import { Icon } from '../shared/icons'
 import { useDocument } from '../../state/room/DocumentProvider'
 import { useRoomAccess } from '../../state/rooms/useRoomAccess'
+import { tr } from '../../core/i18n'
 
 /**
  * Sharing is a code, not an invitation.
@@ -25,26 +26,30 @@ export function ShareDialog({ onClose }: { onClose: () => void }) {
       setCopied(what)
       window.setTimeout(() => setCopied(null), 2200)
     } catch {
-      window.prompt('Salin:', text)
+      window.prompt(tr('Salin:', 'Copy:'), text)
     }
   }
 
   return (
     <Dialog
-      title="Bagikan ruang"
+      title={tr('Bagikan ruang', 'Share room')}
       description={
         locked
-          ? 'Kode ini membawa orang ke depan pintu. Permintaan masuknya muncul di panel Peserta, dan kamu yang menerima.'
-          : 'Siapa pun yang punya kodenya langsung bergabung. Tanpa akun, tanpa undangan.'
+          ? tr(
+              'Kode ini membawa orang ke depan pintu. Permintaan masuknya muncul di panel Peserta, dan kamu yang menerima.',
+              'This code brings people to the door. Their request shows up in the People panel, and you let them in.',
+            )
+          : tr(
+              'Siapa pun yang punya kodenya langsung bergabung. Tanpa akun, tanpa undangan.',
+              'Anyone with the code joins straight away. No account, no invitation.',
+            )
       }
       onClose={onClose}
       footer={
-        <button type="button" className="btn btn-primary" onClick={onClose}>
-          Selesai
-        </button>
+        <button type="button" className="btn btn-primary" onClick={onClose}>{tr('Selesai', 'Done')}</button>
       }
     >
-      <p className="field-label">Kode ruang</p>
+      <p className="field-label">{tr('Kode ruang', 'Room code')}</p>
       <div className="share-code">
         <span>{doc.room.id}</span>
         <button type="button" className="btn btn-small" onClick={() => copy('kode')}>
@@ -53,9 +58,7 @@ export function ShareDialog({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <p className="field-label" style={{ marginTop: 16 }}>
-        Tautan
-      </p>
+      <p className="field-label" style={{ marginTop: 16 }}>{tr('Tautan', 'Link')}</p>
       <div className="share-code is-quiet">
         <span>{link}</span>
         <button type="button" className="btn btn-small" onClick={() => copy('tautan')}>
@@ -67,8 +70,14 @@ export function ShareDialog({ onClose }: { onClose: () => void }) {
       <p className="panel-note" style={{ marginTop: 16, marginBottom: 0 }}>
         <Icon name={locked ? 'lock' : 'link'} size={14} />
         {locked
-          ? 'Ruang terkunci. Kode lebih berguna daripada tautan saat rapat berjalan: ia bisa diucapkan, dan yang menunggu tetap kelihatan di panel Peserta.'
-          : 'Ruang terbuka. Kode lebih berguna daripada tautan saat rapat sedang berjalan: ia bisa diucapkan.'}
+          ? tr(
+              'Ruang terkunci. Kode lebih berguna daripada tautan saat rapat berjalan: ia bisa diucapkan, dan yang menunggu tetap kelihatan di panel Peserta.',
+              'The room is locked. A code beats a link while a meeting is running: it can be said out loud, and whoever is waiting stays visible in the People panel.',
+            )
+          : tr(
+              'Ruang terbuka. Kode lebih berguna daripada tautan saat rapat sedang berjalan: ia bisa diucapkan.',
+              'The room is open. A code beats a link while a meeting is running: it can be said out loud.',
+            )}
       </p>
     </Dialog>
   )

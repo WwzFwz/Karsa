@@ -10,9 +10,15 @@ import { useDocument } from '../../state/room/DocumentProvider'
 import { narrate } from '../../core/events/narrate'
 import { INPUT_PATH_LABEL } from '../../core/vocabulary'
 import { Icon } from '../shared/icons'
+import { lang, tr } from '../../core/i18n'
 
 function clock(at: number): string {
-  return new Date(at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+  // The clock follows the output language, so 22.19 and 10:19 PM are not both
+  // on screen at once depending on which sentence you happen to read.
+  return new Date(at).toLocaleTimeString(lang() === 'en' ? 'en-GB' : 'id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export function EventLog({ limit = 14 }: { limit?: number }) {
@@ -23,10 +29,10 @@ export function EventLog({ limit = 14 }: { limit?: number }) {
     <section className="panel" aria-labelledby="log-heading">
       <header className="panel-head">
         <h2 id="log-heading">
-          <Icon name="clock" size={15} />
-          Jejak perubahan
-        </h2>
-        <span className="pill">{doc.events.length} peristiwa</span>
+          <Icon name="clock" size={15} />{tr('Jejak perubahan', 'Change log')}</h2>
+        <span className="pill">
+          {tr(`${doc.events.length} peristiwa`, `${doc.events.length} events`)}
+        </span>
       </header>
       <ol className="log">
         {events.map((event) => (
@@ -41,8 +47,10 @@ export function EventLog({ limit = 14 }: { limit?: number }) {
         ))}
       </ol>
       <p className="panel-note" style={{ marginTop: 10, marginBottom: 0 }}>
-        Satu peristiwa, satu kalimat. Kalimat ini juga yang dibacakan pembaca layar dan diwakili
-        bunyi pendek.
+        {tr(
+          'Satu peristiwa, satu kalimat. Kalimat ini juga yang dibacakan pembaca layar dan diwakili bunyi pendek.',
+          'One event, one sentence. It is the same sentence a screen reader reads out and a short sound stands in for.',
+        )}
       </p>
     </section>
   )

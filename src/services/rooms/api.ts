@@ -4,6 +4,7 @@
  */
 
 import { apiUrl } from '../../core/config'
+import { tr } from '../../core/i18n'
 
 export class ApiError extends Error {
   constructor(
@@ -30,13 +31,19 @@ export async function api<T>(
       body: options.body ? JSON.stringify(options.body) : undefined,
     })
   } catch {
-    throw new ApiError(0, 'Server tidak terjangkau. Periksa sambungan, lalu coba lagi.')
+    throw new ApiError(
+      0,
+      tr(
+        'Server tidak terjangkau. Periksa sambungan, lalu coba lagi.',
+        'The server is unreachable. Check the connection, then try again.',
+      ),
+    )
   }
   const text = await response.text()
   const data = text ? (JSON.parse(text) as unknown) : null
   if (!response.ok) {
     const message = (data as { message?: string | string[] } | null)?.message
-    throw new ApiError(response.status, Array.isArray(message) ? message.join(' ') : message ?? 'Permintaan gagal.')
+    throw new ApiError(response.status, Array.isArray(message) ? message.join(' ') : message ?? tr('Permintaan gagal.', 'The request failed.'))
   }
   return data as T
 }

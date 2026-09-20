@@ -3,11 +3,12 @@
 import { KIND_LABEL } from '../../core/vocabulary'
 import { NODE_KINDS, TITLE_MAX } from '../../core/rules/invariants'
 import type { NodeKind } from '../../core/model/types'
+import { tr } from '../../core/i18n'
 
 export function TitleField({
   value,
   onChange,
-  label = 'Judul',
+  label = tr('Judul', 'Title'),
 }: {
   value: string
   onChange: (v: string) => void
@@ -39,7 +40,7 @@ export function TitleField({
 export function KindField({ value, onChange }: { value: NodeKind; onChange: (k: NodeKind) => void }) {
   return (
     <fieldset className="chips">
-      <legend className="field-label">Tipe</legend>
+      <legend className="field-label">{tr('Tipe', 'Type')}</legend>
       {NODE_KINDS.filter((k) => k !== 'root').map((k) => (
         <label key={k} className={`chip ${value === k ? 'is-on' : ''}`}>
           <input

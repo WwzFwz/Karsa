@@ -21,10 +21,9 @@ server, kehadiran lewat Awareness, token dan ruang tunggu, suara dari mikrofon
 sampai draf — termasuk Mode Menyimak yang tidak menuntut tangan sama sekali. Dua
 perangkat sungguhan sudah pernah berada di satu ruang dan sepakat.
 
-Yang tersisa terbagi dua, dan keduanya jujur disebut di bawah. Yang **paling
-terlihat**: antarmuka Inggris baru separuh jalan. Yang **paling menentukan**:
-klaim aksesibilitasnya sudah diperiksa mesin dan belum pernah sekali pun
-didengar manusia.
+Yang **paling menentukan** dari sisa pekerjaannya: klaim aksesibilitasnya sudah
+diperiksa mesin dan belum pernah sekali pun didengar manusia. Antarmuka Inggris
+— yang sampai kemarin paling terlihat di daftar ini — sudah selesai (D87).
 
 ---
 
@@ -163,9 +162,12 @@ sekarang 2.000, dan itu bukan angka rapat.
 - ~~**Kursor agen tidak punya tempat berdiri untuk langkah templat.**~~ Selesai:
   kartu bayangan di tempat papan akan mendarat, kursornya berdiri di situ (D83).
 - ~~**Tawaran alat belum diredam.**~~ Selesai (D82).
-- **Antarmuka Inggris baru separuh.** Dari 47 berkas komponen dan halaman, 4
-  memakai `tr()`. Sakelar EN ada di sidebar dan sebagian besar layar tidak
-  berubah saat ditekan. Ini yang paling terlihat dari daftar ini.
+- ~~**Antarmuka Inggris baru separuh.**~~ Selesai (D87): sekitar 300 kalimat di
+  40 berkas, diperiksa di peramban halaman per halaman. Sakelar ID/EN kini juga
+  ada di halaman masuk, tidak cuma di dalam ruang. **Yang masih Indonesia: isi
+  templat** — enam templat menghasilkan simpul berjudul Indonesia apa pun bahasa
+  antarmukanya. Itu pilihan yang belum diambil, bukan yang terlupa: judul simpul
+  memang tidak diterjemahkan (D69), dan templat berada tepat di batasnya.
 - **D53 dan kodenya tidak sepakat.** D53 menyatakan templat selalu mendarat
   berdiri sendiri; `orchestrator.ts` menempelkannya ke simpul terfokus, dan
   pratinjaunya berbunyi "di bawah induk terpilih". Salah satunya harus mengalah.

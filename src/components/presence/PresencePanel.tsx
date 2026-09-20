@@ -15,6 +15,7 @@ import { Icon } from '../shared/icons'
 import { WaitingRoom } from '../rooms/WaitingRoom'
 import { serverMode } from '../../services/rooms/rooms'
 import { useRoomAccess } from '../../state/rooms/useRoomAccess'
+import { tr } from '../../core/i18n'
 
 export function PresencePanel() {
   const { doc, simulateConflict } = useDocument()
@@ -29,16 +30,14 @@ export function PresencePanel() {
     <section className="panel" aria-labelledby="presence-heading">
       <header className="panel-head">
         <h2 id="presence-heading">
-          <Icon name="users" size={15} />
-          Peserta
-        </h2>
-        <span className="pill pill-ok">{online.length} hadir</span>
+          <Icon name="users" size={15} />{tr('Peserta', 'People')}</h2>
+        <span className="pill pill-ok">{tr(`${online.length} hadir`, `${online.length} here`)}</span>
       </header>
 
       {/* Without a server nobody else can reach the room, so there is no door. */}
       {serverMode() && access && <WaitingRoom access={access} />}
 
-      <h3 className="panel-sub">Di dalam ruang</h3>
+      <h3 className="panel-sub">{tr('Di dalam ruang', 'In the room')}</h3>
       <ul className="people">
         {online.map((p) => {
           const pointed = p.pointingNodeId ? doc.nodes[p.pointingNodeId] : null
@@ -51,7 +50,7 @@ export function PresencePanel() {
               <div className="person-body">
                 <p className="person-name">
                   {p.displayName}
-                  {p.actorId === selfId && <span className="tag">Anda</span>}
+                  {p.actorId === selfId && <span className="tag">{tr('Anda', 'You')}</span>}
                   {p.talking && (
                     <span className="tag tag-talking">
                       <Icon name="mic" size={11} />
@@ -81,7 +80,7 @@ export function PresencePanel() {
                       </button>
                     </>
                   ) : (
-                    'Belum menempati simpul mana pun'
+                    tr('Belum menempati simpul mana pun', 'Not on any node yet')
                   )}
                 </p>
               </div>
@@ -92,26 +91,21 @@ export function PresencePanel() {
 
       <div className="panel-actions">
         <button type="button" className="btn btn-small" onClick={() => pointAt(focusId)} disabled={!focusId}>
-          <Icon name="pointer" size={15} />
-          Tunjuk simpul terfokus
-        </button>
+          <Icon name="pointer" size={15} />{tr('Tunjuk simpul terfokus', 'Point at the focused node')}</button>
         <button type="button" className="btn btn-small" onClick={() => pointAt(null)}>
-          <Icon name="x" size={15} />
-          Berhenti menunjuk
-        </button>
+          <Icon name="x" size={15} />{tr('Berhenti menunjuk', 'Stop pointing')}</button>
       </div>
 
       <div className="danger-zone">
-        <h3 className="panel-sub">Uji perilaku bentrok</h3>
+        <h3 className="panel-sub">{tr('Uji perilaku bentrok', 'Test conflict behaviour')}</h3>
         <p className="panel-note">
-          Yjs tidak punya operasi pindah yang aman. Tombol ini memaksa dua pemindahan bersilangan
-          seperti yang terjadi setelah penggabungan, supaya pemulihannya bisa didengar dan dibaca,
-          bukan sekadar dijelaskan.
+          {tr(
+            'Yjs tidak punya operasi pindah yang aman. Tombol ini memaksa dua pemindahan bersilangan seperti yang terjadi setelah penggabungan, supaya pemulihannya bisa didengar dan dibaca, bukan sekadar dijelaskan.',
+            'Yjs has no safe move operation. This button forces two crossing moves, the kind that happen after a merge, so the repair can be heard and read rather than merely described.',
+          )}
         </p>
         <button type="button" className="btn btn-danger btn-small" onClick={simulateConflict}>
-          <Icon name="alert" size={15} />
-          Paksa pemindahan bersilangan
-        </button>
+          <Icon name="alert" size={15} />{tr('Paksa pemindahan bersilangan', 'Force a crossing move')}</button>
       </div>
     </section>
   )

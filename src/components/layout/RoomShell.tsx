@@ -23,6 +23,7 @@ import { Icon } from '../shared/icons'
 import { VoiceDock } from '../voice/VoiceDock'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { tr } from '../../core/i18n'
 
 export function RoomShell({ children }: { children: ReactNode }) {
   const { doc, lastError, clearError } = useDocument()
@@ -62,9 +63,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
 
   return (
     <div ref={appRef} className={classes.filter(Boolean).join(' ')}>
-      <a className="skip-link" href="#isi-utama">
-        Lompat ke isi utama
-      </a>
+      <a className="skip-link" href="#isi-utama">{tr('Lompat ke isi utama', 'Skip to main content')}</a>
 
       <TopBar barRef={topbarRef} />
 
@@ -73,7 +72,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
           <div className="error-bar" role="status">
             <Icon name="alert" size={16} />
             <span>{lastError}</span>
-            <button type="button" className="icon-btn is-danger" aria-label="Tutup pesan" onClick={clearError}>
+            <button type="button" className="icon-btn is-danger" aria-label={tr('Tutup pesan', 'Dismiss message')} onClick={clearError}>
               <Icon name="x" size={16} />
             </button>
           </div>
@@ -87,8 +86,8 @@ export function RoomShell({ children }: { children: ReactNode }) {
         <button
           type="button"
           className="icon-btn focus-exit"
-          aria-label="Keluar dari layar penuh"
-          title="Keluar dari layar penuh (Escape)"
+          aria-label={tr('Keluar dari layar penuh', 'Leave full screen')}
+          title={tr('Keluar dari layar penuh (Escape)', 'Leave full screen (Escape)')}
           onClick={() => toggleFocusMode(false)}
         >
           <Icon name="minimize" size={18} />

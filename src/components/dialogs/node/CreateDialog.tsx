@@ -3,6 +3,7 @@ import { Dialog } from '../../shared/Dialog'
 import { useDocument } from '../../../state/room/DocumentProvider'
 import { TitleField, KindField } from '../fields'
 import type { NodeId, NodeKind } from '../../../core/model/types'
+import { tr } from '../../../core/i18n'
 
 export function CreateDialog({
   parentId,
@@ -25,17 +26,13 @@ export function CreateDialog({
 
   return (
     <Dialog
-      title="Tambah simpul"
-      description={`Akan ditempatkan di bawah ${parentTitle}.`}
+      title={tr('Tambah simpul', 'Add node')}
+      description={tr(`Akan ditempatkan di bawah ${parentTitle}.`, `It will be placed under ${parentTitle}.`)}
       onClose={onClose}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
-            Batal
-          </button>
-          <button type="button" className="btn btn-primary" onClick={submit} disabled={!title.trim()}>
-            Tambahkan
-          </button>
+          <button type="button" className="btn" onClick={onClose}>{tr('Batal', 'Cancel')}</button>
+          <button type="button" className="btn btn-primary" onClick={submit} disabled={!title.trim()}>{tr('Tambahkan', 'Add')}</button>
         </>
       }
     >

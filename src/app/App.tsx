@@ -10,11 +10,24 @@ import { DashboardPage } from './pages/DashboardPage'
 import { WorkspacePage } from './pages/WorkspacePage'
 import { SummaryPage } from './pages/SummaryPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { useLang } from '../state/useLang'
 
 const NAME_KEY = 'karsa:nama'
 
 export function App() {
   const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) ?? '')
+  /*
+    One subscription for the whole tree.
+
+    `tr` reads the current language at call time, so a component only shows the
+    new language when something re-renders it -- and with `tr` now in three
+    dozen files, a per-component hook would mean three dozen chances to forget
+    one and leave a stray Indonesian label behind after the switch. Subscribing
+    here re-renders everything below, which is correct as long as nothing in
+    between is memoised; nothing is, and a `memo` added later would show up as
+    exactly that stray label.
+  */
+  useLang()
 
   const join = (value: string) => {
     setName(value)

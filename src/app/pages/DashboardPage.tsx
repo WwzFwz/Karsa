@@ -21,13 +21,14 @@ import { agoLabel, lastRoom, listRooms, serverMode, type RoomSummary } from '../
 import { RoomThumbnail } from '../../components/rooms/RoomThumbnail'
 import { NewRoomDialog } from '../../components/rooms/NewRoomDialog'
 import { useAnnouncer } from '../../a11y/Announcer'
+import { tr } from '../../core/i18n'
 
 type Scope = 'semua' | 'milik' | 'dibagikan'
 
-const SCOPES: { id: Scope; label: string; icon: IconName }[] = [
-  { id: 'semua', label: 'Semua ruang', icon: 'layout' },
-  { id: 'milik', label: 'Milik saya', icon: 'folder' },
-  { id: 'dibagikan', label: 'Dibagikan ke saya', icon: 'users' },
+const SCOPES: { id: Scope; label: () => string; icon: IconName }[] = [
+  { id: 'semua', label: () => tr('Semua ruang', 'All rooms'), icon: 'layout' },
+  { id: 'milik', label: () => tr('Milik saya', 'Mine'), icon: 'folder' },
+  { id: 'dibagikan', label: () => tr('Dibagikan ke saya', 'Shared with me'), icon: 'users' },
 ]
 
 export function DashboardPage({ name }: { name: string }) {
@@ -72,7 +73,7 @@ export function DashboardPage({ name }: { name: string }) {
     } catch {
       // Clipboard can be refused. The code is on the card either way, and a
       // code is all anyone needs to join.
-      window.prompt('Salin tautan ruang ini:', link)
+      window.prompt(tr('Salin tautan ruang ini:', 'Copy this room link:'), link)
     }
   }
 
@@ -85,7 +86,7 @@ export function DashboardPage({ name }: { name: string }) {
           </span>
           <div>
             <p className="brand-name">Karsa</p>
-            <p className="brand-sub">Ruang kerja kolaboratif</p>
+            <p className="brand-sub">{tr('Ruang kerja kolaboratif', 'A collaborative workspace')}</p>
           </div>
         </div>
 
@@ -98,7 +99,7 @@ export function DashboardPage({ name }: { name: string }) {
           </button>
         )}
 
-        <nav aria-label="Saringan ruang">
+        <nav aria-label={tr('Saringan ruang', 'Room filter')}>
           {SCOPES.map((item) => (
             <button
               key={item.id}
@@ -108,7 +109,7 @@ export function DashboardPage({ name }: { name: string }) {
               onClick={() => setScope(item.id)}
             >
               <Icon name={item.icon} size={19} />
-              <span className="nav-label">{item.label}</span>
+              <span className="nav-label">{item.label()}</span>
             </button>
           ))}
         </nav>
@@ -123,14 +124,14 @@ export function DashboardPage({ name }: { name: string }) {
           <ThemeSwitch />
 
           <div className="side-card">
-            <p className="side-card-label">Masuk sebagai</p>
+            <p className="side-card-label">{tr('Masuk sebagai', 'Signed in as')}</p>
             <p className="side-card-value">
               <span className="avatar small" aria-hidden="true" style={{ ['--hue' as string]: '340' }}>
                 {name.charAt(0)}
               </span>
               {name}
             </p>
-            <p className="side-card-sub">Tanpa akun, tanpa surel</p>
+            <p className="side-card-sub">{tr('Tanpa akun, tanpa surel', 'No account, no email')}</p>
           </div>
         </div>
       </aside>
@@ -138,9 +139,12 @@ export function DashboardPage({ name }: { name: string }) {
       <main className="dash-main" id="isi-utama">
         <header className="dash-head">
           <div>
-            <h1>Ruang</h1>
+            <h1>{tr('Ruang', 'Rooms')}</h1>
             <p className="dash-sub">
-              {shown.length} ruang{serverMode() ? '' : ' di perangkat ini'}.
+              {tr(
+                `${shown.length} ruang${serverMode() ? '' : ' di perangkat ini'}.`,
+                `${shown.length} rooms${serverMode() ? '' : ' on this device'}.`,
+              )}
             </p>
           </div>
 
@@ -150,39 +154,36 @@ export function DashboardPage({ name }: { name: string }) {
               <input
                 type="search"
                 className="text-input"
-                placeholder="Cari nama atau kode ruang"
+                placeholder={tr('Cari nama atau kode ruang', 'Search by room name or code')}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                aria-label="Cari ruang"
+                aria-label={tr('Cari ruang', 'Search rooms')}
               />
             </label>
             <button type="button" className="btn btn-primary" onClick={() => setMaking(true)}>
-              <Icon name="plus" size={17} />
-              Ruang baru
-            </button>
+              <Icon name="plus" size={17} />{tr('Ruang baru', 'New room')}</button>
           </div>
         </header>
 
         <p className="dash-note">
           <Icon name="shield" size={15} />
           {serverMode()
-            ? 'Suara dan model tetap di perangkat. Yang disimpan server hanya isi ruang.'
-            : 'Tanpa server: ruang hanya ada di perangkat ini.'}
+            ? tr(
+                'Suara dan model tetap di perangkat. Yang disimpan server hanya isi ruang.',
+                'Voice and models stay on this device. The server only keeps what is in the room.',
+              )
+            : tr('Tanpa server: ruang hanya ada di perangkat ini.', 'No server: rooms live on this device only.')}
         </p>
 
         {loadError && (
           <p className="dash-empty" role="status">
             {loadError}{' '}
-            <button type="button" className="link" onClick={() => void reload()}>
-              Coba lagi
-            </button>
+            <button type="button" className="link" onClick={() => void reload()}>{tr('Coba lagi', 'Try again')}</button>
           </p>
         )}
 
         {shown.length === 0 && query.trim() ? (
-          <p className="dash-empty">
-            Tidak ada ruang yang cocok dengan pencarian itu.
-          </p>
+          <p className="dash-empty">{tr('Tidak ada ruang yang cocok dengan pencarian itu.', 'No room matches that search.')}</p>
         ) : (
           <ul className="dash-grid">
             <li>
@@ -190,8 +191,8 @@ export function DashboardPage({ name }: { name: string }) {
                 <span className="room-new-icon" aria-hidden="true">
                   <Icon name="plus" size={20} />
                 </span>
-                <span className="room-new-title">Ruang baru</span>
-                <span className="room-new-sub">Kosong, siap diisi dengan suara</span>
+                <span className="room-new-title">{tr('Ruang baru', 'New room')}</span>
+                <span className="room-new-sub">{tr('Kosong, siap diisi dengan suara', 'Empty, ready to fill by voice')}</span>
               </button>
             </li>
             {shown.map((room) => (
@@ -200,9 +201,9 @@ export function DashboardPage({ name }: { name: string }) {
                   type="button"
                   className="room-open"
                   onClick={() => openRoom(room.id)}
-                  aria-label={`Buka ruang ${room.title}, kode ${room.id}, ${
-                    room.access === 'terkunci' ? 'terkunci' : 'terbuka'
-                  }, ${room.nodeCount} simpul`}
+                  aria-label={`${tr('Buka ruang', 'Open room')} ${room.title}, ${tr('kode', 'code')} ${room.id}, ${
+                    room.access === 'terkunci' ? tr('terkunci', 'locked') : tr('terbuka', 'open')
+                  }, ${room.nodeCount} ${tr('simpul', 'nodes')}`}
                 >
                   <span className="room-thumb">
                     <RoomThumbnail id={room.id} shape={room.shape} nodeCount={room.nodeCount} />
@@ -216,9 +217,11 @@ export function DashboardPage({ name }: { name: string }) {
                           belongs on the card and not only in a settings page. */}
                       <span className={`pill ${room.access === 'terkunci' ? 'pill-lock' : ''}`}>
                         <Icon name={room.access === 'terkunci' ? 'lock' : 'link'} size={11} />
-                        {room.access === 'terkunci' ? 'terkunci' : 'terbuka'}
+                        {room.access === 'terkunci' ? tr('terkunci', 'locked') : tr('terbuka', 'open')}
                       </span>
-                      <span>{room.nodeCount} simpul</span>
+                      <span>
+                        {room.nodeCount} {tr('simpul', 'nodes')}
+                      </span>
                       <span aria-hidden="true">·</span>
                       <span>{SHAPE_LABEL[room.shape]}</span>
                     </span>
@@ -228,7 +231,7 @@ export function DashboardPage({ name }: { name: string }) {
                       {room.shared && (
                         <span className="pill">
                           <Icon name="users" size={11} />
-                          dibagikan
+                          {tr('dibagikan', 'shared')}
                         </span>
                       )}
                     </span>
@@ -236,10 +239,16 @@ export function DashboardPage({ name }: { name: string }) {
                 </button>
 
                 <div className="room-foot">
-                  <ul className="avatar-stack" aria-label={`${room.people.length} peserta terakhir`}>
-                    {room.people.slice(0, 4).map((person) => (
+                  <ul className="avatar-stack" aria-label={`${room.people.length} ${tr('peserta terakhir', 'people most recently here')}`}>
+                    {/*
+                      Keyed by position, not by name. Two people in one room
+                      can share a display name -- there are no accounts here to
+                      stop them -- and React drops one of two children with the
+                      same key, so the second one silently disappeared.
+                    */}
+                    {room.people.slice(0, 4).map((person, at) => (
                       <li
-                        key={person.name}
+                        key={`${person.name}-${at}`}
                         className="avatar small"
                         style={{ ['--hue' as string]: String(person.hue) }}
                         title={person.name}
@@ -247,17 +256,17 @@ export function DashboardPage({ name }: { name: string }) {
                         {person.name.charAt(0)}
                       </li>
                     ))}
-                    {room.people.length === 0 && <li className="room-nobody">Belum ada peserta</li>}
+                    {room.people.length === 0 && <li className="room-nobody">{tr('Belum ada peserta', 'Nobody here yet')}</li>}
                   </ul>
 
                   <button
                     type="button"
                     className="btn btn-small"
                     onClick={() => share(room)}
-                    title="Salin tautan ruang"
+                    title={tr('Salin tautan ruang', 'Copy room link')}
                   >
                     <Icon name={copied === room.id ? 'check' : 'link'} size={15} />
-                    {copied === room.id ? 'Tersalin' : 'Bagikan'}
+                    {copied === room.id ? tr('Tersalin', 'Copied') : tr('Bagikan', 'Share')}
                   </button>
                 </div>
               </li>
@@ -273,7 +282,12 @@ export function DashboardPage({ name }: { name: string }) {
           onCreated={(room) => {
             setMaking(false)
             void reload()
-            announce(`Ruang ${room.title} dibuat, kode ${room.id}.`)
+            announce(
+              tr(
+                `Ruang ${room.title} dibuat, kode ${room.id}.`,
+                `Room ${room.title} created, code ${room.id}.`,
+              ),
+            )
             openRoom(room.id)
           }}
         />

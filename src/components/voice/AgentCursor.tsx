@@ -22,6 +22,7 @@ import { useAssistant } from '../../state/room/AssistantProvider'
 import { QuestionCard } from './QuestionCard'
 import { Icon } from '../shared/icons'
 import type { Point } from '../../core/shape/layout'
+import { tr } from '../../core/i18n'
 
 function pace(seconds: number): { label: string; tone: string } {
   if (seconds > 12) return { label: 'agak lambat', tone: 'is-slow' }
@@ -86,13 +87,13 @@ export function AgentCursor({
       )}
 
       {ready && (
-        <div className="agent-bubble" role="group" aria-label="Usulan dari asisten">
+        <div className="agent-bubble" role="group" aria-label={tr('Usulan dari asisten', 'Assistant suggestion')}>
           <p className="agent-bubble-head">
             <span className="agent-avatar" aria-hidden="true">
               <Icon name="sparkles" size={13} />
             </span>
             <span>
-              <strong>Usulan sudah disiapkan</strong>
+              <strong>{tr('Usulan sudah disiapkan', 'A suggestion is ready')}</strong>
               <span className="agent-bubble-sub">
                 {targetTitle ? `Di sekitar "${targetTitle}".` : 'Di kanvas ini.'} Belum ada yang
                 berubah.
@@ -141,8 +142,7 @@ export function AgentCursor({
           )}
 
           <div className="agent-actions">
-            <button type="button" className="btn btn-small" onClick={discardDraft}>
-              Batalkan <kbd>Esc</kbd>
+            <button type="button" className="btn btn-small" onClick={discardDraft}>{tr('Batalkan', 'Undo')} <kbd>Esc</kbd>
             </button>
             <button
               type="button"

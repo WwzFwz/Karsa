@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { TITLE_MAX } from '../../core/rules/invariants'
+import { tr } from '../../core/i18n'
 
 export function InlineTitle({
   value,
@@ -56,7 +57,7 @@ export function InlineTitle({
       ref={ref}
       className={`inline-title ${over ? 'is-over' : ''} ${className}`}
       value={draft}
-      aria-label="Ubah judul simpul"
+      aria-label={tr('Ubah judul simpul', 'Rename node')}
       aria-invalid={over}
       maxLength={TITLE_MAX + 20}
       onChange={(e) => setDraft(e.target.value)}

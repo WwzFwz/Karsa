@@ -28,6 +28,7 @@ import type { ToolSpec } from '../../core/tools/registry'
 import type { Comment, NodeId, Participant, RoomDoc } from '../../core/model/types'
 import type { Point } from '../../core/shape/layout'
 import type { ProjectedNode, TreeProjection } from '../../core/tree/project'
+import { tr } from '../../core/i18n'
 
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
@@ -116,9 +117,14 @@ export function NodeCard({
   const label = [
     `${KIND_LABEL[node.kind]} ${node.title}`,
     node.state ? STATE_LABEL[node.state].toLowerCase() : '',
-    comments.length ? `${comments.length} komentar` : '',
-    pointing.length ? `ditunjuk ${pointing.map((p) => p.displayName).join(' dan ')}` : '',
-    state.proposed ? 'ada usulan menunggu persetujuan' : '',
+    comments.length ? tr(`${comments.length} komentar`, `${comments.length} comments`) : '',
+    pointing.length
+      ? tr(
+          `ditunjuk ${pointing.map((p) => p.displayName).join(' dan ')}`,
+          `pointed at by ${pointing.map((p) => p.displayName).join(' and ')}`,
+        )
+      : '',
+    state.proposed ? tr('ada usulan menunggu persetujuan', 'a suggestion is waiting for approval') : '',
   ]
     .filter(Boolean)
     .join(', ')
@@ -217,7 +223,7 @@ export function NodeCard({
       {state.proposed && (
         <span className="node-proposed" aria-hidden="true">
           <Icon name="sparkles" size={11} />
-          usulan menunggu
+          {tr('usulan menunggu', 'waiting')}
         </span>
       )}
 
@@ -232,7 +238,7 @@ export function NodeCard({
             </span>
           )}
           {node.note && (
-            <span className="count-tag" title="Punya catatan">
+            <span className="count-tag" title={tr('Punya catatan', 'Has a note')}>
               <Icon name="fileText" size={11} />
             </span>
           )}
@@ -244,7 +250,10 @@ export function NodeCard({
           className="node-pointer"
           style={{ ['--hue' as string]: String(pointing[0].hue) }}
           aria-hidden="true"
-          title={`${pointing.map((p) => p.displayName).join(' dan ')} menunjuk simpul ini`}
+          title={tr(
+            `${pointing.map((p) => p.displayName).join(' dan ')} menunjuk simpul ini`,
+            `${pointing.map((p) => p.displayName).join(' and ')} is pointing at this node`,
+          )}
         >
           <Icon name="pointer" size={12} />
         </span>
@@ -257,8 +266,8 @@ export function NodeCard({
               <button
                 type="button"
                 className="node-handle"
-                aria-label={`Tambah simpul anak di bawah ${node.title}`}
-                title="Tambah anak (n)"
+                aria-label={tr(`Tambah simpul anak di bawah ${node.title}`, `Add a child node under ${node.title}`)}
+                title={tr('Tambah anak (n)', 'Add a child (n)')}
                 onClick={(event) => {
                   event.stopPropagation()
                   on.addChild()

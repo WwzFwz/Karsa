@@ -4,6 +4,7 @@ import { Icon } from '../shared/icons'
 import { TOOL_LIST } from '../../core/tools/registry'
 import { useDocument } from '../../state/room/DocumentProvider'
 import type { NodeId, ToolKind } from '../../core/model/types'
+import { tr } from '../../core/i18n'
 
 /**
  * Turning a node into a tool, and back.
@@ -21,31 +22,30 @@ export function ToolDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () =>
 
   return (
     <Dialog
-      title="Alat"
-      description={`${node?.title ?? 'Simpul ini'} digambar sebagai alat. Anaknya tetap simpul biasa -- alat cuma cara menggambar dan mengoperasikannya, jadi mematikannya tidak menghilangkan apa pun.`}
+      title={tr('Alat', 'Tool')}
+      description={tr(
+        `${node?.title ?? 'Simpul ini'} digambar sebagai alat. Anaknya tetap simpul biasa -- alat cuma cara menggambar dan mengoperasikannya, jadi mematikannya tidak menghilangkan apa pun.`,
+        `${node?.title ?? 'This node'} is drawn as a tool. Its children stay ordinary nodes -- a tool is only a way of drawing and working them, so turning it off loses nothing.`,
+      )}
       onClose={onClose}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
-            Batal
-          </button>
+          <button type="button" className="btn" onClick={onClose}>{tr('Batal', 'Cancel')}</button>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => run({ type: 'setNodeTool', id: nodeId, tool }).ok && onClose()}
-          >
-            Terapkan
-          </button>
+          >{tr('Terapkan', 'Apply')}</button>
         </>
       }
     >
       <fieldset className="chips chips-stack">
-        <legend className="field-label">Gambar sebagai</legend>
+        <legend className="field-label">{tr('Gambar sebagai', 'Draw as')}</legend>
         <label className={`chip ${tool === null ? 'is-on' : ''}`}>
           <input type="radio" name="tool" checked={tool === null} onChange={() => setTool(null)} />
           <span>
-            <strong>Simpul biasa</strong>
-            <span className="chip-hint">Kartu judul seperti simpul lain.</span>
+            <strong>{tr('Simpul biasa', 'Ordinary node')}</strong>
+            <span className="chip-hint">{tr('Kartu judul seperti simpul lain.', 'A titled card like any other node.')}</span>
           </span>
         </label>
         {TOOL_LIST.map((spec) => (
@@ -68,8 +68,11 @@ export function ToolDialog({ nodeId, onClose }: { nodeId: NodeId; onClose: () =>
 
       <p className="panel-note" style={{ marginBottom: 0 }}>
         {childCount === 0
-          ? 'Simpul ini belum punya anak. Tambah anak lebih dulu -- itulah isi alatnya.'
-          : `${childCount} anak akan jadi isinya.`}
+          ? tr(
+              'Simpul ini belum punya anak. Tambah anak lebih dulu -- itulah isi alatnya.',
+              'This node has no children yet. Add some first -- they are what the tool holds.',
+            )
+          : tr(`${childCount} anak akan jadi isinya.`, `${childCount} children will be its contents.`)}
       </p>
     </Dialog>
   )

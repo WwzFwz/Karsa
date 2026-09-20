@@ -11,12 +11,13 @@ import { useMemo, useState } from 'react'
 import { useDocument } from '../../state/room/DocumentProvider'
 import { useView } from '../../state/room/ViewProvider'
 import { Icon } from '../shared/icons'
+import { tr } from '../../core/i18n'
 
 function timeAgo(at: number): string {
   const minutes = Math.max(0, Math.round((Date.now() - at) / 60000))
   if (minutes < 1) return 'baru saja'
-  if (minutes < 60) return `${minutes} menit lalu`
-  return `${Math.round(minutes / 60)} jam lalu`
+  if (minutes < 60) return tr(`${minutes} menit lalu`, `${minutes} min ago`)
+  return tr(`${Math.round(minutes / 60)} jam lalu`, `${Math.round(minutes / 60)} h ago`)
 }
 
 export function CommentsPanel() {
@@ -44,17 +45,13 @@ export function CommentsPanel() {
     <section className="panel" aria-labelledby="comments-heading">
       <header className="panel-head">
         <h2 id="comments-heading">
-          <Icon name="message" size={15} />
-          Percakapan pada elemen
-        </h2>
+          <Icon name="message" size={15} />{tr('Percakapan pada elemen', 'Conversation on an element')}</h2>
         <label className="toggle">
           <input
             type="checkbox"
             checked={showResolved}
             onChange={(e) => setShowResolved(e.target.checked)}
-          />
-          Tampilkan yang selesai
-        </label>
+          />{tr('Tampilkan yang selesai', 'Show resolved')}</label>
       </header>
 
       <ul className="threads">
@@ -65,7 +62,7 @@ export function CommentsPanel() {
               <p className="thread-anchor">
                 <Icon name="cornerDownRight" size={12} />
                 <button type="button" className="link" onClick={() => target && setFocus(target.id)}>
-                  {target?.title ?? 'Elemen yang sudah dihapus'}
+                  {target?.title ?? tr('Elemen yang sudah dihapus', 'An element that was deleted')}
                 </button>
               </p>
               <p className="thread-body">{root.body}</p>
@@ -87,20 +84,21 @@ export function CommentsPanel() {
                     className="btn btn-small"
                     onClick={() => run({ type: 'resolveComment', id: root.id })}
                   >
-                    <Icon name="check" size={14} />
-                    Tandai selesai
-                  </button>
+                    <Icon name="check" size={14} />{tr('Tandai selesai', 'Mark resolved')}</button>
                 </div>
               )}
             </li>
           )
         })}
-        {threads.length === 0 && <li className="empty">Belum ada komentar.</li>}
+        {threads.length === 0 && <li className="empty">{tr('Belum ada komentar.', 'No comments yet.')}</li>}
       </ul>
 
       <div className="composer">
         <label className="field-label" htmlFor="new-comment">
-          Komentar pada {focusNode ? `"${focusNode.title}"` : 'simpul yang sedang difokus'}
+          {tr(
+            `Komentar pada ${focusNode ? `"${focusNode.title}"` : 'simpul yang sedang difokus'}`,
+            `Comment on ${focusNode ? `"${focusNode.title}"` : 'the focused node'}`,
+          )}
         </label>
         <textarea
           id="new-comment"
@@ -125,9 +123,7 @@ export function CommentsPanel() {
             if (result.ok) setReply('')
           }}
         >
-          <Icon name="send" size={15} />
-          Kirim komentar
-        </button>
+          <Icon name="send" size={15} />{tr('Kirim komentar', 'Send comment')}</button>
       </div>
     </section>
   )

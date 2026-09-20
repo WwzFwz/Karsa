@@ -21,6 +21,8 @@ import { createPortal } from 'react-dom'
 import { Icon } from '../shared/icons'
 import { buildEntries, filterEntries, type PaletteRoom } from './entries'
 import type { NavigateFunction } from 'react-router-dom'
+import { tr } from '../../core/i18n'
+import { keyLabel } from '../../a11y/keys'
 
 export function CommandPalette({
   room,
@@ -106,7 +108,7 @@ export function CommandPalette({
       className="palette-backdrop"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
-      <div className="palette" role="dialog" aria-modal="true" aria-label="Daftar perintah">
+      <div className="palette" role="dialog" aria-modal="true" aria-label={tr('Daftar perintah', 'Command list')}>
         <div className="palette-search">
           <Icon name="search" size={17} />
           <input
@@ -118,7 +120,7 @@ export function CommandPalette({
             aria-controls="palette-list"
             aria-activedescendant={shown[active] ? `palette-${shown[active].id}` : undefined}
             aria-autocomplete="list"
-            placeholder="Cari perintah, alat, atau templat..."
+            placeholder={tr('Cari perintah, alat, atau templat...', 'Search commands, tools or templates...')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={onKeyDown}
@@ -126,7 +128,7 @@ export function CommandPalette({
           <kbd>Esc</kbd>
         </div>
 
-        <ul className="palette-list" id="palette-list" role="listbox" ref={list} aria-label="Perintah">
+        <ul className="palette-list" id="palette-list" role="listbox" ref={list} aria-label={tr('Perintah', 'Commands')}>
           {shown.map((entry, index) => {
             const head = entry.group !== lastGroup ? entry.group : null
             lastGroup = entry.group
@@ -158,25 +160,31 @@ export function CommandPalette({
                   {/* Named where a person is already looking, so the next time
                       they reach for the key instead of the palette. */}
                   {entry.mutates && (
-                    <span className="palette-tag" title="Mengubah kanvas bersama">
-                      ubah
+                    <span className="palette-tag" title={tr('Mengubah kanvas bersama', 'Changes the shared canvas')}>
+                      {tr('ubah', 'changes')}
                     </span>
                   )}
-                  {entry.keys && <kbd className="palette-key">{entry.keys}</kbd>}
+                  {entry.keys && <kbd className="palette-key">{keyLabel(entry.keys)}</kbd>}
                 </div>
               </li>
             )
           })}
           {shown.length === 0 && (
-            <li className="palette-empty">Tidak ada perintah yang cocok dengan itu.</li>
+            <li className="palette-empty">{tr('Tidak ada perintah yang cocok dengan itu.', 'No command matches that.')}</li>
           )}
         </ul>
 
         <p className="palette-foot">
           <Icon name="shield" size={13} />
-          Semua perintah di sini juga punya jalur papan ketiknya sendiri. Yang bertanda{' '}
-          <span className="palette-tag">ubah</span> menyentuh kanvas bersama dan tetap bisa
-          dibatalkan.
+          {tr(
+            'Semua perintah di sini juga punya jalur papan ketiknya sendiri. Yang bertanda',
+            'Every command here also has its own keyboard route. The ones marked',
+          )}{' '}
+          <span className="palette-tag">{tr('ubah', 'changes')}</span>{' '}
+          {tr(
+            'menyentuh kanvas bersama dan tetap bisa dibatalkan.',
+            'touch the shared canvas, and can still be undone.',
+          )}
         </p>
       </div>
     </div>,

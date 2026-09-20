@@ -128,7 +128,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     "Ollama selected" and "Ollama running" are different facts.
   */
   const [provider, setProviderState] = useState<ProviderId>(readProvider)
-  const [providerState, setProbe] = useState({ ready: false, detail: 'Belum diperiksa.' })
+  const [providerState, setProbe] = useState({ ready: false, detail: tr('Belum diperiksa.', 'Not checked yet.') })
   const providerRef = useRef(provider)
   providerRef.current = provider
 

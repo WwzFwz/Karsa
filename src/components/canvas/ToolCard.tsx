@@ -17,6 +17,7 @@ import { Icon } from '../shared/icons'
 import type { RoomDoc, NodeId } from '../../core/model/types'
 import type { TreeProjection } from '../../core/tree/project'
 import type { ToolSpec } from '../../core/tools/registry'
+import { tr } from '../../core/i18n'
 
 interface ToolCardProps {
   spec: ToolSpec
@@ -60,7 +61,10 @@ function VoteBody({ spec, id, doc, tree, votesOn, votedByMe, onVote }: ToolCardP
               type="button"
               className="tool-vote"
               aria-pressed={mine}
-              aria-label={`${mine ? 'Tarik pilihan dari' : 'Pilih'} ${option.title}, ${votes} suara`}
+              aria-label={tr(
+                `${mine ? 'Tarik pilihan dari' : 'Pilih'} ${option.title}, ${votes} suara`,
+                `${mine ? 'Take back the vote on' : 'Vote for'} ${option.title}, ${votes} votes`,
+              )}
               onClick={(event) => {
                 event.stopPropagation()
                 onVote(childId)
@@ -120,7 +124,7 @@ function ColumnsBody({ spec, id, doc, tree, onFocus, dropParent }: ToolCardProps
                   </li>
                 )
               })}
-              {itemIds.length === 0 && <li className="tool-empty">Kosong</li>}
+              {itemIds.length === 0 && <li className="tool-empty">{tr('Kosong', 'Empty')}</li>}
             </ul>
           </section>
         )
@@ -174,7 +178,7 @@ function QuadrantBody({ spec, id, doc, tree, onFocus, dropParent }: ToolCardProp
                   </li>
                 )
               })}
-              {itemIds.length === 0 && <li className="tool-empty">Kosong</li>}
+              {itemIds.length === 0 && <li className="tool-empty">{tr('Kosong', 'Empty')}</li>}
             </ul>
           </section>
         )

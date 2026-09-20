@@ -16,6 +16,7 @@ import { hasExplicitSpeechLang, type AsrModelId } from './settings'
 import { VoiceDetector } from './vad'
 import { Transcriber, type AsrStatus } from './transcriber'
 import { modelUrl } from '../../core/config'
+import { tr } from '../../core/i18n'
 
 /*
   Which model and which language are preferences, not machinery: `settings.ts`.
@@ -159,10 +160,13 @@ export class SpeechRecogniser {
       const name = error instanceof DOMException ? error.name : ''
       throw new Error(
         name === 'NotAllowedError'
-          ? 'Izin mikrofon ditolak. Izinkan lewat ikon gembok di bilah alamat.'
+          ? tr(
+              'Izin mikrofon ditolak. Izinkan lewat ikon gembok di bilah alamat.',
+              'Microphone permission was refused. Allow it from the padlock in the address bar.',
+            )
           : name === 'NotFoundError'
-            ? 'Tidak ada mikrofon yang terpasang.'
-            : 'Mikrofon tidak bisa dibuka.',
+            ? tr('Tidak ada mikrofon yang terpasang.', 'No microphone is attached.')
+            : tr('Mikrofon tidak bisa dibuka.', 'The microphone could not be opened.'),
       )
     }
     // The browser resamples to 16 kHz for us, which is what Whisper expects.
@@ -224,7 +228,7 @@ export class SpeechRecogniser {
 
     const audio = this.collected()
     this.chunks = []
-    if (audio.length < MIN_SAMPLES) return { text: '', error: 'Tidak ada suara yang terekam.' }
+    if (audio.length < MIN_SAMPLES) return { text: '', error: tr('Tidak ada suara yang terekam.', 'No sound was recorded.') }
     const status = await this.asr.settled()
     if (status.phase !== 'ready') return { text: '', error: status.detail }
     return this.asr.transcribe(audio, true)

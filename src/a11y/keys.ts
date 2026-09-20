@@ -11,12 +11,71 @@
  * typing in a field.
  */
 
+import { bilingual, localise, tr } from '../core/i18n'
+
+/*
+  The English half of the table, keyed by id rather than written inline.
+
+  Everywhere else the two languages sit on the same line (D69), and for the
+  same reason: a sentence added in one language and forgotten in the other is
+  invisible until somebody switches. Here that would mean a 40-line array with
+  two labels per row, and the row is already long enough to wrap. Keeping the
+  ids in one block above it buys the same check a different way: this table
+  defines what an id *is*, so a shortcut added without an English label is a
+  compile error rather than a row that quietly stays Indonesian.
+*/
+const EN = {
+  help: 'Open the shortcut sheet',
+  palette: 'Open the command list',
+  'view-canvas': 'Go to the canvas',
+  'view-outline': 'Go to the outline',
+  'view-draft': 'Open the command panel',
+  talk: 'Tap to lock the microphone, or hold while speaking',
+  traverse: 'Start or stop the audio walk',
+  mode: 'Switch between meeting and review mode',
+  sound: 'Turn sound on or off',
+  panel: 'Open or close the right panel',
+  'palette-tools': 'Open tools and templates',
+  'focus-mode': 'Full-screen canvas, leave with Escape',
+  undo: 'Undo the last change',
+  'zoom-in': 'Zoom in',
+  'zoom-out': 'Zoom out',
+  'zoom-reset': 'Back to 100 per cent',
+  'nav-down': 'To the next row',
+  'nav-up': 'To the previous row',
+  'nav-right': 'Open the branch, then to the first child',
+  'nav-left': 'Close the branch, then to the parent',
+  'nav-home': 'To the first row',
+  'nav-end': 'To the last row',
+  point: 'Point at this node for everybody',
+  'add-child': 'Add a child node',
+  'add-sibling': 'Add a sibling node',
+  rename: 'Rename',
+  kind: 'Change the node type',
+  state: 'Change the action status',
+  note: 'Edit the note',
+  move: 'Move to another parent',
+  up: 'Move up among its siblings',
+  down: 'Move down among its siblings',
+  vote: 'Vote or take the vote back on the focused node',
+  tool: 'Turn the focused node into a tool',
+  relate: 'Relate to another node',
+  comment: 'Write a comment',
+  delete: 'Delete the node',
+  'draft-apply': 'Apply the draft to the shared canvas',
+  'draft-discard': 'Discard the draft',
+}
+
+
+/** Every shortcut there is, named by the table that gives it both languages. */
+export type ShortcutId = keyof typeof EN
+
 export type ShortcutScope = 'global' | 'tree' | 'draft'
 
 export interface Shortcut {
-  id: string
+  id: ShortcutId
   keys: string[]
-  /** Indonesian, imperative, one line. */
+  /** Imperative, one line, in the current output language (D69). */
   label: string
   scope: ShortcutScope
   /** True when the shortcut changes the shared document. */
@@ -68,17 +127,46 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'draft-discard', keys: ['Escape'], label: 'Batalkan draf', scope: 'draft', mutates: false },
 ]
 
+for (const shortcut of SHORTCUTS) {
+  localise(shortcut, 'label', EN[shortcut.id])
+}
+
+/**
+ * A key as it is printed on the sheet.
+ *
+ * Only the named keys need this -- a letter is a letter in both languages, and
+ * so is `Ctrl`. It is a function rather than a table because the same key name
+ * appears inside `keys` arrays that are built once at module load, and a table
+ * read then would freeze whichever language happened to be current.
+ */
+export function keyLabel(key: string): string {
+  if (key === 'Spasi') return tr('Spasi', 'Space')
+  if (key.startsWith('Panah ')) {
+    const way = key.slice(6)
+    const en = way === 'atas' ? 'up' : way === 'bawah' ? 'down' : way === 'kiri' ? 'left' : 'right'
+    return tr(key, 'Arrow ' + en)
+  }
+  return key
+}
+
 export const SHORTCUTS_BY_SCOPE: Record<ShortcutScope, Shortcut[]> = {
   global: SHORTCUTS.filter((s) => s.scope === 'global'),
   tree: SHORTCUTS.filter((s) => s.scope === 'tree'),
   draft: SHORTCUTS.filter((s) => s.scope === 'draft'),
 }
 
-export const SCOPE_LABEL: Record<ShortcutScope, string> = {
-  global: 'Di mana saja',
-  tree: 'Saat fokus di sebuah simpul',
-  draft: 'Saat draf perintah terbuka',
-}
+export const SCOPE_LABEL: Record<ShortcutScope, string> = bilingual(
+  {
+    global: 'Di mana saja',
+    tree: 'Saat fokus di sebuah simpul',
+    draft: 'Saat draf perintah terbuka',
+  },
+  {
+    global: 'Anywhere',
+    tree: 'While a node has focus',
+    draft: 'While the command draft is open',
+  },
+)
 
 /** True while the person is typing, so single-letter shortcuts stay quiet. */
 export function isTypingTarget(target: EventTarget | null): boolean {

@@ -12,6 +12,7 @@ import { useDocument } from '../../state/room/DocumentProvider'
 import type { NodeId } from '../../core/model/types'
 import { KIND_LABEL } from '../../core/vocabulary'
 import { pathTo } from '../../core/tree/project'
+import { tr } from '../../core/i18n'
 
 export function NodePicker({
   label,
@@ -57,7 +58,7 @@ export function NodePicker({
         id={`${listId}-q`}
         type="text"
         className="text-input"
-        placeholder="Ketik untuk menyaring"
+        placeholder={tr('Ketik untuk menyaring', 'Type to filter')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         autoComplete="off"
@@ -72,8 +73,8 @@ export function NodePicker({
               className={`picker-option ${value === null ? 'is-selected' : ''}`}
               onClick={() => onChange(null)}
             >
-              <span className="picker-title">Akar ruang</span>
-              <span className="picker-trail">Tanpa induk</span>
+              <span className="picker-title">{tr('Akar ruang', 'Room root')}</span>
+              <span className="picker-trail">{tr('Tanpa induk', 'No parent')}</span>
             </button>
           </li>
         )}
@@ -95,7 +96,7 @@ export function NodePicker({
           </li>
         ))}
         {options.length === 0 && (
-          <li className="picker-empty">Tidak ada simpul yang cocok.</li>
+          <li className="picker-empty">{tr('Tidak ada simpul yang cocok.', 'No node matches that.')}</li>
         )}
       </ul>
     </div>

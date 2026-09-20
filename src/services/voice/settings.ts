@@ -13,22 +13,22 @@
  */
 
 import { CONFIG } from '../../core/config'
-import { lang } from '../../core/i18n'
+import { lang, tr } from '../../core/i18n'
 
 export type AsrModelId = string
 export type AsrMode = 'whisper-base' | 'whisper-small' | 'whisper-turbo' | 'contoh'
 
-export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: AsrModelId }[] = [
+export const ASR_MODES: { id: AsrMode; label: () => string; detail: () => string; model?: AsrModelId }[] = [
   {
     id: 'whisper-base',
-    label: 'Whisper base',
-    detail: '±80 MB · cepat',
+    label: () => 'Whisper base',
+    detail: () => tr('±80 MB · cepat', '±80 MB · fast'),
     model: CONFIG.asrModel,
   },
   {
     id: 'whisper-small',
-    label: 'Whisper small',
-    detail: '±460 MB · jauh lebih teliti untuk Bahasa Indonesia',
+    label: () => 'Whisper small',
+    detail: () => tr('±460 MB · jauh lebih teliti untuk Bahasa Indonesia', '±460 MB · far more accurate for Indonesian'),
     model: CONFIG.asrModelAccurate,
   },
   {
@@ -42,16 +42,16 @@ export const ASR_MODES: { id: AsrMode; label: string; detail: string; model?: As
       products": they are not running a 74M model either.
     */
     id: 'whisper-turbo',
-    label: 'Whisper large turbo',
-    detail: '±700 MB · setara layanan awan · butuh WebGPU',
+    label: () => 'Whisper large turbo',
+    detail: () => tr('±700 MB · setara layanan awan · butuh WebGPU', '±700 MB · a match for the cloud services · needs WebGPU'),
     model: CONFIG.asrModelBest,
   },
   {
     // No model at all: a room with no microphone still gets to see the whole
     // loop work, which is what this is for.
     id: 'contoh',
-    label: 'Ucapan contoh',
-    detail: 'Tanpa mikrofon · untuk demo',
+    label: () => tr('Ucapan contoh', 'Sample speech'),
+    detail: () => tr('Tanpa mikrofon · untuk demo', 'No microphone · for a demo'),
   },
 ]
 

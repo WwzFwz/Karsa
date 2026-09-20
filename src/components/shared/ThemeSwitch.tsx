@@ -14,6 +14,7 @@
 
 import { Icon } from './icons'
 import { useTheme } from '../../state/theme'
+import { tr } from '../../core/i18n'
 
 export function ThemeSwitch() {
   const theme = useTheme()
@@ -28,7 +29,7 @@ export function ThemeSwitch() {
       onClick={theme.toggle}
     >
       <Icon name="moon" size={16} />
-      <span className="theme-switch-label">Mode gelap</span>
+      <span className="theme-switch-label">{tr('Mode gelap', 'Dark mode')}</span>
       <span className="switch-track" aria-hidden="true">
         <span className="switch-knob">
           <Icon name={dark ? 'moon' : 'sun'} size={11} />

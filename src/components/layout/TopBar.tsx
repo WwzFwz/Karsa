@@ -10,13 +10,24 @@ import { useDocument } from '../../state/room/DocumentProvider'
 import { usePresence } from '../../state/room/PresenceProvider'
 import { useView } from '../../state/room/ViewProvider'
 import { Icon } from '../shared/icons'
+import { bilingual, tr } from '../../core/i18n'
 
-const CONNECTION_LABEL = { connected: 'Tersambung', connecting: 'Menyambung', offline: 'Luring' } as const
-const CONNECTION_HINT = {
-  connected: 'Perubahan sampai ke peserta lain',
-  connecting: 'Menyambung ke server; perubahan disimpan di perangkat ini dulu',
-  offline: 'Hanya di perangkat ini',
-} as const
+const CONNECTION_LABEL: Record<'connected' | 'connecting' | 'offline', string> = bilingual(
+  { connected: 'Tersambung', connecting: 'Menyambung', offline: 'Luring' },
+  { connected: 'Connected', connecting: 'Connecting', offline: 'Offline' },
+)
+const CONNECTION_HINT: Record<'connected' | 'connecting' | 'offline', string> = bilingual(
+  {
+    connected: 'Perubahan sampai ke peserta lain',
+    connecting: 'Menyambung ke server; perubahan disimpan di perangkat ini dulu',
+    offline: 'Hanya di perangkat ini',
+  },
+  {
+    connected: 'Changes are reaching the others',
+    connecting: 'Connecting to the server; changes are kept on this device for now',
+    offline: 'On this device only',
+  },
+)
 
 export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
   const { doc } = useDocument()
@@ -26,12 +37,14 @@ export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
   const online = participants.filter((p) => p.online)
 
   return (
-    <header className="topbar" aria-label="Bilah atas" ref={barRef}>
+    <header className="topbar" aria-label={tr('Bilah atas', 'Top bar')} ref={barRef}>
       <button
         type="button"
         className="icon-btn"
         aria-pressed={!sidebarHidden}
-        aria-label={sidebarHidden ? 'Tampilkan navigasi' : 'Sembunyikan navigasi'}
+        aria-label={
+          sidebarHidden ? tr('Tampilkan navigasi', 'Show the navigation') : tr('Sembunyikan navigasi', 'Hide the navigation')
+        }
         title="Navigasi kiri ([)"
         onClick={toggleSidebar}
       >
@@ -67,9 +80,7 @@ export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
           state. The full sentence is the tooltip and the settings page.
         */}
         <span className="mode-badge" title="Tidak ada audio yang keluar dari perangkat ini">
-          <Icon name="shield" size={13} />
-          Lokal
-        </span>
+          <Icon name="shield" size={13} />{tr('Lokal', 'Local')}</span>
         {/*
           Whether changes are reaching anyone. A label, not a colour alone, and
           polite live text so a screen reader hears a dropped connection.
@@ -98,9 +109,7 @@ export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
           onClick={() => dialogs.open({ kind: 'share' })}
           title="Bagikan kode ruang"
         >
-          <Icon name="share" size={15} />
-          Bagikan
-        </button>
+          <Icon name="share" size={15} />{tr('Bagikan', 'Share')}</button>
         <button
           type="button"
           className="btn btn-small"
@@ -113,7 +122,7 @@ export function TopBar({ barRef }: { barRef: Ref<HTMLElement> }) {
         <button
           type="button"
           className="icon-btn"
-          aria-label="Pintasan papan ketik"
+          aria-label={tr('Pintasan papan ketik', 'Keyboard shortcuts')}
           title="Pintasan papan ketik (?)"
           onClick={() => dialogs.open({ kind: 'help' })}
         >

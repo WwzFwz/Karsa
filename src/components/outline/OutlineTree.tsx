@@ -24,6 +24,7 @@ import { toolOf } from '../../core/tools/registry'
 import { Icon, KIND_ICON } from '../shared/icons'
 import { InlineTitle } from '../shared/InlineTitle'
 import type { NodeId } from '../../core/model/types'
+import { tr } from '../../core/i18n'
 
 export function OutlineTree({ compact = false }: { compact?: boolean }) {
   const { tree, doc, run, votesOn, votedByMe } = useDocument()
@@ -58,7 +59,7 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
   const renderLevel = (ids: NodeId[], isRoot = false) => (
     <ul
       role={isRoot ? 'tree' : 'group'}
-      aria-label={isRoot ? `Outline ruang ${doc.room.title}` : undefined}
+      aria-label={isRoot ? tr(`Outline ruang ${doc.room.title}`, `Outline of room ${doc.room.title}`) : undefined}
       aria-multiselectable={isRoot ? false : undefined}
       className="outline-group"
       onKeyDown={isRoot ? onKeyDown : undefined}
@@ -93,24 +94,43 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
         const mine = parentSpec ? votedByMe(id) : false
 
         const descriptionBits: string[] = []
-        if (spec) descriptionBits.push(`Alat ${spec.label.toLowerCase()}`)
+        const other = tr('simpul lain', 'another node')
+        if (spec) descriptionBits.push(tr(`Alat ${spec.label.toLowerCase()}`, `${spec.label} tool`))
         if (parentSpec) {
-          descriptionBits.push(votes === 1 ? '1 suara' : `${votes} suara`)
-          if (mine) descriptionBits.push('kamu memilih ini')
+          descriptionBits.push(tr(`${votes} suara`, votes === 1 ? '1 vote' : `${votes} votes`))
+          if (mine) descriptionBits.push(tr('kamu memilih ini', 'you voted for this'))
         }
-        if (node.state) descriptionBits.push(`Status ${STATE_LABEL[node.state].toLowerCase()}`)
+        if (node.state) {
+          descriptionBits.push(tr(`Status ${STATE_LABEL[node.state].toLowerCase()}`, `Status ${STATE_LABEL[node.state].toLowerCase()}`))
+        }
         for (const r of outgoing) {
-          descriptionBits.push(`${RELATION_LABEL[r.kind]} ${doc.nodes[r.toId]?.title ?? 'simpul lain'}`)
+          descriptionBits.push(`${RELATION_LABEL[r.kind]} ${doc.nodes[r.toId]?.title ?? other}`)
         }
         for (const r of incoming) {
-          descriptionBits.push(`dirujuk oleh ${doc.nodes[r.fromId]?.title ?? 'simpul lain'}`)
+          descriptionBits.push(
+            tr(
+              `dirujuk oleh ${doc.nodes[r.fromId]?.title ?? other}`,
+              `referred to by ${doc.nodes[r.fromId]?.title ?? other}`,
+            ),
+          )
         }
-        if (comments.length) descriptionBits.push(`${comments.length} komentar belum selesai`)
+        if (comments.length) {
+          descriptionBits.push(
+            tr(`${comments.length} komentar belum selesai`, `${comments.length} unresolved comments`),
+          )
+        }
         if (pointing.length) {
-          descriptionBits.push(`sedang ditunjuk ${pointing.map((p) => p.displayName).join(' dan ')}`)
+          descriptionBits.push(
+            tr(
+              `sedang ditunjuk ${pointing.map((p) => p.displayName).join(' dan ')}`,
+              `being pointed at by ${pointing.map((p) => p.displayName).join(' and ')}`,
+            ),
+          )
         }
-        if (node.note && !showsNote) descriptionBits.push(`Catatan: ${node.note}`)
-        if (draftTargets.has(id)) descriptionBits.push('ada usulan menunggu persetujuan')
+        if (node.note && !showsNote) descriptionBits.push(tr(`Catatan: ${node.note}`, `Note: ${node.note}`))
+        if (draftTargets.has(id)) {
+          descriptionBits.push(tr('ada usulan menunggu persetujuan', 'a suggestion is waiting for approval'))
+        }
 
         return (
           <li
@@ -186,7 +206,10 @@ export function OutlineTree({ compact = false }: { compact?: boolean }) {
                   type="button"
                   className={`vote-tag ${mine ? 'is-mine' : ''}`}
                   aria-pressed={mine}
-                  aria-label={`${mine ? 'Tarik pilihan dari' : 'Pilih'} ${node.title}`}
+                  aria-label={tr(
+                    `${mine ? 'Tarik pilihan dari' : 'Pilih'} ${node.title}`,
+                    `${mine ? 'Take back the vote on' : 'Vote for'} ${node.title}`,
+                  )}
                   onClick={(e) => {
                     e.stopPropagation()
                     run({ type: 'voteNode', id }, 'pointer')

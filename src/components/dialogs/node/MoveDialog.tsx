@@ -4,6 +4,7 @@ import { NodePicker } from '../../shared/NodePicker'
 import { descendantsOf } from '../../../core/tree/project'
 import { useDocument } from '../../../state/room/DocumentProvider'
 import type { NodeId } from '../../../core/model/types'
+import { tr } from '../../../core/i18n'
 
 export function MoveDialog({
   nodeId,
@@ -25,29 +26,31 @@ export function MoveDialog({
   )
   return (
     <Dialog
-      title="Pindahkan simpul"
+      title={tr('Pindahkan simpul', 'Move node')}
       description={
         presetParent
-          ? `${doc.nodes[nodeId]?.title} akan menjadi anak dari ${doc.nodes[presetParent]?.title}. Pindah mengubah pohon, jadi ia dikonfirmasi lebih dulu.`
-          : `${doc.nodes[nodeId]?.title} akan menjadi anak dari induk yang dipilih.`
+          ? tr(
+              `${doc.nodes[nodeId]?.title} akan menjadi anak dari ${doc.nodes[presetParent]?.title}. Pindah mengubah pohon, jadi ia dikonfirmasi lebih dulu.`,
+              `${doc.nodes[nodeId]?.title} will become a child of ${doc.nodes[presetParent]?.title}. A move changes the tree, so it is confirmed first.`,
+            )
+          : tr(
+              `${doc.nodes[nodeId]?.title} akan menjadi anak dari induk yang dipilih.`,
+              `${doc.nodes[nodeId]?.title} will become a child of the chosen parent.`,
+            )
       }
       onClose={onClose}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
-            Batal
-          </button>
+          <button type="button" className="btn" onClick={onClose}>{tr('Batal', 'Cancel')}</button>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => run({ type: 'moveNode', id: nodeId, parentId: target }).ok && onClose()}
-          >
-            Pindahkan
-          </button>
+          >{tr('Pindahkan', 'Move')}</button>
         </>
       }
     >
-      <NodePicker label="Induk tujuan" exclude={forbidden} allowRoot value={target} onChange={setTarget} />
+      <NodePicker label={tr('Induk tujuan', 'New parent')} exclude={forbidden} allowRoot value={target} onChange={setTarget} />
     </Dialog>
   )
 }

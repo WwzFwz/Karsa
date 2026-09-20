@@ -110,7 +110,7 @@ export function DocumentProvider({
     return new YjsDocStore({
       initial: room === DEMO_ROOM
         ? buildSeedDoc(self)
-        : buildEmptyDoc(room, entry.title ?? 'Ruang tanpa nama', self),
+        : buildEmptyDoc(room, entry.title ?? tr('Ruang tanpa nama', 'Untitled room'), self),
       self,
       // With a server, the server seeds every room; a device never does (D79).
       seedLocally: !serverMode(),
@@ -182,11 +182,17 @@ export function DocumentProvider({
       const key = `${repair.nodeId}:${repair.formerParentId}`
       if (knownRepairs.current.has(key)) continue
       knownRepairs.current.add(key)
-      const title = doc.nodes[repair.nodeId]?.title ?? 'Sebuah simpul'
+      const title = doc.nodes[repair.nodeId]?.title ?? tr('Sebuah simpul', 'A node')
       announcer.announce(
         repair.reason === 'cycle'
-          ? `Perpindahan bertabrakan. ${title} dikembalikan ke akar.`
-          : `Induk ${title} hilang. Simpul dikembalikan ke akar.`,
+          ? tr(
+              `Perpindahan bertabrakan. ${title} dikembalikan ke akar.`,
+              `Two moves collided. ${title} was returned to the root.`,
+            )
+          : tr(
+              `Induk ${title} hilang. Simpul dikembalikan ke akar.`,
+              `The parent of ${title} is gone. The node was returned to the root.`,
+            ),
         'assertive',
       )
       audioBus.emit({ earcon: 'cycleResolved', force: true })
@@ -245,7 +251,12 @@ export function DocumentProvider({
         refuse(result.violation.message)
         return
       }
-      announcer.announce(`Anda menambahkan templat ${spec.label}, ${templateSize(built)} simpul.`)
+      announcer.announce(
+        tr(
+          `Anda menambahkan templat ${spec.label}, ${templateSize(built)} simpul.`,
+          `You added the ${spec.label} template, ${templateSize(built)} nodes.`,
+        ),
+      )
       audioBus.emit({ earcon: 'createNode', depth: 0, hue: hueOf(self.id) })
       applied(result.events)
     },
@@ -260,7 +271,7 @@ export function DocumentProvider({
   const undo = useCallback(() => {
     const event = store.undo(self.id)
     if (!event) {
-      announcer.announce('Tidak ada perubahan yang bisa dibatalkan.', 'assertive')
+      announcer.announce(tr('Tidak ada perubahan yang bisa dibatalkan.', 'There is no change to undo.'), 'assertive')
       audioBus.emit({ earcon: 'blocked', force: true })
       return
     }

@@ -12,6 +12,7 @@
  */
 
 import { Icon } from '../shared/icons'
+import { tr } from '../../core/i18n'
 
 export function ZoomBar({
   zoom,
@@ -28,11 +29,11 @@ export function ZoomBar({
 }) {
   const percent = Math.round(zoom * 100)
   return (
-    <div className="zoom-bar" role="group" aria-label="Perbesaran kanvas">
+    <div className="zoom-bar" role="group" aria-label={tr('Perbesaran kanvas', 'Canvas zoom')}>
       <button
         type="button"
         className="icon-btn"
-        aria-label="Perkecil"
+        aria-label={tr('Perkecil', 'Zoom out')}
         title="Perkecil (Ctrl -)"
         onClick={() => onZoom(zoom - 0.15)}
         disabled={zoom <= min + 0.001}
@@ -45,7 +46,7 @@ export function ZoomBar({
         type="button"
         className="zoom-value"
         aria-label={`Perbesaran ${percent} persen. Kembalikan ke ukuran asli.`}
-        title="Kembali ke 100 persen (Ctrl 0)"
+        title={tr('Kembali ke 100 persen (Ctrl 0)', 'Back to 100 per cent (Ctrl 0)')}
         onClick={() => onZoom(1)}
       >
         {percent}%
@@ -54,7 +55,7 @@ export function ZoomBar({
       <button
         type="button"
         className="icon-btn"
-        aria-label="Perbesar"
+        aria-label={tr('Perbesar', 'Zoom in')}
         title="Perbesar (Ctrl +)"
         onClick={() => onZoom(zoom + 0.15)}
         disabled={zoom >= max - 0.001}
@@ -67,8 +68,8 @@ export function ZoomBar({
       <button
         type="button"
         className="icon-btn"
-        aria-label="Paskan seluruh kanvas ke layar"
-        title="Paskan ke layar"
+        aria-label={tr('Paskan seluruh kanvas ke layar', 'Fit the whole canvas on screen')}
+        title={tr('Paskan ke layar', 'Fit to screen')}
         onClick={onFit}
       >
         <Icon name="maximize" size={17} />

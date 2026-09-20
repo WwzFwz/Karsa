@@ -10,6 +10,8 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../components/shared/icons'
 import { useTheme } from '../../state/theme'
+import { LangSwitch } from '../../components/shared/LangSwitch'
+import { tr } from '../../core/i18n'
 
 const SAMPLE_ROOM = 'KUR-482'
 
@@ -23,7 +25,12 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!name.trim()) {
-      setError('Isi nama panggilan dulu supaya rekan tahu siapa yang menyunting.')
+      setError(
+        tr(
+          'Isi nama panggilan dulu supaya rekan tahu siapa yang menyunting.',
+          'Type a display name first, so the others know who is editing.',
+        ),
+      )
       return
     }
     onJoin(name.trim())
@@ -41,31 +48,42 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
           </span>
           <div>
             <p className="brand-name">Karsa</p>
-            <p className="brand-sub">Ruang kerja kolaboratif</p>
+            <p className="brand-sub">{tr('Ruang kerja kolaboratif', 'A collaborative workspace')}</p>
           </div>
           <span className="topbar-spacer" />
+          {/*
+            The language switch belongs on this page too. It is the first thing
+            anybody sees, and the two controls that decide how the whole product
+            reads -- its language and its brightness -- should not be reachable
+            only from inside a room somebody has not joined yet.
+          */}
+          <LangSwitch />
           <button
             type="button"
             className="icon-btn"
-            aria-label={theme.active === 'dark' ? 'Beralih ke tema terang' : 'Beralih ke tema gelap'}
-            title={theme.active === 'dark' ? 'Tema gelap' : 'Tema terang'}
+            aria-label={
+              theme.active === 'dark'
+                ? tr('Beralih ke tema terang', 'Switch to the light theme')
+                : tr('Beralih ke tema gelap', 'Switch to the dark theme')
+            }
+            title={theme.active === 'dark' ? tr('Tema gelap', 'Dark theme') : tr('Tema terang', 'Light theme')}
             onClick={theme.toggle}
           >
             <Icon name={theme.active === 'dark' ? 'moon' : 'sun'} size={19} />
           </button>
         </div>
 
-        <h1>Dioperasikan tanpa tangan. Diikuti tanpa mata.</h1>
+        <h1>{tr('Dioperasikan tanpa tangan. Diikuti tanpa mata.', 'Worked without hands. Followed without eyes.')}</h1>
         <p className="join-lede">
-          Satu model data, tiga tampilan setara: kanvas, outline, dan penelusuran lewat bunyi.
-          Ketiganya berubah bersamaan karena ketiganya membaca data yang sama.
+          {tr(
+            'Satu model data, tiga tampilan setara: kanvas, outline, dan penelusuran lewat bunyi. Ketiganya berubah bersamaan karena ketiganya membaca data yang sama.',
+            'One data model, three equal views: the canvas, the outline, and a walk through sound. All three change together because all three read the same data.',
+          )}
         </p>
 
         <form onSubmit={submit} className="join-form">
           <div className="field">
-            <label className="field-label" htmlFor="join-name">
-              Nama panggilan
-            </label>
+            <label className="field-label" htmlFor="join-name">{tr('Nama panggilan', 'Display name')}</label>
             <input
               id="join-name"
               className="text-input"
@@ -74,31 +92,33 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
                 setName(e.target.value)
                 if (error) setError(null)
               }}
-              placeholder="Nama yang muncul di daftar peserta"
+              placeholder={tr('Nama yang muncul di daftar peserta', 'The name shown in the people list')}
               autoComplete="nickname"
               aria-describedby={error ? 'join-error' : 'join-name-help'}
               aria-invalid={Boolean(error)}
             />
             <p className="field-help" id="join-name-help">
-              Tanpa akun, tanpa surel, tanpa kata sandi.
+              {tr('Tanpa akun, tanpa surel, tanpa kata sandi.', 'No account, no email, no password.')}
             </p>
           </div>
 
           <div className="field">
-            <label className="field-label" htmlFor="join-code">
-              Kode ruang
-            </label>
+            <label className="field-label" htmlFor="join-code">{tr('Kode ruang', 'Room code')}</label>
             <input
               id="join-code"
               className="text-input"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="Contoh: KUR-482"
+              placeholder={`${tr('Contoh', 'For example')}: KUR-482`}
               aria-describedby="join-code-help"
             />
             <p className="field-help" id="join-code-help">
-              Kosongkan untuk melihat daftar ruang. Ruang contoh <strong>{SAMPLE_ROOM}</strong> sudah
-              berisi rapat kurikulum dengan lima peserta.
+              {tr('Kosongkan untuk melihat daftar ruang. Ruang contoh', 'Leave it empty to see the room list. The sample room')}{' '}
+              <strong>{SAMPLE_ROOM}</strong>{' '}
+              {tr(
+                'sudah berisi rapat kurikulum dengan lima peserta.',
+                'already holds a curriculum meeting with five people.',
+              )}
             </p>
           </div>
 
@@ -111,7 +131,7 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
           <div className="join-actions is-single">
             <button type="submit" className="btn btn-primary btn-wide">
               <Icon name="logIn" size={17} />
-              {code.trim() ? 'Gabung ke ruang' : 'Lihat daftar ruang'}
+              {code.trim() ? tr('Gabung ke ruang', 'Join the room') : tr('Lihat daftar ruang', 'See the room list')}
             </button>
           </div>
         </form>
@@ -120,22 +140,23 @@ export function JoinPage({ onJoin }: { onJoin: (name: string) => void }) {
           <li>
             <Icon name="shield" size={16} />
             <span>
-              <strong>Tidak ada audio yang keluar dari perangkat.</strong> Pengenalan suara dan model
-              bahasa berjalan di sini.
+              <strong>{tr('Tidak ada audio yang keluar dari perangkat.', 'No audio leaves this device.')}</strong>{' '}
+              {tr('Pengenalan suara dan model bahasa berjalan di sini.', 'Speech recognition and the language model run right here.')}
             </span>
           </li>
           <li>
             <Icon name="eye" size={16} />
             <span>
-              <strong>Aksesibilitas aktif secara bawaan.</strong> Tidak ada tombol mode aksesibel
-              yang harus dinyalakan.
+              <strong>{tr('Aksesibilitas aktif secara bawaan.', 'Accessibility is on by default.')}</strong>{' '}
+              {tr('Tidak ada tombol mode aksesibel yang harus dinyalakan.', 'There is no accessible mode to switch on.')}
             </span>
           </li>
           <li>
             <Icon name="keyboard" size={16} />
             <span>
-              <strong>Bisa dijalankan tanpa tetikus.</strong> Tekan <kbd>?</kbd> di dalam ruang untuk
-              melihat seluruh pintasan.
+              <strong>{tr('Bisa dijalankan tanpa tetikus.', 'It works without a mouse.')}</strong>{' '}
+              {tr('Tekan', 'Press')} <kbd>?</kbd>{' '}
+              {tr('di dalam ruang untuk melihat seluruh pintasan.', 'inside a room to see every shortcut.')}
             </span>
           </li>
         </ul>

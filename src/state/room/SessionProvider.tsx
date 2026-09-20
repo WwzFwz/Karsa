@@ -10,6 +10,7 @@ import type { SoundProfile } from '../../audio/earcons'
 import { useDocument } from './DocumentProvider'
 import { usePresence } from './PresenceProvider'
 import { useView } from './ViewProvider'
+import { tr } from '../../core/i18n'
 
 export type SessionMode = 'meeting' | 'review'
 
@@ -49,14 +50,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setModeState(next)
       updateSelf({ mode: next })
       setSoundProfile(next === 'review' ? 'full' : 'sparse')
-      announcer.announce(next === 'review' ? 'Mode telaah. Bunyi penuh.' : 'Mode rapat. Bunyi ditekan.')
+      announcer.announce(
+        next === 'review'
+          ? tr('Mode telaah. Bunyi penuh.', 'Review mode. Full sound.')
+          : tr('Mode rapat. Bunyi ditekan.', 'Meeting mode. Sound held back.'),
+      )
     },
     [updateSelf, announcer],
   )
 
   const toggleTraversal = useCallback(() => {
     setTraversing((on) => {
-      announcer.announce(on ? 'Telusur audio berhenti.' : 'Telusur audio dimulai.')
+      announcer.announce(
+        on ? tr('Telusur audio berhenti.', 'Audio walk stopped.') : tr('Telusur audio dimulai.', 'Audio walk started.'),
+      )
       return !on
     })
   }, [announcer])
@@ -82,14 +89,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const now = walk.current
       if (index >= now.visibleIds.length) {
         setTraversing(false)
-        now.announcer.announce('Telusur audio selesai.')
+        now.announcer.announce(tr('Telusur audio selesai.', 'Audio walk finished.'))
         return
       }
       const id = now.visibleIds[index]
       const entry = now.tree.byId.get(id)
       if (entry) {
         audioBus.emit({ earcon: 'traverse', depth: entry.depth, force: true })
-        now.announcer.announce(`Tingkat ${entry.depth + 1}. ${entry.node.title}.`)
+        now.announcer.announce(tr(`Tingkat ${entry.depth + 1}. ${entry.node.title}.`, `Level ${entry.depth + 1}. ${entry.node.title}.`))
         now.setFocus(id, { announce: false })
       }
       setTraversalIndex(index)
