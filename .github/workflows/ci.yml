@@ -58,7 +58,13 @@ jobs:
         run: |
           set -o pipefail
           npm test 2>&1 | tee test.log || {
-            echo "::error title=npm test::$(grep -E '^not ok|^# (fail|Subtest)|^ +(code|expected|actual|operator):' test.log | head -25 | awk '{ printf "%s%%0A", $0 }')"
+            # The TAP failures if there are any, and the tail of the output if
+            # there are none -- because the first time this went red it was not
+            # a failing assertion at all, and a wrapper that only knows how to
+            # report assertions reported nothing.
+            lines=$(grep -E '^not ok|^# (fail|Subtest)|^ +(code|expected|actual|operator):' test.log | head -25)
+            [ -n "$lines" ] || lines=$(tail -n 30 test.log)
+            echo "::error title=npm test::$(printf '%s' "$lines" | awk '{ printf "%s%%0A", $0 }')"
             exit 1
           }
 
