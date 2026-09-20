@@ -57,19 +57,22 @@ jobs:
       - name: npm test
         shell: bash
         run: |
-          # No pipeline and no `-e` in the way: the previous two attempts at
-          # this both came back with an empty annotation, which is the same
-          # amount of information as no annotation at all. The exit code and
-          # the byte count go into the message unconditionally, so even "it
-          # produced nothing" is something this can say out loud.
+          # `set +e` first, and it is the whole point of this block.
+          #
+          # Actions runs a `run:` script under `bash -e`, so the moment `npm
+          # test` returns non-zero the shell exits -- taking the line that was
+          # supposed to report *why* with it. Three attempts at this wrapper
+          # reported nothing for exactly that reason before the cause was the
+          # wrapper rather than the tests.
+          set +e
           echo "node $(node -v), npm $(npm -v)"
           npm test > test.log 2>&1
           code=$?
-          bytes=$(wc -c < test.log)
+          echo "exit ${code}, $(wc -c < test.log) bytes of output"
           tail -n 40 test.log
           if [ "$code" -ne 0 ]; then
             body=$(tail -n 40 test.log | awk '{ printf "%s%%0A", $0 }')
-            echo "::error title=npm test::exit ${code}, ${bytes} bytes, node $(node -v)%0A${body}"
+            echo "::error title=npm test::exit ${code}, node $(node -v)%0A${body}"
             exit "$code"
           fi
 
