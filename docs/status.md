@@ -58,11 +58,16 @@ diperiksa mesin dan belum pernah sekali pun didengar manusia. Antarmuka Inggris
 
 ### 2.1 Uji otomatis untuk `core/` — **sudah dimulai (D73)**
 
-115 uji (`npm test`), 12 uji server (`npm run test:server`), 7 uji dua perangkat
+150 uji (`npm test`), 12 uji server (`npm run test:server`), 7 uji dua perangkat
 (`npm run test:people`), dan 27 kasus eval. Mencakup aturan 1, 4, 5, satu pintu
 data, hitungan suara, alur suara per perangkat (D74), dokumen Yjs (D75),
-kehadiran (D78), kata pemicu Mode Menyimak (D80), dan peredaman tawaran alat
-(D82). Belum: tata letak, dan orchestrator selain set uji eval.
+kehadiran (D78), kata pemicu Mode Menyimak (D80), peredaman tawaran alat (D82),
+dan tata letak kelima bentuk (D88). **Belum: orchestrator selain set uji eval.**
+
+Tata letak ditambahkan terakhir dan paling telat: aritmetika yang memutuskan
+apakah dua kartu bertumpuk sudah dua kali melepas bug yang sama (D54, D55) tanpa
+satu pun uji menjaganya. Ujinya diperiksa dengan memasang kembali bug D55 dan
+memastikan ada yang merah.
 
 ### 2.2 Isi ruang hilang saat halaman dimuat ulang — **selesai (D75)**
 
@@ -174,12 +179,19 @@ sekarang 2.000, dan itu bukan angka rapat.
 
 ### 2.8 Ketahanan
 
-- **Tidak ada error boundary.** Satu galat render membuat layar putih.
-- **Tidak ada CI.** `tsc`, `vite build`, dan `npm run eval` dijalankan manual.
+- ~~**Tidak ada error boundary.**~~ Selesai (D88): dua tingkat, yang dalam
+  berkunci rute supaya pindah halaman memulihkannya. Diuji di peramban dengan
+  galat sungguhan — bilah atas, navigasi, dan dock tetap berdiri.
+- ~~**Tidak ada CI.**~~ Selesai (D88): `.github/workflows/ci.yml` menjalankan
+  `npm run check`, uji server, uji dua perangkat, build klien, dan `docker
+  build`. Perintahnya sama persis dengan yang dijalankan orang di laptopnya.
 - **Latensi model 6-12 detik.** Terukur: prefill 82 ms, decode 23 tok/detik, dan
   jawabannya 146-270 token karena tiap field di skema JSON `required`. Tanpa
   skema: 31 token, 1,6 detik.
-- **Tidak ada Dockerfile.** Padahal mode kelas dijanjikan sebagai satu kontainer.
+- ~~**Tidak ada Dockerfile.**~~ Selesai (D88): satu image, Compose untuk mode
+  kelas, naskahnya di `docs/pemasangan.md`. **Batasnya jujur:** `docker build`
+  belum pernah selesai sekali pun di mesin ini karena daemon-nya mati, jadi yang
+  diperiksa baru asumsinya satu per satu. Pembuktian pertamanya adalah CI.
 - **Belum diuji di jendela sempit sungguhan** — tata letaknya responsif, tapi
   yang diperiksa selama ini jendela lebar.
 

@@ -1,0 +1,44 @@
+# Mode kelas: one container on a teacher's laptop, no internet required.
+#
+#   KARSA_SECRET=$(openssl rand -hex 32) docker compose up -d
+#
+# Section 7 says the classroom install and the deployed one are the same code
+# with different configuration. This file is that configuration, and it is
+# short on purpose -- Redis, PostgreSQL and a reverse proxy belong to the
+# cross-region path in docs/architecture.md, and none of them earn their place
+# until Hocuspocus runs on more than one instance (D2).
+
+services:
+  karsa:
+    build: .
+    image: karsa
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # Signs the join tokens. Without it the server refuses to start in
+      # production, because anyone could otherwise mint a token for any room.
+      # Generate one per install and keep it: changing it logs everybody out.
+      KARSA_SECRET: ${KARSA_SECRET:?set KARSA_SECRET, e.g. openssl rand -hex 32}
+      KARSA_TOKEN_DAYS: ${KARSA_TOKEN_DAYS:-30}
+      # Uncomment together with the models mount below to serve speech models
+      # from this machine instead of from Hugging Face (D81). The client also
+      # has to be built with VITE_MODEL_URL=/models for it to look here.
+      # KARSA_MODELS: /models
+    volumes:
+      # The rooms. Everything else in the container is rebuildable.
+      - karsa-data:/data
+      # - ./server/models:/models:ro
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/rooms').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  karsa-data:

@@ -1,0 +1,68 @@
+# What has to be true before anything is merged.
+#
+# The same commands a person runs locally, in the same order, so a green tick
+# here means exactly what a green `npm run check` means on a laptop. A pipeline
+# that checks something different from what developers run is a pipeline people
+# learn to ignore.
+
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push supersedes the first: nobody needs the results of a commit that
+# has already been replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22 and not 20: the server stores rooms in node:sqlite, which does
+          # not exist before 22.6 (D76).
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - run: npm ci
+      - run: npm ci --prefix server
+
+      # Typecheck, import boundaries, unit tests, and the orchestrator eval
+      # against the rule matcher. The Ollama half of the eval is deliberately
+      # not here: it needs a 7B model on the machine, and a check that cannot
+      # run offline is a check that does not belong in the gate (D62).
+      - run: npm run check
+
+      # The server's own suite: twelve cases against a real server, plus the
+      # two-device test. They need a build, which is its own kind of check.
+      - run: npm run test:server
+      - run: npm run test:people
+
+      # The client bundle. It is the one step above that the others do not
+      # cover -- `tsc` is happy with plenty of things Vite refuses to bundle.
+      - run: npm run build
+
+  image:
+    # Proves the one-container promise in section 7 still holds. Build only:
+    # publishing is a decision about where this gets hosted, and nobody has
+    # made it yet.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { rememberLastRoom } from '../../services/rooms/rooms'
 import { useDocument } from '../../state/room/DocumentProvider'
 import { useView } from '../../state/room/ViewProvider'
@@ -24,11 +24,13 @@ import { VoiceDock } from '../voice/VoiceDock'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { tr } from '../../core/i18n'
+import { ErrorBoundary } from '../shared/ErrorBoundary'
 
 export function RoomShell({ children }: { children: ReactNode }) {
   const { doc, lastError, clearError } = useDocument()
   const { panelHidden, sidebarHidden, focusMode, toggleFocusMode } = useView()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { roomId } = useParams()
   const base = `/ruang/${roomId ?? doc.room.id}`
 
@@ -77,7 +79,21 @@ export function RoomShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         )}
-        <main id="isi-utama">{children}</main>
+        {/*
+          The inner net, around the workspace and nothing else.
+
+          A crash in the canvas is the likeliest one there is -- it is where
+          the arithmetic, the measuring and the dragging live -- and it must
+          not take the navigation, the dock and the room code down with it.
+          Keyed on the route so that leaving a broken view clears it; without
+          that, one bad render would keep the message on screen for the rest of
+          the session, because React never re-mounts a boundary by itself.
+        */}
+        <main id="isi-utama">
+          <ErrorBoundary scope="view" resetKey={pathname}>
+            {children}
+          </ErrorBoundary>
+        </main>
       </div>
 
       <Sidebar base={base} />

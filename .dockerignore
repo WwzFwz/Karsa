@@ -1,0 +1,30 @@
+# What must not reach the build context.
+#
+# node_modules first and for two reasons: it is the largest thing in the repo,
+# and a host install is the wrong platform half the time -- esbuild and the
+# ONNX runtime both ship native binaries, and copying a Windows one into an
+# Alpine image produces a failure that looks like a code bug.
+
+node_modules
+*/node_modules
+
+dist
+server/dist
+server/data
+public/ort
+
+# Roughly 700 MB of speech models. They are mounted, never baked in.
+server/models
+models
+
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+
+docs/laporan/img
+*.log
+.DS_Store
+Thumbs.db

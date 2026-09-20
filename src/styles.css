@@ -3276,3 +3276,53 @@ body { font-size: 14.5px; line-height: 1.55; letter-spacing: -0.005em; }
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--accent);
 }
+
+/* ---- when a render throws ------------------------------------------------ */
+
+/*
+  The crash card borrows the join card rather than inventing a screen of its
+  own: whatever broke, the thing in front of the person should still look like
+  this product. The only additions are a colour that says something is wrong
+  and, for the inline case, a box that sits inside the main area so the
+  navigation, the dock and the room code stay where they were.
+*/
+.join-card.crash {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  max-width: 520px;
+}
+
+.join-card.crash h1 {
+  font-size: 20px;
+}
+
+.crash-inline {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  /*
+    Inside the chrome, not under it.
+
+    The canvas is the background of the whole window and the chrome floats over
+    it (D25), so anything centred in `main` lands beneath the sidebar and the
+    panel. These are the same offsets every other floating surface uses, which
+    is why hiding the sidebar gives this card the space back too.
+  */
+  padding: var(--chrome-top) var(--chrome-right) var(--chrome-bottom) var(--chrome-left);
+  box-sizing: border-box;
+}
+
+.crash-detail {
+  margin-top: 16px;
+}
+
+.crash-detail code {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2, rgba(128, 128, 128, 0.12));
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

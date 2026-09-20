@@ -9,6 +9,7 @@ Komponen dan data tampilan yang dipakai oleh dua fitur atau lebih.
 | File | Isi |
 | --- | --- |
 | Dialog.tsx | Kerangka dialog yang aksesibel |
+| ErrorBoundary.tsx | Penangkap galat render, supaya tidak ada layar putih |
 | NodePicker.tsx | Pemilih simpul lewat daftar, bukan kursor (D6) |
 | InlineTitle.tsx | Menyunting judul di tempat |
 | LangSwitch.tsx | Sakelar ID/EN |
