@@ -37,11 +37,20 @@ jobs:
       - run: npm ci
       - run: npm ci --prefix server
 
-      # Typecheck, import boundaries, unit tests, and the orchestrator eval
-      # against the rule matcher. The Ollama half of the eval is deliberately
-      # not here: it needs a 7B model on the machine, and a check that cannot
-      # run offline is a check that does not belong in the gate (D62).
-      - run: npm run check
+      # These five are exactly what `npm run check` runs, in the same order,
+      # written out so a red run says which one went red. `npm run check` as a
+      # single step reports only "npm run check", and the logs are not readable
+      # without admin rights on the repository -- which is how the first failure
+      # here cost an afternoon of guessing.
+      #
+      # The Ollama half of the eval is deliberately absent: it needs a 7B model
+      # on the machine, and a check that cannot run offline does not belong in
+      # the gate (D62).
+      - run: npm run typecheck
+      - run: npm run typecheck:server
+      - run: npm run check:boundaries
+      - run: npm test
+      - run: npm run eval
 
       # The server's own suite: twelve cases against a real server, plus the
       # two-device test. They need a build, which is its own kind of check.
