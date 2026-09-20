@@ -55,18 +55,23 @@ jobs:
       # without admin rights. The failing TAP lines are echoed as a workflow
       # annotation, which anyone who can see the repository can read.
       - name: npm test
+        shell: bash
         run: |
-          set -o pipefail
-          npm test 2>&1 | tee test.log || {
-            # The TAP failures if there are any, and the tail of the output if
-            # there are none -- because the first time this went red it was not
-            # a failing assertion at all, and a wrapper that only knows how to
-            # report assertions reported nothing.
-            lines=$(grep -E '^not ok|^# (fail|Subtest)|^ +(code|expected|actual|operator):' test.log | head -25)
-            [ -n "$lines" ] || lines=$(tail -n 30 test.log)
-            echo "::error title=npm test::$(printf '%s' "$lines" | awk '{ printf "%s%%0A", $0 }')"
-            exit 1
-          }
+          # No pipeline and no `-e` in the way: the previous two attempts at
+          # this both came back with an empty annotation, which is the same
+          # amount of information as no annotation at all. The exit code and
+          # the byte count go into the message unconditionally, so even "it
+          # produced nothing" is something this can say out loud.
+          echo "node $(node -v), npm $(npm -v)"
+          npm test > test.log 2>&1
+          code=$?
+          bytes=$(wc -c < test.log)
+          tail -n 40 test.log
+          if [ "$code" -ne 0 ]; then
+            body=$(tail -n 40 test.log | awk '{ printf "%s%%0A", $0 }')
+            echo "::error title=npm test::exit ${code}, ${bytes} bytes, node $(node -v)%0A${body}"
+            exit "$code"
+          fi
 
       - run: npm run eval
 
